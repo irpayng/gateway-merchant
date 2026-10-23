@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.tms.gateway.grpc.user";
+
+package user;
+
+// Subset of UserService RPCs needed by gateway-merchant.
+// Full definition is in tms-user/src/main/proto/user_service.proto
+service UserService {
+  // Authenticate a pg_merchant user by email + password for dashboard login.
+  // Uses the same credentials created during registration.
+  rpc AuthPgMerchant (AuthPgMerchantRequest) returns (AuthPgMerchantResponse);
+}
+
+message AuthPgMerchantRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message AuthPgMerchantResponse {
+  bool success = 1;
+  // "ok", "invalid_credentials", "not_pg_merchant", "blocked", "suspended", "email_not_verified"
+  string reason = 2;
+  string message = 3;
+  // Populated only on success
+  int64 user_id = 4;
+  string merchant_id = 5;
+  string email = 6;
+  string phone_number = 7;
+  string business_name = 8;
+  string first_name = 9;
+  string last_name = 10;
+}

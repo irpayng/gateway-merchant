@@ -1,0 +1,182 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.tms.gateway.modules.grpc.compliance";
+
+package pgmerchant;
+
+// gRPC service for PG merchant compliance operations. Called by gateway-merchant
+// for write operations. Reads are done locally via Kafka-replicated data.
+service PgMerchantComplianceService {
+  // Start a new compliance application (idempotent)
+  rpc StartCompliance (StartComplianceRequest) returns (ComplianceResponse);
+  
+  // Get current compliance status (for initial sync, not for reads)
+  rpc GetCompliance (GetComplianceRequest) returns (ComplianceResponse);
+  
+  // Save step 1: Profile details
+  rpc SaveProfile (SaveProfileRequest) returns (ComplianceResponse);
+  
+  // Save step 2: Contact information
+  rpc SaveContact (SaveContactRequest) returns (ComplianceResponse);
+  
+  // Save step 3: Owners/directors
+  rpc SaveOwners (SaveOwnersRequest) returns (ComplianceResponse);
+  
+  // Save step 4: Bank accounts
+  rpc SaveBankAccounts (SaveBankAccountsRequest) returns (ComplianceResponse);
+  
+  // Save step 5: Service agreement
+  rpc SaveAgreement (SaveAgreementRequest) returns (ComplianceResponse);
+  
+  // Submit compliance for review
+  rpc SubmitCompliance (SubmitComplianceRequest) returns (ComplianceResponse);
+}
+
+// ── Request Messages ────────────────────────────────────────
+
+message StartComplianceRequest {
+  int64 user_id = 1;
+  string merchant_id = 2;
+}
+
+message GetComplianceRequest {
+  int64 user_id = 1;
+}
+
+message SaveProfileRequest {
+  int64 user_id = 1;
+  string country = 2;
+  string industry = 3;
+  string category = 4;
+  string trading_name = 5;
+  string sales_volume = 6;
+  string business_type = 7;
+  string business_name = 8;
+  string rc_number = 9;
+  string cac_url = 10;
+}
+
+message SaveContactRequest {
+  int64 user_id = 1;
+  string email = 2;
+  string phone = 3;
+  string address = 4;
+  string city = 5;
+  string state = 6;
+  string postal_code = 7;
+  string country = 8;
+}
+
+message SaveOwnersRequest {
+  int64 user_id = 1;
+  repeated OwnerData owners = 2;
+}
+
+message OwnerData {
+  int64 id = 1;
+  string role = 2;
+  string first_name = 3;
+  string last_name = 4;
+  string email = 5;
+  string phone = 6;
+  string bvn = 7;
+  string nin = 8;
+  string date_of_birth = 9;
+  string address = 10;
+  int32 ownership_percentage = 11;
+  string id_document_url = 12;
+  string id_document_type = 13;
+}
+
+message SaveBankAccountsRequest {
+  int64 user_id = 1;
+  repeated BankAccountData bank_accounts = 2;
+}
+
+message BankAccountData {
+  int64 id = 1;
+  string bank_code = 2;
+  string bank_name = 3;
+  string account_number = 4;
+  string account_name = 5;
+  bool is_primary = 6;
+  string currency = 7;
+}
+
+message SaveAgreementRequest {
+  int64 user_id = 1;
+  bool terms_accepted = 2;
+  string terms_version = 3;
+  bool privacy_accepted = 4;
+  string ip_address = 5;
+  string user_agent = 6;
+}
+
+message SubmitComplianceRequest {
+  int64 user_id = 1;
+}
+
+// ── Response Messages ───────────────────────────────────────
+
+message ComplianceResponse {
+  bool success = 1;
+  string message = 2;
+  ComplianceData compliance = 3;
+}
+
+message ComplianceData {
+  int64 compliance_id = 1;
+  int64 user_id = 2;
+  string merchant_id = 3;
+  string status = 4;
+  int32 current_step = 5;
+  bool profile_complete = 6;
+  bool contact_complete = 7;
+  bool owners_complete = 8;
+  bool bank_accounts_complete = 9;
+  bool agreement_complete = 10;
+  string rejection_reason = 11;
+  string reviewed_by = 12;
+  string reviewed_at = 13;
+  string created_at = 14;
+  string updated_at = 15;
+  
+  // Full step data (included in GetCompliance)
+  ProfileData profile = 16;
+  ContactData contact = 17;
+  repeated OwnerData owners = 18;
+  repeated BankAccountData bank_accounts = 19;
+  AgreementData agreement = 20;
+}
+
+message ProfileData {
+  string country = 1;
+  string industry = 2;
+  string category = 3;
+  string trading_name = 4;
+  string sales_volume = 5;
+  string business_type = 6;
+  string business_name = 7;
+  string rc_number = 8;
+  string cac_url = 9;
+}
+
+message ContactData {
+  string email = 1;
+  string phone = 2;
+  string address = 3;
+  string city = 4;
+  string state = 5;
+  string postal_code = 6;
+  string country = 7;
+}
+
+message AgreementData {
+  bool terms_accepted = 1;
+  string terms_version = 2;
+  bool privacy_accepted = 3;
+  string ip_address = 4;
+  string user_agent = 5;
+  string accepted_at = 6;
+}
