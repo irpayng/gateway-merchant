@@ -91,8 +91,14 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Static so Spring can create it without first building this class, which
+     * itself injects an ObjectMapper. As an instance method it formed a cycle and
+     * the application failed to start: Spring Boot 4's own mapper is a Jackson 3
+     * type, so this is the only com.fasterxml ObjectMapper bean.
+     */
     @Bean
-    public ObjectMapper objectMapper() {
+    public static ObjectMapper objectMapper() {
         return new ObjectMapper();
     }
 }
