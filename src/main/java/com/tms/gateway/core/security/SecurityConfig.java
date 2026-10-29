@@ -52,7 +52,9 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
                         .permitAll().requestMatchers("/health", "/error").permitAll()
-                        .requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
+                                "/v3/api-docs.yaml")
+                        .permitAll().requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
                         // Auth endpoints are public
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
