@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserGrpcClient userGrpcClient;
+    private final com.tms.gateway.modules.compliance.service.ComplianceService complianceService;
     private final JwtService jwtService;
     private final PgMerchantUserRepository userRepository;
 
@@ -55,14 +56,16 @@ public class AuthService {
         // Update or create local replica entry
         upsertLocalReplica(authResponse);
 
-        // Build user data (compliance status will be added when compliance module is
-        // implemented)
+        var principal = GatewayMerchantUserDetails.builder().id(authResponse.getUserId())
+                .merchantId(authResponse.getMerchantId()).emailVerifiedAt(Instant.now()).build();
+        var compliance = complianceService.getCompliance(complianceService.context(principal, null, null));
         UserData userData = UserData.builder().id(authResponse.getUserId()).merchantId(authResponse.getMerchantId())
                 .email(authResponse.getEmail()).phoneNumber(authResponse.getPhoneNumber())
                 .businessName(authResponse.getBusinessName()).firstName(authResponse.getFirstName())
                 .lastName(authResponse.getLastName()).displayName(buildDisplayName(authResponse))
-                .complianceStatus("none") // TODO: fetch from compliance replica
-                .complianceStep(0).complianceRequired(true).build();
+                .complianceStatus(compliance == null ? "none" : compliance.status())
+                .complianceStep(compliance == null ? 0 : compliance.currentStep())
+                .complianceRequired(compliance == null || !"approved".equals(compliance.status())).build();
 
         log.info("Login successful for userId={} merchantId={}", authResponse.getUserId(),
                 authResponse.getMerchantId());
@@ -79,16 +82,14 @@ public class AuthService {
      * @return the user data with compliance status
      */
     public UserData getCurrentUser(GatewayMerchantUserDetails userDetails) {
-        // TODO: fetch compliance status from compliance replica
+        var compliance = complianceService.getCompliance(complianceService.context(userDetails, null, null));
         return UserData.builder().id(userDetails.getId()).merchantId(userDetails.getMerchantId())
                 .email(userDetails.getEmail()).phoneNumber(userDetails.getPhoneNumber())
                 .businessName(userDetails.getBusinessName()).firstName(userDetails.getFirstName())
-                .lastName(userDetails.getLastName()).displayName(userDetails.getDisplayName()).complianceStatus("none") // TODO:
-                                                                                                                        // fetch
-                                                                                                                        // from
-                                                                                                                        // compliance
-                                                                                                                        // replica
-                .complianceStep(0).complianceRequired(true).build();
+                .lastName(userDetails.getLastName()).displayName(userDetails.getDisplayName())
+                .complianceStatus(compliance == null ? "none" : compliance.status())
+                .complianceStep(compliance == null ? 0 : compliance.currentStep())
+                .complianceRequired(compliance == null || !"approved".equals(compliance.status())).build();
     }
 
     /**
@@ -103,6 +104,7 @@ public class AuthService {
 
             if (existing.isPresent()) {
                 PgMerchantUserEntity user = existing.get();
+                user.setMerchantId(auth.getMerchantId());
                 user.setEmail(auth.getEmail());
                 user.setPhoneNumber(auth.getPhoneNumber());
                 user.setBusinessName(auth.getBusinessName());

@@ -1,12 +1,11 @@
 package com.tms.gateway.modules.compliance.dto;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
-
 /**
- * Request to save step 3: Owners (replaces all existing owners).
+ * Supplied collection replaces the previous list; an empty list clears the
+ * draft section.
  */
-public record SaveOwnersRequest(
-        @NotEmpty(message = "At least one owner is required") @Valid List<SaveOwnerRequest> owners) {
+public record SaveOwnersRequest(@JsonProperty("owners") @NotNull @Valid List<@NotNull SaveOwnerRequest> owners) {
 }

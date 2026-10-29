@@ -35,3 +35,4 @@ logs/
 *.jar
 *.war
 *.ear
+docs/compliance-api.md

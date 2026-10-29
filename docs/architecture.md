@@ -1,5 +1,8 @@
 # Gateway Merchant - Architecture Guide
 
+> Compliance implementation update: see [Merchant compliance API](compliance-api.md)
+> for the current Starter/Registered contract and required upstream rollout.
+
 > A scalable backend for Payment Gateway merchants, designed to handle millions of users through event-driven data replication.
 
 ## Table of Contents

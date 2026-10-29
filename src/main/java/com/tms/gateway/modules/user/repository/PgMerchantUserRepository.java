@@ -13,7 +13,7 @@ public interface PgMerchantUserRepository extends JpaRepository<PgMerchantUserEn
 
     Optional<PgMerchantUserEntity> findByEmail(String email);
 
-    Optional<PgMerchantUserEntity> findByMerchantId(String merchantId);
+    java.util.List<PgMerchantUserEntity> findAllByMerchantId(String merchantId);
 
     Optional<PgMerchantUserEntity> findByPhoneNumber(String phoneNumber);
 

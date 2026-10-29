@@ -19,6 +19,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(com.tms.gateway.modules.compliance.service.ComplianceValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleComplianceValidation(
+            com.tms.gateway.modules.compliance.service.ComplianceValidationException ex) {
+        return ResponseEntity.unprocessableEntity()
+                .body(Map.of("code", 422, "message", ex.getMessage(), "errors", ex.getErrors()));
+    }
+
+    @ExceptionHandler({org.springframework.web.bind.ServletRequestBindingException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMalformedRequest(Exception ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(400, "Malformed request or missing required header"));
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(EntityNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(404, ex.getMessage()));

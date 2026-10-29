@@ -1,24 +1,18 @@
 package com.tms.gateway.modules.compliance.dto;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-
+import java.util.List;
 /**
- * Request to save step 2: Contact information.
+ * Nullable fields support partial drafts. Omitted scalar values retain their
+ * saved value.
  */
-public record SaveContactRequest(
-        @NotBlank(message = "Email is required") @Email(message = "Invalid email format") String email,
-
-        @NotBlank(message = "Phone is required") String phone,
-
-        @NotBlank(message = "Address is required") String address,
-
-        @NotBlank(message = "City is required") String city,
-
-        @NotBlank(message = "State is required") String state,
-
-        @JsonProperty("postal_code") String postalCode,
-
-        String country) {
+public record SaveContactRequest(@JsonProperty("email") @Email String email, @JsonProperty("phone") String phone,
+        @JsonProperty("address") String address, @JsonProperty("city") String city, @JsonProperty("state") String state,
+        @JsonProperty("postal_code") String postalCode, @JsonProperty("country") String country,
+        @JsonProperty("support_email") @Email String supportEmail,
+        @JsonProperty("dispute_email") @Email String disputeEmail, @JsonProperty("lga") String lga,
+        @JsonProperty("same_as_support_email") Boolean sameAsSupportEmail,
+        @JsonProperty("business_address_document_id") String businessAddressDocumentId,
+        @JsonProperty("online_links") @Valid List<OnlineLink> onlineLinks) {
 }

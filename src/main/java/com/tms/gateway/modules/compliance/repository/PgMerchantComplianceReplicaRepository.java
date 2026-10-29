@@ -12,5 +12,6 @@ public interface PgMerchantComplianceReplicaRepository extends JpaRepository<PgM
 
     Optional<PgMerchantComplianceReplicaEntity> findByMerchantId(String merchantId);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     Optional<PgMerchantComplianceReplicaEntity> findBySourceId(Long sourceId);
 }

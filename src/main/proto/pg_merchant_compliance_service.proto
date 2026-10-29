@@ -5,9 +5,28 @@ option java_package = "com.tms.gateway.modules.grpc.compliance";
 
 package pgmerchant;
 
-// gRPC service for PG merchant compliance operations. Called by gateway-merchant
-// for write operations. Reads are done locally via Kafka-replicated data.
+// Merchant compliance source of truth. Interactive reads and writes use the
+// merchant-scoped RPCs; Kafka maintains replicas for eventual read use cases.
 service PgMerchantComplianceService {
+
+  // Merchant-scoped v2 operations MUST validate membership, versions and idempotency upstream.
+  // Separate RPC names fail closed against legacy servers that cannot enforce this contract.
+  rpc StartMerchantCompliance (MerchantComplianceRequest) returns (ComplianceResponse);
+  rpc GetMerchantCompliance (MerchantComplianceRequest) returns (ComplianceResponse);
+  rpc SaveMerchantProfileDraft (MerchantProfileDraftRequest) returns (ComplianceResponse);
+  rpc SaveMerchantContactDraft (MerchantContactDraftRequest) returns (ComplianceResponse);
+  rpc SaveMerchantOwnersDraft (MerchantOwnersDraftRequest) returns (ComplianceResponse);
+  rpc SaveMerchantBankAccountsDraft (MerchantBankAccountsDraftRequest) returns (ComplianceResponse);
+  rpc SaveMerchantRegistrationDraft (MerchantRegistrationDraftRequest) returns (ComplianceResponse);
+  rpc AcceptAgreementAndSubmit (MerchantSubmissionRequest) returns (ComplianceResponse);
+  rpc ListComplianceReferenceData (ReferenceDataRequest) returns (ReferenceDataResponse);
+  rpc CreateComplianceDocumentUpload (DocumentUploadRequest) returns (DocumentUploadResponse);
+  rpc CompleteComplianceDocumentUpload (DocumentRequest) returns (DocumentResponse);
+  rpc GetComplianceDocument (DocumentRequest) returns (DocumentResponse);
+  rpc DeleteComplianceDocument (DocumentRequest) returns (DocumentResponse);
+
+  // Legacy user-scoped RPCs retained for wire compatibility. The gateway no
+  // longer calls these operations because they cannot enforce the v2 contract.
   // Start a new compliance application (idempotent)
   rpc StartCompliance (StartComplianceRequest) returns (ComplianceResponse);
   
@@ -55,6 +74,8 @@ message SaveProfileRequest {
   string business_name = 8;
   string rc_number = 9;
   string cac_url = 10;
+  string business_description = 11;
+  string currency = 12;
 }
 
 message SaveContactRequest {
@@ -66,6 +87,12 @@ message SaveContactRequest {
   string state = 6;
   string postal_code = 7;
   string country = 8;
+  string support_email = 9;
+  string dispute_email = 10;
+  string lga = 11;
+  bool same_as_support_email = 12;
+  string business_address_document_id = 13;
+  repeated OnlineLinkData online_links = 14;
 }
 
 message SaveOwnersRequest {
@@ -87,6 +114,13 @@ message OwnerData {
   int32 ownership_percentage = 11;
   string id_document_url = 12;
   string id_document_type = 13;
+  string full_name = 14;
+  string nationality = 15;
+  string state = 16;
+  string lga = 17;
+  bool same_as_business_address = 18;
+  string id_document_id = 19;
+  string proof_of_address_document_id = 20;
 }
 
 message SaveBankAccountsRequest {
@@ -123,6 +157,8 @@ message ComplianceResponse {
   bool success = 1;
   string message = 2;
   ComplianceData compliance = 3;
+  string error_code = 4;
+  repeated CorrectionData errors = 5;
 }
 
 message ComplianceData {
@@ -148,6 +184,11 @@ message ComplianceData {
   repeated OwnerData owners = 18;
   repeated BankAccountData bank_accounts = 19;
   AgreementData agreement = 20;
+  int64 version = 21;
+  repeated CorrectionData corrections = 22;
+  RegistrationData registration = 23;
+  bool registration_complete = 24;
+  int64 updated_by = 25;
 }
 
 message ProfileData {
@@ -160,6 +201,8 @@ message ProfileData {
   string business_name = 7;
   string rc_number = 8;
   string cac_url = 9;
+  string business_description = 10;
+  string currency = 11;
 }
 
 message ContactData {
@@ -170,6 +213,12 @@ message ContactData {
   string state = 5;
   string postal_code = 6;
   string country = 7;
+  string support_email = 8;
+  string dispute_email = 9;
+  string lga = 10;
+  bool same_as_support_email = 11;
+  string business_address_document_id = 12;
+  repeated OnlineLinkData online_links = 13;
 }
 
 message AgreementData {
@@ -179,4 +228,47 @@ message AgreementData {
   string ip_address = 4;
   string user_agent = 5;
   string accepted_at = 6;
+}
+
+// v2 mutation contract: check replay first, then expected_version, then write in ONE transaction.
+// Partial scalars merge only fields listed in supplied_fields. Collections replace atomically.
+message MutationContext {
+  int64 actor_user_id = 1;
+  string merchant_id = 2;
+  string idempotency_key = 3;
+  int64 expected_version = 4;
+}
+message MerchantComplianceRequest { MutationContext context = 1; }
+message MerchantProfileDraftRequest { MutationContext context = 1; SaveProfileRequest data = 2; repeated string supplied_fields = 3; }
+message MerchantContactDraftRequest { MutationContext context = 1; SaveContactRequest data = 2; repeated string supplied_fields = 3; }
+message MerchantOwnersDraftRequest { MutationContext context = 1; repeated OwnerData owners = 2; repeated FieldPresence owner_fields = 3; }
+message FieldPresence { repeated string fields = 1; }
+message MerchantBankAccountsDraftRequest { MutationContext context = 1; repeated BankAccountData bank_accounts = 2; repeated FieldPresence account_fields = 3; }
+message MerchantRegistrationDraftRequest { MutationContext context = 1; RegistrationData data = 2; repeated string supplied_fields = 3; }
+message MerchantSubmissionRequest {
+  MutationContext context = 1;
+  bool agreement_accepted = 2;
+  string ip_address = 3;
+  string user_agent = 4;
+}
+message RegistrationData { string registration_number = 1; string tax_identification_number = 2; }
+message OnlineLinkData { string platform = 1; string url = 2; }
+message CorrectionData { string step = 1; string field = 2; string message = 3; }
+message ReferenceDataRequest {
+  string kind = 1; string parent_code = 2; string country = 3; string currency = 4;
+}
+message ReferenceOption { string code = 1; string label = 2; string parent_code = 3; string currency = 4; string minimum = 5; string maximum = 6; }
+message ReferenceDataResponse { repeated ReferenceOption options = 1; }
+// KYC owns private object storage, scan lifecycle, merchant authorization and document retention.
+message DocumentUploadRequest {
+  MutationContext context = 1; string purpose = 2; string file_name = 3;
+  string content_type = 4; int64 size_bytes = 5;
+}
+message DocumentUploadResponse {
+  string document_id = 1; string upload_url = 2; string expires_at = 3;
+  map<string,string> headers = 4; string method = 5;
+}
+message DocumentRequest { MutationContext context = 1; string document_id = 2; }
+message DocumentResponse {
+  string document_id = 1; string status = 2; string download_url = 3; string expires_at = 4;
 }

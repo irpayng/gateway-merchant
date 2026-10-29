@@ -52,7 +52,7 @@ public class UserEventConsumer {
             JsonNode root = objectMapper.readTree(message);
 
             // Debezium outbox events have a payload wrapper
-            JsonNode payload = root.has("payload") ? root.get("payload") : root;
+            JsonNode payload = root.path("payload").isObject() ? root.get("payload") : root;
 
             String eventType = getStringField(payload, "type");
             String aggregateType = getStringField(payload, "aggregateType");
@@ -172,6 +172,7 @@ public class UserEventConsumer {
         Instant now = Instant.now();
 
         // Update fields if present in event
+        updateIfPresent(data, "merchantId", "merchant_id", user::setMerchantId);
         updateIfPresent(data, "email", user::setEmail);
         updateIfPresent(data, "phoneNumber", "phone_number", user::setPhoneNumber);
         updateIfPresent(data, "businessName", "business_name", user::setBusinessName);

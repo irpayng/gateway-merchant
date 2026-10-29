@@ -76,4 +76,10 @@ public class PgMerchantProfileReplicaEntity {
 
     @Column(name = "synced_at", nullable = false)
     private Instant syncedAt;
+
+    @Column(name = "business_description", columnDefinition = "text")
+    private String businessDescription;
+
+    @Column(name = "currency", columnDefinition = "text")
+    private String currency;
 }
