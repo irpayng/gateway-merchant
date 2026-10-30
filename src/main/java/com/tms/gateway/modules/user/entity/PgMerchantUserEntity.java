@@ -31,7 +31,7 @@ public class PgMerchantUserEntity {
     @Id
     private Long id;
 
-    @Column(name = "merchant_id", nullable = false, length = 50)
+    @Column(name = "merchant_id", length = 50)
     private String merchantId;
 
     @Column(nullable = false, unique = true)
