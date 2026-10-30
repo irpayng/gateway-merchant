@@ -57,9 +57,9 @@ public class SecurityConfig {
                         .permitAll().requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
                         // Auth endpoints are public
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/verify-email").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/auth/resend-otp").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register/pg-merchant").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/pg-merchant/verify-email").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/pg-merchant/resend-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll()
                         // All other endpoints require authentication

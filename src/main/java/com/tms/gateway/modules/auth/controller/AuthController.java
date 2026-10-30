@@ -50,7 +50,7 @@ public class AuthController {
      * Creates a new user with type "pg_merchant" and a unique MID. Sends an email
      * verification OTP that must be confirmed before login is allowed.
      */
-    @PostMapping("/register")
+    @PostMapping("/register/pg-merchant")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
         RegisterResponse response = authService.register(request);
         return ResponseEntity.ok(ApiResponse.success(response, response.getMessage()));
@@ -62,7 +62,7 @@ public class AuthController {
      * <p>
      * Once verified, the merchant can log in to the dashboard.
      */
-    @PostMapping("/verify-email")
+    @PostMapping("/pg-merchant/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         authService.verifyEmail(request);
         return ResponseEntity.ok(ApiResponse.success(null, "Email verified successfully"));
@@ -74,7 +74,7 @@ public class AuthController {
      * <p>
      * Throttled to one request per 60 seconds.
      */
-    @PostMapping("/resend-otp")
+    @PostMapping("/pg-merchant/resend-otp")
     public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
         authService.resendOtp(request);
         return ResponseEntity.ok(ApiResponse.success(null, "Verification code sent"));
