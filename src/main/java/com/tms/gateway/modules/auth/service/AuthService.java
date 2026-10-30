@@ -66,11 +66,17 @@ public class AuthService {
                 .merchantId(authResponse.getMerchantId()).emailVerifiedAt(Instant.now()).build();
 
         // Get compliance status - don't fail login if KYC service is unavailable
+        // or if merchantId is not yet assigned (legacy users)
         ComplianceResponse compliance = null;
-        try {
-            compliance = complianceService.getCompliance(complianceService.context(principal, null, null));
-        } catch (Exception e) {
-            log.warn("Failed to fetch compliance for merchantId={}: {}", authResponse.getMerchantId(), e.getMessage());
+        if (authResponse.getMerchantId() != null && !authResponse.getMerchantId().isBlank()) {
+            try {
+                compliance = complianceService.getCompliance(complianceService.context(principal, null, null));
+            } catch (Exception e) {
+                log.warn("Failed to fetch compliance for merchantId={}: {}", authResponse.getMerchantId(),
+                        e.getMessage());
+            }
+        } else {
+            log.warn("Login for userId={} has no merchantId - skipping compliance check", authResponse.getUserId());
         }
 
         UserData userData = UserData.builder().id(authResponse.getUserId()).merchantId(authResponse.getMerchantId())
