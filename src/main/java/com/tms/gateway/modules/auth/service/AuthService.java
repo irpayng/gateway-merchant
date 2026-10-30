@@ -144,7 +144,17 @@ public class AuthService {
      * @return the user data with compliance status
      */
     public UserData getCurrentUser(GatewayMerchantUserDetails userDetails) {
-        var compliance = complianceService.getCompliance(complianceService.context(userDetails, null, null));
+        // Get compliance status - skip if user has no merchantId (legacy users)
+        ComplianceResponse compliance = null;
+        if (userDetails.getMerchantId() != null && !userDetails.getMerchantId().isBlank()) {
+            try {
+                compliance = complianceService.getCompliance(complianceService.context(userDetails, null, null));
+            } catch (Exception e) {
+                log.warn("Failed to fetch compliance for merchantId={}: {}", userDetails.getMerchantId(),
+                        e.getMessage());
+            }
+        }
+
         return UserData.builder().id(userDetails.getId()).merchantId(userDetails.getMerchantId())
                 .email(userDetails.getEmail()).phoneNumber(userDetails.getPhoneNumber())
                 .businessName(userDetails.getBusinessName()).firstName(userDetails.getFirstName())
