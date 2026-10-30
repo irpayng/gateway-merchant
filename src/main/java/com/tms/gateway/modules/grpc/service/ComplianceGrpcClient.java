@@ -97,6 +97,9 @@ public class ComplianceGrpcClient {
                 .getMerchantCompliance(MerchantComplianceRequest.newBuilder().setContext(context).build()));
         if (!r.getSuccess() && "NOT_FOUND".equals(r.getErrorCode()))
             return null;
+        // Handle case where merchant exists but hasn't started compliance yet
+        if (r.getSuccess() && (!r.hasCompliance() || r.getCompliance().getMerchantId().isBlank()))
+            return null;
         return result(r);
     }
     public ComplianceData saveProfile(MutationContext context,
