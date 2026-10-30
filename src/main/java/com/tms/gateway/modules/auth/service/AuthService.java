@@ -11,6 +11,7 @@ import com.tms.gateway.modules.auth.dto.RegisterResponse;
 import com.tms.gateway.modules.auth.dto.ResendOtpRequest;
 import com.tms.gateway.modules.auth.dto.UserData;
 import com.tms.gateway.modules.auth.dto.VerifyEmailRequest;
+import com.tms.gateway.modules.compliance.dto.ComplianceResponse;
 import com.tms.gateway.modules.grpc.service.UserGrpcClient;
 import com.tms.gateway.modules.user.entity.PgMerchantUserEntity;
 import com.tms.gateway.modules.user.repository.PgMerchantUserRepository;
@@ -63,7 +64,15 @@ public class AuthService {
 
         var principal = GatewayMerchantUserDetails.builder().id(authResponse.getUserId())
                 .merchantId(authResponse.getMerchantId()).emailVerifiedAt(Instant.now()).build();
-        var compliance = complianceService.getCompliance(complianceService.context(principal, null, null));
+
+        // Get compliance status - don't fail login if KYC service is unavailable
+        ComplianceResponse compliance = null;
+        try {
+            compliance = complianceService.getCompliance(complianceService.context(principal, null, null));
+        } catch (Exception e) {
+            log.warn("Failed to fetch compliance for merchantId={}: {}", authResponse.getMerchantId(), e.getMessage());
+        }
+
         UserData userData = UserData.builder().id(authResponse.getUserId()).merchantId(authResponse.getMerchantId())
                 .email(authResponse.getEmail()).phoneNumber(authResponse.getPhoneNumber())
                 .businessName(authResponse.getBusinessName()).firstName(authResponse.getFirstName())
