@@ -3,9 +3,14 @@ package com.tms.gateway.modules.auth.service;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.core.security.JwtService;
 import com.tms.gateway.grpc.user.AuthPgMerchantResponse;
+import com.tms.gateway.grpc.user.RegisterPgMerchantResponse;
 import com.tms.gateway.modules.auth.dto.LoginRequest;
 import com.tms.gateway.modules.auth.dto.LoginResponse;
+import com.tms.gateway.modules.auth.dto.RegisterRequest;
+import com.tms.gateway.modules.auth.dto.RegisterResponse;
+import com.tms.gateway.modules.auth.dto.ResendOtpRequest;
 import com.tms.gateway.modules.auth.dto.UserData;
+import com.tms.gateway.modules.auth.dto.VerifyEmailRequest;
 import com.tms.gateway.modules.grpc.service.UserGrpcClient;
 import com.tms.gateway.modules.user.entity.PgMerchantUserEntity;
 import com.tms.gateway.modules.user.repository.PgMerchantUserRepository;
@@ -20,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Authentication service for pg_merchant dashboard.
  *
  * <p>
- * Authenticates users via gRPC to tms-user (same credentials as registration),
- * then issues local JWTs for session management.
+ * Authenticates and registers users via gRPC to tms-user, then issues local
+ * JWTs for session management.
  */
 @Slf4j
 @Service
@@ -72,6 +77,48 @@ public class AuthService {
 
         return LoginResponse.builder().token(token).tokenType("Bearer").expiresIn(jwtExpirationMs / 1000).user(userData)
                 .build();
+    }
+
+    /**
+     * Register a new pg_merchant user.
+     *
+     * @param request
+     *            the registration request
+     * @return the registration response with user details
+     */
+    public RegisterResponse register(RegisterRequest request) {
+        RegisterPgMerchantResponse response = userGrpcClient.registerPgMerchant(request.getEmail().trim().toLowerCase(),
+                request.getPassword(), request.getPhoneNumber(), request.getBusinessName(), request.getBusinessType(),
+                request.getFirstName(), request.getLastName(), request.getCountry());
+
+        log.info("Registration successful for userId={} merchantId={}", response.getUserId(), response.getMerchantId());
+
+        return RegisterResponse.builder().userId(response.getUserId()).merchantId(response.getMerchantId())
+                .email(response.getEmail()).phoneNumber(response.getPhoneNumber())
+                .businessName(response.getBusinessName()).businessType(response.getBusinessType())
+                .message("Registration successful. Please verify your email address.").build();
+    }
+
+    /**
+     * Verify a pg_merchant's email address using the OTP.
+     *
+     * @param request
+     *            the verification request with email and OTP
+     */
+    public void verifyEmail(VerifyEmailRequest request) {
+        userGrpcClient.verifyPgMerchantEmail(request.getEmail().trim().toLowerCase(), request.getOtp().trim());
+        log.info("Email verified for email={}", request.getEmail());
+    }
+
+    /**
+     * Resend the email verification OTP.
+     *
+     * @param request
+     *            the resend request with email
+     */
+    public void resendOtp(ResendOtpRequest request) {
+        userGrpcClient.resendPgMerchantOtp(request.getEmail().trim().toLowerCase());
+        log.info("OTP resent for email={}", request.getEmail());
     }
 
     /**

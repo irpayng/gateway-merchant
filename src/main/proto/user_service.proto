@@ -11,6 +11,16 @@ service UserService {
   // Authenticate a pg_merchant user by email + password for dashboard login.
   // Uses the same credentials created during registration.
   rpc AuthPgMerchant (AuthPgMerchantRequest) returns (AuthPgMerchantResponse);
+
+  // Register a new Payment Gateway merchant. Creates a user with type "pg_merchant"
+  // and a unique MID, then sends an email verification OTP.
+  rpc RegisterPgMerchant (RegisterPgMerchantRequest) returns (RegisterPgMerchantResponse);
+
+  // Verify a PG merchant's email address using the OTP sent during registration.
+  rpc VerifyPgMerchantEmail (VerifyPgMerchantEmailRequest) returns (VerifyPgMerchantEmailResponse);
+
+  // Resend the email verification OTP for a PG merchant. Throttled to 60 seconds.
+  rpc ResendPgMerchantOtp (ResendPgMerchantOtpRequest) returns (ResendPgMerchantOtpResponse);
 }
 
 message AuthPgMerchantRequest {
@@ -31,4 +41,56 @@ message AuthPgMerchantResponse {
   string business_name = 8;
   string first_name = 9;
   string last_name = 10;
+}
+
+// ── PG Merchant registration messages ──
+
+message RegisterPgMerchantRequest {
+  string email = 1;
+  string password = 2;
+  string phone_number = 3;
+  string business_name = 4;
+  // "starter" (unregistered) or "registered" (CAC registered)
+  string business_type = 5;
+  string first_name = 6;
+  string last_name = 7;
+  // ISO 3166-1 alpha-2 country code, defaults to "NG"
+  string country = 8;
+}
+
+message RegisterPgMerchantResponse {
+  bool success = 1;
+  // "ok", "email_taken", "phone_taken", or error
+  string reason = 2;
+  string message = 3;
+  // Populated only on success
+  int64 user_id = 4;
+  string merchant_id = 5;
+  string email = 6;
+  string phone_number = 7;
+  string business_name = 8;
+  string business_type = 9;
+}
+
+message VerifyPgMerchantEmailRequest {
+  string email = 1;
+  string otp = 2;
+}
+
+message VerifyPgMerchantEmailResponse {
+  bool success = 1;
+  // "ok", "invalid_otp", "expired", "already_verified", or error
+  string reason = 2;
+  string message = 3;
+}
+
+message ResendPgMerchantOtpRequest {
+  string email = 1;
+}
+
+message ResendPgMerchantOtpResponse {
+  bool success = 1;
+  // "ok", "not_found", "already_verified", "throttled", or error
+  string reason = 2;
+  string message = 3;
 }
