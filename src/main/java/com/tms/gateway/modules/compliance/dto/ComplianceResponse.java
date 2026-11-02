@@ -28,11 +28,10 @@ public record ComplianceResponse(@JsonProperty("compliance_id") Long complianceI
             @JsonProperty("online_links") List<OnlineLink> onlineLinks) {
     }
     public record OwnerData(@JsonProperty("id") Long id, @JsonProperty("role") String role,
-            @JsonProperty("date_of_birth") String dateOfBirth,
-            @JsonProperty("address") String address, @JsonProperty("id_document_type") String idDocumentType,
-                @JsonProperty("full_name") String fullName,
+            @JsonProperty("date_of_birth") String dateOfBirth, @JsonProperty("address") String address,
+            @JsonProperty("id_document_type") String idDocumentType, @JsonProperty("full_name") String fullName,
             @JsonProperty("nationality") String nationality, @JsonProperty("lga") String lga,
-                @JsonProperty("same_as_business_address") Boolean sameAsBusinessAddress,
+            @JsonProperty("same_as_business_address") Boolean sameAsBusinessAddress,
             @JsonProperty("id_document_id") String idDocumentId,
             @JsonProperty("proof_of_address_document_id") String proofOfAddressDocumentId) {
     }
@@ -44,8 +43,7 @@ public record ComplianceResponse(@JsonProperty("compliance_id") Long complianceI
             @JsonProperty("tax_identification_number") String taxIdentificationNumber) {
     }
     public record AgreementData(@JsonProperty("terms_accepted") boolean termsAccepted,
-            @JsonProperty("terms_version") String termsVersion,
-            @JsonProperty("ip_address") String ipAddress,
+            @JsonProperty("terms_version") String termsVersion, @JsonProperty("ip_address") String ipAddress,
             @JsonProperty("user_agent") String userAgent, @JsonProperty("accepted_at") String acceptedAt) {
     }
     public record CorrectionData(String step, String field, String message) {

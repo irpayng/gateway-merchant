@@ -13,26 +13,26 @@ class ComplianceDesignContractTest {
     @Test
     void legacyUpstreamFieldsAreNotExposedToFrontend() {
         var data = ComplianceData.newBuilder()
-                .setProfile(com.tms.gateway.modules.grpc.compliance.ProfileData.newBuilder()
-                        .setTradingName("ACME").setBusinessName("Legacy").setRcNumber("RC123")
-                        .setCacUrl("https://legacy.test/cac").setCurrency("NGN"))
-                .setContact(com.tms.gateway.modules.grpc.compliance.ContactData.newBuilder()
-                        .setEmail("contact@acme.test").setCity("Lagos").setState("Lagos")
-                        .setCountry("NG").setPostalCode("100001"))
-                .addOwners(com.tms.gateway.modules.grpc.compliance.OwnerData.newBuilder()
-                        .setFullName("John Doe").setFirstName("John").setLastName("Doe")
-                        .setEmail("owner@acme.test").setPhone("123").setBvn("123").setNin("123")
-                        .setState("Lagos").setOwnershipPercentage(100).setIdDocumentUrl("https://legacy.test/id"))
+                .setProfile(com.tms.gateway.modules.grpc.compliance.ProfileData.newBuilder().setTradingName("ACME")
+                        .setBusinessName("Legacy").setRcNumber("RC123").setCacUrl("https://legacy.test/cac")
+                        .setCurrency("NGN"))
+                .setContact(
+                        com.tms.gateway.modules.grpc.compliance.ContactData.newBuilder().setEmail("contact@acme.test")
+                                .setCity("Lagos").setState("Lagos").setCountry("NG").setPostalCode("100001"))
+                .addOwners(com.tms.gateway.modules.grpc.compliance.OwnerData.newBuilder().setFullName("John Doe")
+                        .setFirstName("John").setLastName("Doe").setEmail("owner@acme.test").setPhone("123")
+                        .setBvn("123").setNin("123").setState("Lagos").setOwnershipPercentage(100)
+                        .setIdDocumentUrl("https://legacy.test/id"))
                 .addBankAccounts(com.tms.gateway.modules.grpc.compliance.BankAccountData.newBuilder()
                         .setAccountNumber("1234567890").setIsPrimary(true).setCurrency("NGN"))
-                .setAgreement(com.tms.gateway.modules.grpc.compliance.AgreementData.newBuilder()
-                        .setTermsAccepted(true).setPrivacyAccepted(true))
+                .setAgreement(com.tms.gateway.modules.grpc.compliance.AgreementData.newBuilder().setTermsAccepted(true)
+                        .setPrivacyAccepted(true))
                 .build();
         var response = json.valueToTree(new ComplianceMapper().toResponse(data));
         absent(response.get("profile"), "business_name", "rc_number", "cac_url", "currency");
         absent(response.get("contact"), "city", "state", "postal_code", "country");
-        absent(response.get("owners").get(0), "first_name", "last_name", "email", "phone", "bvn", "nin",
-                "state", "ownership_percentage", "id_document_url");
+        absent(response.get("owners").get(0), "first_name", "last_name", "email", "phone", "bvn", "nin", "state",
+                "ownership_percentage", "id_document_url");
         absent(response.get("bank_accounts").get(0), "is_primary", "currency");
         absent(response.get("agreement"), "privacy_accepted");
         assertEquals("ACME", response.at("/profile/trading_name").asText());

@@ -14,8 +14,8 @@ public class ComplianceMapper {
                 d.getBankAccountsList().stream().map(this::bankAccount).toList(),
                 d.hasAgreement()
                         ? new AgreementData(d.getAgreement().getTermsAccepted(), d.getAgreement().getTermsVersion(),
-                                d.getAgreement().getIpAddress(),
-                                d.getAgreement().getUserAgent(), d.getAgreement().getAcceptedAt())
+                                d.getAgreement().getIpAddress(), d.getAgreement().getUserAgent(),
+                                d.getAgreement().getAcceptedAt())
                         : null,
                 d.getVersion(),
                 d.getCorrectionsList().stream().map(c -> new CorrectionData(c.getStep(), c.getField(), c.getMessage()))
@@ -28,9 +28,8 @@ public class ComplianceMapper {
                 d.getBusinessType(), d.getBusinessDescription());
     }
     private ContactData contact(com.tms.gateway.modules.grpc.compliance.ContactData d) {
-        return new ContactData(d.getEmail(), d.getPhone(), d.getAddress(), d.getSupportEmail(),
-                d.getDisputeEmail(), d.getLga(), d.getSameAsSupportEmail(),
-                d.getBusinessAddressDocumentId(),
+        return new ContactData(d.getEmail(), d.getPhone(), d.getAddress(), d.getSupportEmail(), d.getDisputeEmail(),
+                d.getLga(), d.getSameAsSupportEmail(), d.getBusinessAddressDocumentId(),
                 d.getOnlineLinksList().stream().map(l -> new OnlineLink(l.getPlatform(), l.getUrl())).toList());
     }
     private OwnerData owner(com.tms.gateway.modules.grpc.compliance.OwnerData d) {
