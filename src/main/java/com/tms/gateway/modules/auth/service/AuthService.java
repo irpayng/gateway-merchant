@@ -85,7 +85,8 @@ public class AuthService {
                 .lastName(authResponse.getLastName()).displayName(buildDisplayName(authResponse))
                 .complianceStatus(compliance == null ? "none" : compliance.status())
                 .complianceStep(compliance == null ? 0 : compliance.currentStep())
-                .complianceRequired(compliance == null || !"approved".equals(compliance.status())).build();
+                .complianceRequired(compliance == null || !"approved".equals(compliance.status()))
+                .businessType(extractBusinessType(compliance)).build();
 
         log.info("Login successful for userId={} merchantId={}", authResponse.getUserId(),
                 authResponse.getMerchantId());
@@ -161,7 +162,8 @@ public class AuthService {
                 .lastName(userDetails.getLastName()).displayName(userDetails.getDisplayName())
                 .complianceStatus(compliance == null ? "none" : compliance.status())
                 .complianceStep(compliance == null ? 0 : compliance.currentStep())
-                .complianceRequired(compliance == null || !"approved".equals(compliance.status())).build();
+                .complianceRequired(compliance == null || !"approved".equals(compliance.status()))
+                .businessType(extractBusinessType(compliance)).build();
     }
 
     /**
@@ -209,5 +211,16 @@ public class AuthService {
             return name;
         }
         return auth.getBusinessName() != null ? auth.getBusinessName() : auth.getEmail();
+    }
+
+    /**
+     * Extract business type from compliance profile. Returns null if compliance or
+     * profile is not available.
+     */
+    private String extractBusinessType(ComplianceResponse compliance) {
+        if (compliance == null || compliance.profile() == null) {
+            return null;
+        }
+        return compliance.profile().businessType();
     }
 }
