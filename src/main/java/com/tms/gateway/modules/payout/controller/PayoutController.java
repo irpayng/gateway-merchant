@@ -1,10 +1,10 @@
 package com.tms.gateway.modules.payout.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
+import com.tms.gateway.modules.grpc.service.ConfigGrpcClient;
 import com.tms.gateway.modules.payout.dto.BankResponse;
 import com.tms.gateway.modules.payout.dto.NameEnquiryRequest;
 import com.tms.gateway.modules.payout.dto.NameEnquiryResponse;
-import com.tms.gateway.modules.payout.service.ConfigService;
 import com.tms.gateway.modules.payout.service.PayoutService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PayoutController {
 
     private final PayoutService payoutService;
-    private final ConfigService configService;
+    private final ConfigGrpcClient configGrpcClient;
 
     /**
      * Get list of all supported banks for payouts.
@@ -41,7 +41,7 @@ public class PayoutController {
     @GetMapping("/banks")
     @Operation(summary = "List all banks", description = "Get all supported banks for payouts")
     public ResponseEntity<ApiResponse<List<BankResponse>>> listBanks() {
-        List<BankResponse> banks = configService.getBanks();
+        List<BankResponse> banks = configGrpcClient.listBankCodes();
         return ResponseEntity.ok(ApiResponse.success(banks));
     }
 
@@ -55,7 +55,7 @@ public class PayoutController {
     @GetMapping("/banks/popular")
     @Operation(summary = "List popular banks", description = "Get most commonly used banks for quick selection")
     public ResponseEntity<ApiResponse<List<BankResponse>>> listPopularBanks() {
-        List<BankResponse> banks = configService.getMostUsedBanks();
+        List<BankResponse> banks = configGrpcClient.listMostUsedBanks();
         return ResponseEntity.ok(ApiResponse.success(banks));
     }
 
