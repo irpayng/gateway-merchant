@@ -32,22 +32,9 @@ class ComplianceDraftValidatorTest {
         assertThrows(ComplianceValidationException.class, () -> ComplianceDraftValidator.owners(request));
     }
     @Test
-    void internationalAccountNumberAndCurrencyAreAccepted() throws Exception {
-        var request = json.readValue(
-                "{\"bank_accounts\":[{\"account_number\":\"GB82WEST12345698765432\",\"currency\":\"GBP\"}]}",
-                SaveBankAccountsRequest.class);
-        assertDoesNotThrow(() -> ComplianceDraftValidator.accounts(request));
-    }
-    @Test
     void unsafeOnlineLinkIsRejected() throws Exception {
         var request = json.readValue("{\"online_links\":[{\"platform\":\"website\",\"url\":\"javascript:alert(1)\"}]}",
                 SaveContactRequest.class);
         assertThrows(ComplianceValidationException.class, () -> ComplianceDraftValidator.contact(request));
-    }
-    @Test
-    void publicIdentityDocumentUrlIsRejected() throws Exception {
-        var request = json.readValue("{\"owners\":[{\"id_document_url\":\"https://public.test/passport.pdf\"}]}",
-                SaveOwnersRequest.class);
-        assertThrows(ComplianceValidationException.class, () -> ComplianceDraftValidator.owners(request));
     }
 }

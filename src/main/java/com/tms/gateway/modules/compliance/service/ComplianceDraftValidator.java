@@ -20,7 +20,6 @@ public final class ComplianceDraftValidator {
     public static void profile(SaveProfileRequest r) {
         if (supplied(r.businessType()) && !Set.of("starter", "registered").contains(r.businessType()))
             fail("profile", "business_type", "Use starter or registered");
-        currency(r.currency(), "profile");
     }
     public static void contact(SaveContactRequest r) {
         if (r.onlineLinks() != null)
@@ -55,25 +54,6 @@ public final class ComplianceDraftValidator {
                 if (birth.plusYears(18).isAfter(LocalDate.now(ZoneId.of("Africa/Lagos"))))
                     fail("owners", prefix + "date_of_birth", "Owner must be at least 18 years old");
             }
-            if (o.ownershipPercentage() != null && (o.ownershipPercentage() < 0 || o.ownershipPercentage() > 100))
-                fail("owners", prefix + "ownership_percentage", "Use a percentage from 0 to 100");
-            if (supplied(o.idDocumentUrl()))
-                fail("owners", prefix + "id_document_url", "Use a private document ID instead of a public URL");
         }
-    }
-    public static void accounts(SaveBankAccountsRequest r) {
-        long primary = r.bankAccounts().stream().filter(a -> Boolean.TRUE.equals(a.isPrimary())).count();
-        if (primary > 1)
-            fail("bank_accounts", "is_primary", "Only one account may be primary");
-        for (var account : r.bankAccounts())
-            currency(account.currency(), "bank_accounts");
-    }
-    private static void currency(String value, String step) {
-        if (supplied(value))
-            try {
-                Currency.getInstance(value);
-            } catch (IllegalArgumentException e) {
-                fail(step, "currency", "Use an ISO 4217 currency code");
-            }
     }
 }

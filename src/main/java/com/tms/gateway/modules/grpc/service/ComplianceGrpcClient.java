@@ -128,25 +128,9 @@ public class ComplianceGrpcClient {
             supplied.add("business_type");
             data.setBusinessType(r.businessType());
         }
-        if (r.businessName() != null) {
-            supplied.add("business_name");
-            data.setBusinessName(r.businessName());
-        }
-        if (r.rcNumber() != null) {
-            supplied.add("rc_number");
-            data.setRcNumber(r.rcNumber());
-        }
-        if (r.cacUrl() != null) {
-            supplied.add("cac_url");
-            data.setCacUrl(r.cacUrl());
-        }
         if (r.businessDescription() != null) {
             supplied.add("business_description");
             data.setBusinessDescription(r.businessDescription());
-        }
-        if (r.currency() != null) {
-            supplied.add("currency");
-            data.setCurrency(r.currency());
         }
         return result(invoke("saveProfile", () -> timed().saveMerchantProfileDraft(MerchantProfileDraftRequest
                 .newBuilder().setContext(context).setData(data).addAllSuppliedFields(supplied).build())));
@@ -167,22 +151,6 @@ public class ComplianceGrpcClient {
         if (r.address() != null) {
             supplied.add("address");
             data.setAddress(r.address());
-        }
-        if (r.city() != null) {
-            supplied.add("city");
-            data.setCity(r.city());
-        }
-        if (r.state() != null) {
-            supplied.add("state");
-            data.setState(r.state());
-        }
-        if (r.postalCode() != null) {
-            supplied.add("postal_code");
-            data.setPostalCode(r.postalCode());
-        }
-        if (r.country() != null) {
-            supplied.add("country");
-            data.setCountry(r.country());
         }
         if (r.supportEmail() != null) {
             supplied.add("support_email");
@@ -244,30 +212,6 @@ public class ComplianceGrpcClient {
                 data.setRole(r.role());
                 supplied.addFields("role");
             }
-            if (r.firstName() != null) {
-                data.setFirstName(r.firstName());
-                supplied.addFields("first_name");
-            }
-            if (r.lastName() != null) {
-                data.setLastName(r.lastName());
-                supplied.addFields("last_name");
-            }
-            if (r.email() != null) {
-                data.setEmail(r.email());
-                supplied.addFields("email");
-            }
-            if (r.phone() != null) {
-                data.setPhone(r.phone());
-                supplied.addFields("phone");
-            }
-            if (r.bvn() != null) {
-                data.setBvn(r.bvn());
-                supplied.addFields("bvn");
-            }
-            if (r.nin() != null) {
-                data.setNin(r.nin());
-                supplied.addFields("nin");
-            }
             if (r.dateOfBirth() != null) {
                 data.setDateOfBirth(r.dateOfBirth());
                 supplied.addFields("date_of_birth");
@@ -275,14 +219,6 @@ public class ComplianceGrpcClient {
             if (r.address() != null) {
                 data.setAddress(r.address());
                 supplied.addFields("address");
-            }
-            if (r.ownershipPercentage() != null) {
-                data.setOwnershipPercentage(r.ownershipPercentage());
-                supplied.addFields("ownership_percentage");
-            }
-            if (r.idDocumentUrl() != null) {
-                data.setIdDocumentUrl(r.idDocumentUrl());
-                supplied.addFields("id_document_url");
             }
             if (r.idDocumentType() != null) {
                 data.setIdDocumentType(r.idDocumentType());
@@ -295,10 +231,6 @@ public class ComplianceGrpcClient {
             if (r.nationality() != null) {
                 data.setNationality(r.nationality());
                 supplied.addFields("nationality");
-            }
-            if (r.state() != null) {
-                data.setState(r.state());
-                supplied.addFields("state");
             }
             if (r.lga() != null) {
                 data.setLga(r.lga());
@@ -345,14 +277,6 @@ public class ComplianceGrpcClient {
             if (r.accountName() != null) {
                 data.setAccountName(r.accountName());
                 supplied.addFields("account_name");
-            }
-            if (r.isPrimary() != null) {
-                data.setIsPrimary(r.isPrimary());
-                supplied.addFields("is_primary");
-            }
-            if (r.currency() != null) {
-                data.setCurrency(r.currency());
-                supplied.addFields("currency");
             }
             request.addBankAccounts(data).addAccountFields(supplied);
         }

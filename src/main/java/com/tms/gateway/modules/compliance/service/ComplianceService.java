@@ -59,7 +59,6 @@ public class ComplianceService {
         return checked(c, grpcClient.saveOwners(c, r.owners()));
     }
     public ComplianceResponse saveBankAccounts(MutationContext c, SaveBankAccountsRequest r) {
-        ComplianceDraftValidator.accounts(r);
         return checked(c, grpcClient.saveBankAccounts(c, r.bankAccounts()));
     }
     public ComplianceResponse saveRegistration(MutationContext c, SaveRegistrationRequest r) {
