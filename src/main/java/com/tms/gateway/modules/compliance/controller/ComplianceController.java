@@ -2,18 +2,39 @@ package com.tms.gateway.modules.compliance.controller;
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.compliance.dto.*;
+import com.tms.gateway.modules.compliance.schema.ComplianceSchema;
+import com.tms.gateway.modules.compliance.schema.ComplianceSchemaDefinitions;
 import com.tms.gateway.modules.compliance.service.ComplianceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/compliance")
 @RequiredArgsConstructor
 public class ComplianceController {
     private final ComplianceService service;
+
+    /**
+     * Returns the compliance schema for a given business type. The schema defines
+     * the steps, fields, and validation rules needed to complete compliance.
+     *
+     * @param businessType
+     *            "starter" or "registered"
+     * @return compliance schema with steps and field definitions
+     */
+    @GetMapping("/schema")
+    public ResponseEntity<ApiResponse<ComplianceSchema>> getSchema(@RequestParam("business_type") String businessType) {
+        ComplianceSchema schema = ComplianceSchemaDefinitions.forBusinessType(businessType);
+        return ResponseEntity.ok().cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic())
+                .body(ApiResponse.success(schema, "Schema retrieved"));
+    }
+
     @PostMapping("/start")
     public ResponseEntity<ApiResponse<ComplianceResponse>> start(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key) {
