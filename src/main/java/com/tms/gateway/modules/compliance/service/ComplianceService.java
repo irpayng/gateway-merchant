@@ -18,9 +18,18 @@ public class ComplianceService {
     private final ComplianceGrpcClient grpcClient;
     private final ComplianceMapper mapper;
     public MutationContext context(GatewayMerchantUserDetails user, String key, Long version) {
-        if (user == null || !user.isEnabled() || user.getUserId() == null || user.getMerchantId() == null
-                || user.getMerchantId().isBlank())
-            throw new AppException("Active merchant membership required", HttpStatus.FORBIDDEN);
+        if (user == null) {
+            throw new AppException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
+        if (!user.isEnabled()) {
+            throw new AppException("Account is disabled or not verified", HttpStatus.FORBIDDEN);
+        }
+        if (user.getUserId() == null) {
+            throw new AppException("User ID is missing", HttpStatus.FORBIDDEN);
+        }
+        if (user.getMerchantId() == null || user.getMerchantId().isBlank()) {
+            throw new AppException("Merchant ID is not assigned. Please contact support.", HttpStatus.FORBIDDEN);
+        }
         if (key != null && (!key.matches("[A-Za-z0-9._:-]{1,128}")))
             throw new AppException("Invalid Idempotency-Key");
         if (version != null && version < 0)

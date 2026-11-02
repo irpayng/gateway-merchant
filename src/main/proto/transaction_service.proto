@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.tms.gateway.grpc.transaction";
+
+package transaction;
+
+/**
+ * Transaction service gRPC interface. Only includes RPCs needed by
+ * gateway-merchant (name enquiry for payout validation).
+ */
+service TransactionService {
+  // Verify a bank account holder's name before initiating a payout.
+  rpc NameEnquiry (NameEnquiryGrpcRequest) returns (TransactionCommandResponse);
+}
+
+message NameEnquiryGrpcRequest {
+  string account_number = 1;
+  string bank_code = 2;
+}
+
+message TransactionCommandResponse {
+  bool success = 1;
+  string message = 2;
+  string reference = 3;
+  // JSON object with account details: {"account_name": "...", "account_number": "...", "bank_code": "..."}
+  string data_json = 4;
+}

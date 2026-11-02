@@ -57,4 +57,11 @@ public class UserData {
     @JsonProperty("compliance_required")
     @Builder.Default
     private boolean complianceRequired = true;
+
+    /**
+     * Business type: "starter" or "registered". Determined during compliance
+     * profile step.
+     */
+    @JsonProperty("business_type")
+    private String businessType;
 }

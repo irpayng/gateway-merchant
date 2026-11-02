@@ -56,7 +56,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     var user = userOpt.get();
 
                     // Verify token claims match the user record
-                    if (user.getId().equals(userId) && user.getMerchantId().equals(merchantId)) {
+                    // Handle null/empty merchantId for legacy users
+                    boolean merchantIdMatches = (merchantId == null || merchantId.isBlank())
+                            ? (user.getMerchantId() == null || user.getMerchantId().isBlank())
+                            : merchantId.equals(user.getMerchantId());
+
+                    if (user.getId().equals(userId) && merchantIdMatches) {
                         var userDetails = GatewayMerchantUserDetails.builder().id(user.getId())
                                 .merchantId(user.getMerchantId()).email(user.getEmail())
                                 .phoneNumber(user.getPhoneNumber()).businessName(user.getBusinessName())

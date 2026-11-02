@@ -97,6 +97,9 @@ public class ComplianceGrpcClient {
                 .getMerchantCompliance(MerchantComplianceRequest.newBuilder().setContext(context).build()));
         if (!r.getSuccess() && "NOT_FOUND".equals(r.getErrorCode()))
             return null;
+        // Handle case where merchant exists but hasn't started compliance yet
+        if (r.getSuccess() && (!r.hasCompliance() || r.getCompliance().getMerchantId().isBlank()))
+            return null;
         return result(r);
     }
     public ComplianceData saveProfile(MutationContext context,
@@ -186,6 +189,10 @@ public class ComplianceGrpcClient {
             com.tms.gateway.modules.compliance.dto.SaveRegistrationRequest r) {
         var data = RegistrationData.newBuilder();
         var supplied = new ArrayList<String>();
+        if (r.businessType() != null) {
+            supplied.add("business_type");
+            data.setBusinessType(r.businessType());
+        }
         if (r.registrationNumber() != null) {
             supplied.add("registration_number");
             data.setRegistrationNumber(r.registrationNumber());

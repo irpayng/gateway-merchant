@@ -22,6 +22,7 @@ public class GrpcProperties {
         private ServiceEndpoint kyc = new ServiceEndpoint();
         private ServiceEndpoint transaction = new ServiceEndpoint();
         private ServiceEndpoint notification = new ServiceEndpoint();
+        private ServiceEndpoint config = new ServiceEndpoint();
     }
 
     @Data
@@ -62,5 +63,13 @@ public class GrpcProperties {
 
     public int getNotificationServicePort() {
         return services.getNotification().getPort();
+    }
+
+    public String getConfigServiceHost() {
+        return services.getConfig().getHost();
+    }
+
+    public int getConfigServicePort() {
+        return services.getConfig().getPort();
     }
 }
