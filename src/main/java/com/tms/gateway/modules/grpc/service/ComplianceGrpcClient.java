@@ -12,6 +12,8 @@ import jakarta.annotation.PreDestroy;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,9 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ComplianceGrpcClient {
+    private static final Logger log = LoggerFactory.getLogger(ComplianceGrpcClient.class);
+    @Value("${grpc.debug-errors:false}")
+    private boolean debugErrors;
     private final GrpcProperties properties;
     private ManagedChannel channel;
     private PgMerchantComplianceServiceGrpc.PgMerchantComplianceServiceBlockingStub stub;
@@ -54,9 +59,15 @@ public class ComplianceGrpcClient {
         }
     }
     private <T> T invoke(String operation, Supplier<T> call) {
+        long started = System.nanoTime();
+        log.debug("KYC gRPC request operation={} target={}:{}", operation, properties.getKycServiceHost(),
+                properties.getKycServicePort());
         try {
             return call.get();
         } catch (StatusRuntimeException e) {
+            log.error("KYC gRPC failed operation={} target={}:{} status={} description={} elapsed_ms={}", operation,
+                    properties.getKycServiceHost(), properties.getKycServicePort(), e.getStatus().getCode(),
+                    e.getStatus().getDescription(), TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started), e);
             HttpStatus http = switch (e.getStatus().getCode()) {
                 case INVALID_ARGUMENT -> HttpStatus.UNPROCESSABLE_ENTITY;
                 case PERMISSION_DENIED -> HttpStatus.FORBIDDEN;
@@ -67,11 +78,18 @@ public class ComplianceGrpcClient {
                 case DEADLINE_EXCEEDED -> HttpStatus.GATEWAY_TIMEOUT;
                 default -> HttpStatus.BAD_GATEWAY;
             };
-            throw new AppException("KYC " + operation + " failed (" + e.getStatus().getCode().name() + ")", http);
+            String message = "KYC " + operation + " failed (" + e.getStatus().getCode().name() + ")";
+            if (debugErrors && e.getStatus().getDescription() != null)
+                message += ": " + e.getStatus().getDescription();
+            var failure = new AppException(message, http);
+            failure.initCause(e);
+            throw failure;
         }
     }
     private ComplianceData result(com.tms.gateway.modules.grpc.compliance.ComplianceResponse r) {
         if (!r.getSuccess()) {
+            log.warn("KYC rejected compliance operation error_code={} message={} field_error_count={}",
+                    r.getErrorCode(), r.getMessage(), r.getErrorsCount());
             if (!r.getErrorsList().isEmpty())
                 throw new ComplianceValidationException(r.getErrorsList().stream()
                         .map(e -> new CorrectionData(e.getStep(), e.getField(), e.getMessage())).toList());
@@ -84,8 +102,11 @@ public class ComplianceGrpcClient {
             };
             throw new AppException(r.getMessage().isBlank() ? "KYC rejected the operation" : r.getMessage(), status);
         }
-        if (!r.hasCompliance() || r.getCompliance().getMerchantId().isBlank())
+        if (!r.hasCompliance() || r.getCompliance().getMerchantId().isBlank()) {
+            log.error("KYC returned an incomplete compliance response has_compliance={} merchant_id_present={}",
+                    r.hasCompliance(), !r.getCompliance().getMerchantId().isBlank());
             throw new AppException("KYC returned an incomplete compliance response", HttpStatus.BAD_GATEWAY);
+        }
         return r.getCompliance();
     }
     public ComplianceData startCompliance(MutationContext context) {

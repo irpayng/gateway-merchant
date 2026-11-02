@@ -62,6 +62,26 @@ class ComplianceGrpcClientTest {
                 .getStatus().value());
     }
     @Test
+    void upstreamDescriptionIsHiddenByDefaultAndCauseIsRetained() {
+        var upstream = Status.INTERNAL.withDescription("Profile storage failed").asRuntimeException();
+        when(stub.startMerchantCompliance(any())).thenThrow(upstream);
+        var error = assertThrows(AppException.class, () -> client.startCompliance(context));
+        assertEquals(502, error.getStatus().value());
+        assertEquals("KYC start failed (INTERNAL)", error.getMessage());
+        assertSame(upstream, error.getCause());
+    }
+    @Test
+    void debugModeReturnsActualProfileGrpcDescription() throws Exception {
+        ReflectionTestUtils.setField(client, "debugErrors", true);
+        when(stub.saveMerchantProfileDraft(any()))
+                .thenThrow(Status.INTERNAL.withDescription("Profile storage failed").asRuntimeException());
+        var request = new ObjectMapper().readValue("{}",
+                com.tms.gateway.modules.compliance.dto.SaveProfileRequest.class);
+        var error = assertThrows(AppException.class, () -> client.saveProfile(context, request));
+        assertEquals(502, error.getStatus().value());
+        assertEquals("KYC saveProfile failed (INTERNAL): Profile storage failed", error.getMessage());
+    }
+    @Test
     void submissionRetainsFieldErrors() {
         when(stub.acceptAgreementAndSubmit(any()))
                 .thenReturn(
