@@ -221,6 +221,10 @@ public class ComplianceGrpcClient {
             com.tms.gateway.modules.compliance.dto.SaveRegistrationRequest r) {
         var data = RegistrationData.newBuilder();
         var supplied = new ArrayList<String>();
+        if (r.businessType() != null) {
+            supplied.add("business_type");
+            data.setBusinessType(r.businessType());
+        }
         if (r.registrationNumber() != null) {
             supplied.add("registration_number");
             data.setRegistrationNumber(r.registrationNumber());
