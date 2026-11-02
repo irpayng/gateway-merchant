@@ -86,7 +86,7 @@ public class AuthService {
                 .complianceStatus(compliance == null ? "none" : compliance.status())
                 .complianceStep(compliance == null ? 0 : compliance.currentStep())
                 .complianceRequired(compliance == null || !"approved".equals(compliance.status()))
-                .businessType(extractBusinessType(compliance)).build();
+                .businessType(extractBusinessType(authResponse, compliance)).build();
 
         log.info("Login successful for userId={} merchantId={}", authResponse.getUserId(),
                 authResponse.getMerchantId());
@@ -156,6 +156,17 @@ public class AuthService {
             }
         }
 
+        // Get businessType from local replica (populated on login)
+        String businessType = null;
+        var localUser = userRepository.findById(userDetails.getId());
+        if (localUser.isPresent() && localUser.get().getBusinessType() != null) {
+            businessType = localUser.get().getBusinessType();
+        }
+        // Fallback to compliance profile if local replica doesn't have it
+        if (businessType == null && compliance != null && compliance.profile() != null) {
+            businessType = compliance.profile().businessType();
+        }
+
         return UserData.builder().id(userDetails.getId()).merchantId(userDetails.getMerchantId())
                 .email(userDetails.getEmail()).phoneNumber(userDetails.getPhoneNumber())
                 .businessName(userDetails.getBusinessName()).firstName(userDetails.getFirstName())
@@ -163,7 +174,7 @@ public class AuthService {
                 .complianceStatus(compliance == null ? "none" : compliance.status())
                 .complianceStep(compliance == null ? 0 : compliance.currentStep())
                 .complianceRequired(compliance == null || !"approved".equals(compliance.status()))
-                .businessType(extractBusinessType(compliance)).build();
+                .businessType(businessType).build();
     }
 
     /**
@@ -182,6 +193,7 @@ public class AuthService {
                 user.setEmail(auth.getEmail());
                 user.setPhoneNumber(auth.getPhoneNumber());
                 user.setBusinessName(auth.getBusinessName());
+                user.setBusinessType(auth.getBusinessType());
                 user.setFirstName(auth.getFirstName());
                 user.setLastName(auth.getLastName());
                 user.setUpdatedAt(now);
@@ -191,8 +203,10 @@ public class AuthService {
                 // Create new replica entry (first login before Kafka sync)
                 PgMerchantUserEntity user = PgMerchantUserEntity.builder().id(auth.getUserId())
                         .merchantId(auth.getMerchantId()).email(auth.getEmail()).phoneNumber(auth.getPhoneNumber())
-                        .businessName(auth.getBusinessName()).firstName(auth.getFirstName())
-                        .lastName(auth.getLastName()).emailVerifiedAt(now) // Must be verified to login
+                        .businessName(auth.getBusinessName()).businessType(auth.getBusinessType())
+                        .firstName(auth.getFirstName()).lastName(auth.getLastName()).emailVerifiedAt(now) // Must be
+                                                                                                          // verified to
+                                                                                                          // login
                         .createdAt(now).updatedAt(now).syncedAt(now).build();
                 userRepository.save(user);
             }
@@ -214,13 +228,19 @@ public class AuthService {
     }
 
     /**
-     * Extract business type from compliance profile. Returns null if compliance or
-     * profile is not available.
+     * Extract business type from auth response (primary) or compliance profile
+     * (fallback). Auth response contains the registration-time business type stored
+     * in tms-user; compliance profile contains the value from the KYC profile step.
      */
-    private String extractBusinessType(ComplianceResponse compliance) {
-        if (compliance == null || compliance.profile() == null) {
-            return null;
+    private String extractBusinessType(AuthPgMerchantResponse auth, ComplianceResponse compliance) {
+        // Primary: from tms-user (registration-time value)
+        if (auth != null && auth.getBusinessType() != null && !auth.getBusinessType().isBlank()) {
+            return auth.getBusinessType();
         }
-        return compliance.profile().businessType();
+        // Fallback: from compliance profile (KYC step value)
+        if (compliance != null && compliance.profile() != null && compliance.profile().businessType() != null) {
+            return compliance.profile().businessType();
+        }
+        return null;
     }
 }

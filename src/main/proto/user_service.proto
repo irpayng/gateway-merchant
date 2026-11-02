@@ -41,6 +41,8 @@ message AuthPgMerchantResponse {
   string business_name = 8;
   string first_name = 9;
   string last_name = 10;
+  // "starter" or "registered" - captured during registration
+  string business_type = 11;
 }
 
 // ── PG Merchant registration messages ──

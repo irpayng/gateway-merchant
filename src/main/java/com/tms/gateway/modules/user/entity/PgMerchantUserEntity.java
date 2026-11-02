@@ -43,6 +43,13 @@ public class PgMerchantUserEntity {
     @Column(name = "business_name")
     private String businessName;
 
+    /**
+     * Business registration type chosen at signup: "starter" (unregistered) or
+     * "registered" (CAC registered). Used to route the compliance flow.
+     */
+    @Column(name = "business_type", length = 20)
+    private String businessType;
+
     @Column(name = "first_name", length = 100)
     private String firstName;
 
