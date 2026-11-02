@@ -43,13 +43,12 @@ public class ConfigService {
      */
     @Cacheable(value = "banks", unless = "#result == null || #result.isEmpty()")
     public List<BankResponse> getBanks() {
-        log.debug("Fetching bank codes from config service");
+        log.debug("Fetching bank codes from config service at {}:{}", properties.getConfigServiceHost(),
+                properties.getConfigServicePort());
 
         try {
-            // tms-config runs on the same port as its gRPC service for REST
-            // Use transaction service host/port as a proxy - in k8s config-service is
-            // separate
-            String url = String.format("http://%s:%d/bank-codes/all", getConfigServiceHost(), getConfigServicePort());
+            String url = String.format("http://%s:%d/bank-codes/all", properties.getConfigServiceHost(),
+                    properties.getConfigServicePort());
 
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(30))
                     .header("Accept", "application/json").GET().build();
@@ -57,7 +56,7 @@ public class ConfigService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 400) {
-                log.error("Config service returned error: status={}", response.statusCode());
+                log.error("Config service returned error: status={}, body={}", response.statusCode(), response.body());
                 throw new AppException("Failed to fetch banks", HttpStatus.BAD_GATEWAY);
             }
 
@@ -80,7 +79,7 @@ public class ConfigService {
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Failed to fetch banks: {}", e.getMessage());
+            log.error("Failed to fetch banks: {}", e.getMessage(), e);
             throw new AppException("Failed to fetch banks: " + e.getMessage(), HttpStatus.BAD_GATEWAY);
         }
     }
@@ -92,10 +91,12 @@ public class ConfigService {
      */
     @Cacheable(value = "banks-most-used", unless = "#result == null || #result.isEmpty()")
     public List<BankResponse> getMostUsedBanks() {
-        log.debug("Fetching most used banks from config service");
+        log.debug("Fetching most used banks from config service at {}:{}", properties.getConfigServiceHost(),
+                properties.getConfigServicePort());
 
         try {
-            String url = String.format("http://%s:%d/banks/most-used", getConfigServiceHost(), getConfigServicePort());
+            String url = String.format("http://%s:%d/banks/most-used", properties.getConfigServiceHost(),
+                    properties.getConfigServicePort());
 
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).timeout(Duration.ofSeconds(30))
                     .header("Accept", "application/json").GET().build();
@@ -103,7 +104,7 @@ public class ConfigService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() >= 400) {
-                log.error("Config service returned error: status={}", response.statusCode());
+                log.error("Config service returned error: status={}, body={}", response.statusCode(), response.body());
                 throw new AppException("Failed to fetch banks", HttpStatus.BAD_GATEWAY);
             }
 
@@ -125,32 +126,8 @@ public class ConfigService {
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Failed to fetch most used banks: {}", e.getMessage());
+            log.error("Failed to fetch most used banks: {}", e.getMessage(), e);
             throw new AppException("Failed to fetch banks: " + e.getMessage(), HttpStatus.BAD_GATEWAY);
         }
-    }
-
-    private String getConfigServiceHost() {
-        // In production, config-service is at CONFIG_SERVICE_HOST
-        // For now, use the transaction service host as it typically points to the
-        // cluster
-        String host = System.getenv("CONFIG_SERVICE_HOST");
-        if (host != null && !host.isBlank()) {
-            return host;
-        }
-        // Fallback to localhost for local dev
-        return "localhost";
-    }
-
-    private int getConfigServicePort() {
-        String port = System.getenv("CONFIG_SERVICE_PORT");
-        if (port != null && !port.isBlank()) {
-            try {
-                return Integer.parseInt(port);
-            } catch (NumberFormatException ignored) {
-            }
-        }
-        // Default config-service REST port
-        return 8080;
     }
 }
