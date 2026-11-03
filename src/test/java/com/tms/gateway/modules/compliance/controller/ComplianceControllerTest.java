@@ -85,6 +85,7 @@ class ComplianceControllerTest {
                           "same_as_support_email": false,
                           "phone": "+2348012345678",
                           "address": "1 Main Street",
+                          "state": "Lagos",
                           "lga": "ikeja",
                           "business_address_document_id": "doc-1",
                           "online_links": [{"platform": "website", "url": "https://example.com"}]
@@ -100,7 +101,42 @@ class ComplianceControllerTest {
                 argThat(context -> context.getActorUserId() == 4 && context.getMerchantId().equals("m1")
                         && context.getExpectedVersion() == 6),
                 argThat(request -> "support@example.com".equals(request.supportEmail())
+                        && "Lagos".equals(request.state()) && "ikeja".equals(request.lga())
                         && request.onlineLinks().size() == 1));
+    }
+
+    @Test
+    void contactEndpointForwardsStateAndLga() throws Exception {
+        when(client.saveContact(any(), any())).thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6)
+                .setStatus("draft").setContact(com.tms.gateway.modules.grpc.compliance.ContactData.newBuilder()
+                        .setState("Lagos").setLga("ikeja"))
+                .build());
+
+        mvc.perform(
+                put("/compliance/contact").header("Idempotency-Key", "contact-state").header("X-Expected-Version", "5")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"state\":\"Lagos\",\"lga\":\"ikeja\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.contact.state").value("Lagos"))
+                .andExpect(jsonPath("$.data.contact.lga").value("ikeja"));
+
+        verify(client).saveContact(any(),
+                argThat(request -> "Lagos".equals(request.state()) && "ikeja".equals(request.lga())));
+    }
+
+    @Test
+    void ownersEndpointForwardsStateAndLga() throws Exception {
+        when(client.saveOwners(any(), any())).thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6)
+                .setStatus("draft").addOwners(com.tms.gateway.modules.grpc.compliance.OwnerData.newBuilder()
+                        .setState("Lagos").setLga("ikeja"))
+                .build());
+
+        mvc.perform(put("/compliance/owners").header("Idempotency-Key", "owner-state").header("X-Expected-Version", "5")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"owners\":[{\"state\":\"Lagos\",\"lga\":\"ikeja\"}]}")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.owners[0].state").value("Lagos"))
+                .andExpect(jsonPath("$.data.owners[0].lga").value("ikeja"));
+
+        verify(client).saveOwners(any(), argThat(owners -> owners.size() == 1
+                && "Lagos".equals(owners.getFirst().state()) && "ikeja".equals(owners.getFirst().lga())));
     }
 
     @Test
@@ -150,6 +186,7 @@ class ComplianceControllerTest {
                             "id_document_id": "doc-id",
                             "address": "2 Home Street",
                             "same_as_business_address": false,
+                            "state": "Lagos",
                             "lga": "ikeja",
                             "proof_of_address_document_id": "doc-address"
                           }]
@@ -159,7 +196,8 @@ class ComplianceControllerTest {
         verify(client).saveOwners(any(),
                 argThat(shareholders -> shareholders.size() == 1
                         && "Jane Doe".equals(shareholders.getFirst().fullName())
-                        && "1980-04-15".equals(shareholders.getFirst().dateOfBirth())));
+                        && "1980-04-15".equals(shareholders.getFirst().dateOfBirth())
+                        && "Lagos".equals(shareholders.getFirst().state())));
     }
 
     @Test
@@ -198,5 +236,24 @@ class ComplianceControllerTest {
         mvc.perform(put("/compliance/profile").header("Idempotency-Key", "profile-1").header("X-Expected-Version", "4")
                 .contentType(MediaType.APPLICATION_JSON).content("{broken")).andExpect(status().isBadRequest());
         verifyNoInteractions(client);
+    }
+
+    @Test
+    void schemaIncludesStateAndLgaForContactAndOwnerSections() throws Exception {
+        mvc.perform(get("/compliance/schema").param("business_type", "starter")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.steps[1].fields[6].name").value("state"))
+                .andExpect(jsonPath("$.data.steps[1].fields[6].options_ref").value("states"))
+                .andExpect(jsonPath("$.data.steps[1].fields[7].name").value("lga"))
+                .andExpect(jsonPath("$.data.steps[2].fields[7].name").value("state"))
+                .andExpect(jsonPath("$.data.steps[2].fields[7].options_ref").value("states"))
+                .andExpect(jsonPath("$.data.steps[2].fields[8].name").value("lga"));
+
+        mvc.perform(get("/compliance/schema").param("business_type", "registered")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.steps[0].fields[12].name").value("state"))
+                .andExpect(jsonPath("$.data.steps[0].fields[12].options_ref").value("states"))
+                .andExpect(jsonPath("$.data.steps[0].fields[13].name").value("lga"))
+                .andExpect(jsonPath("$.data.steps[2].fields[8].name").value("state"))
+                .andExpect(jsonPath("$.data.steps[2].fields[8].options_ref").value("states"))
+                .andExpect(jsonPath("$.data.steps[2].fields[9].name").value("lga"));
     }
 }

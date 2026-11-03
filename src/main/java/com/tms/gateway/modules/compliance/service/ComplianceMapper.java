@@ -29,13 +29,13 @@ public class ComplianceMapper {
     }
     private ContactData contact(com.tms.gateway.modules.grpc.compliance.ContactData d) {
         return new ContactData(d.getEmail(), d.getPhone(), d.getAddress(), d.getSupportEmail(), d.getDisputeEmail(),
-                d.getLga(), d.getSameAsSupportEmail(), d.getBusinessAddressDocumentId(),
+                d.getState(), d.getLga(), d.getSameAsSupportEmail(), d.getBusinessAddressDocumentId(),
                 d.getOnlineLinksList().stream().map(l -> new OnlineLink(l.getPlatform(), l.getUrl())).toList());
     }
     private OwnerData owner(com.tms.gateway.modules.grpc.compliance.OwnerData d) {
         return new OwnerData(d.getId(), d.getRole(), d.getDateOfBirth(), d.getAddress(), d.getIdDocumentType(),
-                d.getFullName(), d.getNationality(), d.getLga(), d.getSameAsBusinessAddress(), d.getIdDocumentId(),
-                d.getProofOfAddressDocumentId());
+                d.getFullName(), d.getNationality(), d.getState(), d.getLga(), d.getSameAsBusinessAddress(),
+                d.getIdDocumentId(), d.getProofOfAddressDocumentId());
     }
     private BankAccountData bankAccount(com.tms.gateway.modules.grpc.compliance.BankAccountData d) {
         return new BankAccountData(d.getId(), d.getBankCode(), d.getBankName(), d.getAccountNumber(),

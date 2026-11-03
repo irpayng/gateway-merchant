@@ -22,16 +22,16 @@ public record ComplianceResponse(@JsonProperty("compliance_id") Long complianceI
     }
     public record ContactData(@JsonProperty("email") String email, @JsonProperty("phone") String phone,
             @JsonProperty("address") String address, @JsonProperty("support_email") String supportEmail,
-            @JsonProperty("dispute_email") String disputeEmail, @JsonProperty("lga") String lga,
-            @JsonProperty("same_as_support_email") Boolean sameAsSupportEmail,
+            @JsonProperty("dispute_email") String disputeEmail, @JsonProperty("state") String state,
+            @JsonProperty("lga") String lga, @JsonProperty("same_as_support_email") Boolean sameAsSupportEmail,
             @JsonProperty("business_address_document_id") String businessAddressDocumentId,
             @JsonProperty("online_links") List<OnlineLink> onlineLinks) {
     }
     public record OwnerData(@JsonProperty("id") Long id, @JsonProperty("role") String role,
             @JsonProperty("date_of_birth") String dateOfBirth, @JsonProperty("address") String address,
             @JsonProperty("id_document_type") String idDocumentType, @JsonProperty("full_name") String fullName,
-            @JsonProperty("nationality") String nationality, @JsonProperty("lga") String lga,
-            @JsonProperty("same_as_business_address") Boolean sameAsBusinessAddress,
+            @JsonProperty("nationality") String nationality, @JsonProperty("state") String state,
+            @JsonProperty("lga") String lga, @JsonProperty("same_as_business_address") Boolean sameAsBusinessAddress,
             @JsonProperty("id_document_id") String idDocumentId,
             @JsonProperty("proof_of_address_document_id") String proofOfAddressDocumentId) {
     }

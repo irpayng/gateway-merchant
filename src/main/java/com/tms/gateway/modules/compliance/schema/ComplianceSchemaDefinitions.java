@@ -67,7 +67,9 @@ public final class ComplianceSchemaDefinitions {
                 builder("phone", "Phone Number", PHONE).required().placeholder("Enter phone number").build(),
                 builder("address", "Business Address", TEXT).required().placeholder("Enter your business address")
                         .build(),
-                builder("lga", "Local Government Area", SELECT).required().optionsRef("lgas").build(),
+                builder("state", "State", SELECT).required().optionsRef("states").build(),
+                builder("lga", "Local Government Area", SELECT).required().optionsRef("lgas")
+                        .hint("Choose from the selected state").build(),
                 onlineLinksField()).build();
     }
 
@@ -83,7 +85,9 @@ public final class ComplianceSchemaDefinitions {
                         .build(),
                 builder("address", "Home address", TEXT).required().placeholder("Enter your home address").build(),
                 builder("same_as_business_address", "Same as business address", CHECKBOX).build(),
-                builder("lga", "LGA", SELECT).required().optionsRef("lgas").build(),
+                builder("state", "State", SELECT).required().optionsRef("states").build(),
+                builder("lga", "LGA", SELECT).required().optionsRef("lgas").hint("Choose from the selected state")
+                        .build(),
                 builder("proof_of_address_document_id", "Upload Proof of Address", FILE).required().hint(
                         "Please upload a valid utility bill not older than 3 months (Electricity, Water or Waste Bill)")
                         .build())
@@ -122,7 +126,9 @@ public final class ComplianceSchemaDefinitions {
                         builder("phone", "Phone Number", PHONE).required().placeholder("Enter phone number").build(),
                         builder("address", "Business Address", TEXT).required()
                                 .placeholder("Enter your business address").build(),
-                        builder("lga", "Local Government Area", SELECT).required().optionsRef("lgas").build(),
+                        builder("state", "State", SELECT).required().optionsRef("states").build(),
+                        builder("lga", "Local Government Area", SELECT).required().optionsRef("lgas")
+                                .hint("Choose from the selected state").build(),
                         builder("business_address_document_id", "Upload Proof of Business Address", FILE).required()
                                 .hint("Please upload a valid utility bill not older than 3 months (Electricity, Water or Waste Bill)")
                                 .build(),
@@ -156,7 +162,9 @@ public final class ComplianceSchemaDefinitions {
                         builder("address", "Home address", TEXT).required().placeholder("Enter your home address")
                                 .build(),
                         builder("same_as_business_address", "Same as business address", CHECKBOX).build(),
-                        builder("lga", "LGA", SELECT).required().optionsRef("lgas").build(),
+                        builder("state", "State", SELECT).required().optionsRef("states").build(),
+                        builder("lga", "LGA", SELECT).required().optionsRef("lgas")
+                                .hint("Choose from the selected state").build(),
                         builder("proof_of_address_document_id", "Upload Proof of Address", FILE).required().hint(
                                 "Please upload a valid utility bill not older than 3 months (Electricity, Water or Waste Bill)")
                                 .build())

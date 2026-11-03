@@ -81,13 +81,14 @@ public class ComplianceService {
         SaveProfileRequest profile = new SaveProfileRequest(r.country(), r.industry(), r.category(), r.tradingName(),
                 r.salesVolume(), r.businessType(), r.businessDescription());
         SaveContactRequest contact = new SaveContactRequest(null, r.phone(), r.address(), r.supportEmail(),
-                r.disputeEmail(), r.lga(), r.sameAsSupportEmail(), r.businessAddressDocumentId(), r.onlineLinks());
+                r.disputeEmail(), r.state(), r.lga(), r.sameAsSupportEmail(), r.businessAddressDocumentId(),
+                r.onlineLinks());
 
         boolean hasProfileFields = r.country() != null || r.industry() != null || r.category() != null
                 || r.tradingName() != null || r.salesVolume() != null || r.businessType() != null
                 || r.businessDescription() != null;
         boolean hasContactFields = r.phone() != null || r.address() != null || r.supportEmail() != null
-                || r.disputeEmail() != null || r.lga() != null || r.sameAsSupportEmail() != null
+                || r.disputeEmail() != null || r.state() != null || r.lga() != null || r.sameAsSupportEmail() != null
                 || r.businessAddressDocumentId() != null || r.onlineLinks() != null;
         if (!hasProfileFields && !hasContactFields)
             throw new ComplianceValidationException(List.of(new ComplianceResponse.CorrectionData("business_details",
@@ -129,9 +130,9 @@ public class ComplianceService {
             if (dateOfBirth != null && !dateOfBirth.isEmpty())
                 dateOfBirth = LocalDate.parse(dateOfBirth, DateTimeFormatter.ofPattern("dd-MM-uuuu")).toString();
             return new SaveOwnerRequest(null, shareholder.role(), dateOfBirth, shareholder.address(),
-                    shareholder.idDocumentType(), shareholder.fullName(), shareholder.nationality(), shareholder.lga(),
-                    shareholder.sameAsBusinessAddress(), shareholder.idDocumentId(),
-                    shareholder.proofOfAddressDocumentId());
+                    shareholder.idDocumentType(), shareholder.fullName(), shareholder.nationality(),
+                    shareholder.state(), shareholder.lga(), shareholder.sameAsBusinessAddress(),
+                    shareholder.idDocumentId(), shareholder.proofOfAddressDocumentId());
         }).toList();
         return checkedRequired(c, grpcClient.saveOwners(c, owners));
     }

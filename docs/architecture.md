@@ -238,8 +238,8 @@ PG merchants must complete a 5-step compliance process before accessing the dash
 | Step | Endpoint | Data Collected |
 |------|----------|----------------|
 | 1 | `PUT /compliance/profile` | Business type, industry, country, trading name |
-| 2 | `PUT /compliance/contact` | Email, phone, address, city, state, country |
-| 3 | `PUT /compliance/owners` | Directors/shareholders (multiple allowed) |
+| 2 | `PUT /compliance/contact` | Email, phone, address, state, LGA |
+| 3 | `PUT /compliance/owners` | Directors/shareholders (multiple allowed; state and LGA per owner) |
 | 4 | `PUT /compliance/bank-accounts` | Settlement accounts (multiple allowed) |
 | 5 | `PUT /compliance/agreement` | Terms acceptance with IP/user-agent |
 

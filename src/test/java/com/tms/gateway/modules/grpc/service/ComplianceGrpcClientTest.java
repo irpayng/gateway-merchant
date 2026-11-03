@@ -43,12 +43,27 @@ class ComplianceGrpcClientTest {
     @Test
     void explicitFalseIsNotTreatedAsOmitted() throws Exception {
         when(stub.saveMerchantContactDraft(any())).thenReturn(success());
-        var r = new ObjectMapper().readValue("{\"same_as_support_email\":false}",
+        var r = new ObjectMapper().readValue("{\"same_as_support_email\":false,\"state\":\"Lagos\"}",
                 com.tms.gateway.modules.compliance.dto.SaveContactRequest.class);
         client.saveContact(context, r);
         var captor = ArgumentCaptor.forClass(MerchantContactDraftRequest.class);
         verify(stub).saveMerchantContactDraft(captor.capture());
-        assertEquals(java.util.List.of("same_as_support_email"), captor.getValue().getSuppliedFieldsList());
+        assertEquals(java.util.List.of("state", "same_as_support_email"), captor.getValue().getSuppliedFieldsList());
+        assertEquals("Lagos", captor.getValue().getData().getState());
+    }
+
+    @Test
+    void ownerStateIsForwardedWithPresenceToKyc() {
+        when(stub.saveMerchantOwnersDraft(any())).thenReturn(success());
+        var owner = new com.tms.gateway.modules.compliance.dto.SaveOwnerRequest(null, null, null, null, null, null,
+                null, "Lagos", null, null, null, null);
+
+        client.saveOwners(context, java.util.List.of(owner));
+
+        var captor = ArgumentCaptor.forClass(MerchantOwnersDraftRequest.class);
+        verify(stub).saveMerchantOwnersDraft(captor.capture());
+        assertEquals("Lagos", captor.getValue().getOwners(0).getState());
+        assertEquals(java.util.List.of("state"), captor.getValue().getOwnerFields(0).getFieldsList());
     }
     @Test
     void serverWithoutV2FailsClosed() {

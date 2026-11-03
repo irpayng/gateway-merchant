@@ -12,7 +12,7 @@ public record RegisteredBusinessDetailsRequest(@JsonProperty("country") String c
         @JsonProperty("business_type") String businessType, @JsonProperty("support_email") @Email String supportEmail,
         @JsonProperty("dispute_email") @Email String disputeEmail,
         @JsonProperty("same_as_support_email") Boolean sameAsSupportEmail, @JsonProperty("phone") String phone,
-        @JsonProperty("address") String address, @JsonProperty("lga") String lga,
+        @JsonProperty("address") String address, @JsonProperty("state") String state, @JsonProperty("lga") String lga,
         @JsonProperty("business_address_document_id") String businessAddressDocumentId,
         @JsonProperty("online_links") @Valid List<OnlineLink> onlineLinks) {
 }

@@ -30,12 +30,14 @@ class ComplianceDesignContractTest {
                 .build();
         var response = json.valueToTree(new ComplianceMapper().toResponse(data));
         absent(response.get("profile"), "business_name", "rc_number", "cac_url", "currency");
-        absent(response.get("contact"), "city", "state", "postal_code", "country");
-        absent(response.get("owners").get(0), "first_name", "last_name", "email", "phone", "bvn", "nin", "state",
+        absent(response.get("contact"), "city", "postal_code", "country");
+        absent(response.get("owners").get(0), "first_name", "last_name", "email", "phone", "bvn", "nin",
                 "ownership_percentage", "id_document_url");
         absent(response.get("bank_accounts").get(0), "is_primary", "currency");
         absent(response.get("agreement"), "privacy_accepted");
         assertEquals("ACME", response.at("/profile/trading_name").asText());
+        assertEquals("Lagos", response.at("/contact/state").asText());
+        assertEquals("Lagos", response.at("/owners/0/state").asText());
         assertEquals("John Doe", response.at("/owners/0/full_name").asText());
         assertEquals("1234567890", response.at("/bank_accounts/0/account_number").asText());
     }
@@ -43,10 +45,19 @@ class ComplianceDesignContractTest {
     @Test
     void removedFieldsAreAbsentFromRequestContracts() {
         absent(json.valueToTree(empty(SaveProfileRequest.class)), "business_name", "rc_number", "cac_url", "currency");
-        absent(json.valueToTree(empty(SaveContactRequest.class)), "city", "state", "postal_code", "country");
+        absent(json.valueToTree(empty(SaveContactRequest.class)), "city", "postal_code", "country");
         absent(json.valueToTree(empty(SaveOwnerRequest.class)), "first_name", "last_name", "email", "phone", "bvn",
-                "nin", "state", "ownership_percentage", "id_document_url");
+                "nin", "ownership_percentage", "id_document_url");
         absent(json.valueToTree(empty(SaveBankAccountRequest.class)), "is_primary", "currency");
+    }
+
+    @Test
+    void stateIsExposedOnContactAndOwnerRequests() {
+        var contact = new SaveContactRequest(null, null, null, null, null, "Lagos", "ikeja", null, null, null);
+        var owner = new SaveOwnerRequest(null, null, null, null, null, null, null, "Lagos", "ikeja", null, null, null);
+
+        assertEquals("Lagos", json.valueToTree(contact).get("state").asText());
+        assertEquals("Lagos", json.valueToTree(owner).get("state").asText());
     }
 
     private Object empty(Class<?> type) {

@@ -9,8 +9,8 @@ import java.util.List;
  */
 public record SaveContactRequest(@JsonProperty("email") @Email String email, @JsonProperty("phone") String phone,
         @JsonProperty("address") String address, @JsonProperty("support_email") @Email String supportEmail,
-        @JsonProperty("dispute_email") @Email String disputeEmail, @JsonProperty("lga") String lga,
-        @JsonProperty("same_as_support_email") Boolean sameAsSupportEmail,
+        @JsonProperty("dispute_email") @Email String disputeEmail, @JsonProperty("state") String state,
+        @JsonProperty("lga") String lga, @JsonProperty("same_as_support_email") Boolean sameAsSupportEmail,
         @JsonProperty("business_address_document_id") String businessAddressDocumentId,
         @JsonProperty("online_links") @Valid List<OnlineLink> onlineLinks) {
 }

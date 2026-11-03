@@ -184,6 +184,10 @@ public class ComplianceGrpcClient {
             supplied.add("dispute_email");
             data.setDisputeEmail(r.disputeEmail());
         }
+        if (r.state() != null) {
+            supplied.add("state");
+            data.setState(r.state());
+        }
         if (r.lga() != null) {
             supplied.add("lga");
             data.setLga(r.lga());
@@ -259,6 +263,10 @@ public class ComplianceGrpcClient {
             if (r.nationality() != null) {
                 data.setNationality(r.nationality());
                 supplied.addFields("nationality");
+            }
+            if (r.state() != null) {
+                data.setState(r.state());
+                supplied.addFields("state");
             }
             if (r.lga() != null) {
                 data.setLga(r.lga());
