@@ -9,6 +9,8 @@ import io.grpc.*;
 import io.grpc.stub.MetadataUtils;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -225,6 +227,117 @@ public class ComplianceGrpcClient {
         return result(
                 invoke("saveRegistration", () -> timed().saveMerchantRegistrationDraft(MerchantRegistrationDraftRequest
                         .newBuilder().setContext(context).setData(data).addAllSuppliedFields(supplied).build())));
+    }
+    public ComplianceData saveRegisteredBusinessDetails(MutationContext context, RegisteredBusinessDetailsRequest r) {
+        var data = RegisteredBusinessDetailsData.newBuilder();
+        var supplied = new ArrayList<String>();
+        if (r.country() != null) {
+            supplied.add("country");
+            data.setCountry(r.country());
+        }
+        if (r.industry() != null) {
+            supplied.add("industry");
+            data.setIndustry(r.industry());
+        }
+        if (r.category() != null) {
+            supplied.add("category");
+            data.setCategory(r.category());
+        }
+        if (r.tradingName() != null) {
+            supplied.add("trading_name");
+            data.setTradingName(r.tradingName());
+        }
+        if (r.salesVolume() != null) {
+            supplied.add("sales_volume");
+            data.setSalesVolume(r.salesVolume());
+        }
+        if (r.businessDescription() != null) {
+            supplied.add("business_description");
+            data.setBusinessDescription(r.businessDescription());
+        }
+        if (r.businessType() != null) {
+            supplied.add("business_type");
+            data.setBusinessType(r.businessType());
+        }
+        if (r.supportEmail() != null) {
+            supplied.add("support_email");
+            data.setSupportEmail(r.supportEmail());
+        }
+        if (r.disputeEmail() != null) {
+            supplied.add("dispute_email");
+            data.setDisputeEmail(r.disputeEmail());
+        }
+        if (r.sameAsSupportEmail() != null) {
+            supplied.add("same_as_support_email");
+            data.setSameAsSupportEmail(r.sameAsSupportEmail());
+        }
+        if (r.phone() != null) {
+            supplied.add("phone");
+            data.setPhone(r.phone());
+        }
+        if (r.address() != null) {
+            supplied.add("address");
+            data.setAddress(r.address());
+        }
+        if (r.lga() != null) {
+            supplied.add("lga");
+            data.setLga(r.lga());
+        }
+        if (r.businessAddressDocumentId() != null) {
+            supplied.add("business_address_document_id");
+            data.setBusinessAddressDocumentId(r.businessAddressDocumentId());
+        }
+        if (r.onlineLinks() != null) {
+            supplied.add("online_links");
+            data.addAllOnlineLinks(r.onlineLinks().stream()
+                    .map(link -> OnlineLinkData.newBuilder().setPlatform(link.platform() == null ? "" : link.platform())
+                            .setUrl(link.url() == null ? "" : link.url()).build())
+                    .toList());
+        }
+        var request = RegisteredBusinessDetailsDraftRequest.newBuilder().setContext(context).setData(data)
+                .addAllSuppliedFields(supplied).build();
+        return result(
+                invoke("save registered business details", () -> timed().saveRegisteredBusinessDetailsDraft(request)));
+    }
+    public ComplianceData saveRegisteredBusinessRegistration(MutationContext context,
+            RegisteredBusinessRegistrationRequest r) {
+        var data = RegisteredBusinessRegistrationData.newBuilder();
+        var supplied = new ArrayList<String>();
+        if (r.registrationNumber() != null) {
+            supplied.add("registration_number");
+            data.setRegistrationNumber(r.registrationNumber());
+        }
+        if (r.taxIdentificationNumber() != null) {
+            supplied.add("tax_identification_number");
+            data.setTaxIdentificationNumber(r.taxIdentificationNumber());
+        }
+        var request = RegisteredBusinessRegistrationDraftRequest.newBuilder().setContext(context).setData(data)
+                .addAllSuppliedFields(supplied).build();
+        return result(invoke("save registered business registration",
+                () -> timed().saveRegisteredBusinessRegistrationDraft(request)));
+    }
+    public ComplianceData saveRegisteredBusinessShareholders(MutationContext context,
+            List<RegisteredShareholderRequest> shareholders) {
+        var request = RegisteredBusinessShareholdersDraftRequest.newBuilder().setContext(context);
+        for (var shareholder : shareholders) {
+            var data = RegisteredShareholderData.newBuilder().setFullName(value(shareholder.fullName()))
+                    .setDateOfBirth(shareholder.dateOfBirth() == null || shareholder.dateOfBirth().isBlank()
+                            ? ""
+                            : LocalDate.parse(shareholder.dateOfBirth(), DateTimeFormatter.ofPattern("dd-MM-uuuu"))
+                                    .toString())
+                    .setNationality(value(shareholder.nationality())).setRole(value(shareholder.role()))
+                    .setIdDocumentType(value(shareholder.idDocumentType()))
+                    .setIdDocumentId(value(shareholder.idDocumentId())).setAddress(value(shareholder.address()))
+                    .setSameAsBusinessAddress(Boolean.TRUE.equals(shareholder.sameAsBusinessAddress()))
+                    .setLga(value(shareholder.lga()))
+                    .setProofOfAddressDocumentId(value(shareholder.proofOfAddressDocumentId()));
+            request.addShareholders(data);
+        }
+        return result(invoke("save registered business shareholders",
+                () -> timed().saveRegisteredBusinessShareholdersDraft(request.build())));
+    }
+    private static String value(String value) {
+        return value == null ? "" : value;
     }
     public ComplianceData saveOwners(MutationContext context,
             List<com.tms.gateway.modules.compliance.dto.SaveOwnerRequest> items) {

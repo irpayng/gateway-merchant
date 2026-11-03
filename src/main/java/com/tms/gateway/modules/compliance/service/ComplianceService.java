@@ -73,6 +73,19 @@ public class ComplianceService {
     public ComplianceResponse saveRegistration(MutationContext c, SaveRegistrationRequest r) {
         return checked(c, grpcClient.saveRegistration(c, r));
     }
+    public ComplianceResponse saveRegisteredBusinessDetails(MutationContext c, RegisteredBusinessDetailsRequest r) {
+        ComplianceDraftValidator.registeredBusinessDetails(r);
+        return checked(c, grpcClient.saveRegisteredBusinessDetails(c, r));
+    }
+    public ComplianceResponse saveRegisteredBusinessRegistration(MutationContext c,
+            RegisteredBusinessRegistrationRequest r) {
+        return checked(c, grpcClient.saveRegisteredBusinessRegistration(c, r));
+    }
+    public ComplianceResponse saveRegisteredBusinessShareholders(MutationContext c,
+            SaveRegisteredShareholdersRequest r) {
+        ComplianceDraftValidator.registeredShareholders(r);
+        return checked(c, grpcClient.saveRegisteredBusinessShareholders(c, r.shareholders()));
+    }
     public ComplianceResponse submitCompliance(MutationContext c, SubmitComplianceRequest r, String ip, String agent) {
         if (!Boolean.TRUE.equals(r.agreementAccepted()))
             throw new AppException("Agreement must be accepted", HttpStatus.UNPROCESSABLE_ENTITY);

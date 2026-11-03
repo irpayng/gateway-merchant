@@ -75,6 +75,30 @@ public class ComplianceController {
             @RequestHeader("X-Expected-Version") long version, @Valid @RequestBody SaveRegistrationRequest request) {
         return ok(service.saveRegistration(service.mutation(user, key, version), request), "Draft saved");
     }
+    @PutMapping("/business/details")
+    public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessDetails(
+            @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
+            @RequestHeader("X-Expected-Version") long version,
+            @Valid @RequestBody RegisteredBusinessDetailsRequest request) {
+        return ok(service.saveRegisteredBusinessDetails(service.mutation(user, key, version), request),
+                "Business details saved");
+    }
+    @PutMapping("/business/registration")
+    public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessRegistration(
+            @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
+            @RequestHeader("X-Expected-Version") long version,
+            @Valid @RequestBody RegisteredBusinessRegistrationRequest request) {
+        return ok(service.saveRegisteredBusinessRegistration(service.mutation(user, key, version), request),
+                "Registration details saved");
+    }
+    @PutMapping("/business/shareholders")
+    public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessShareholders(
+            @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
+            @RequestHeader("X-Expected-Version") long version,
+            @Valid @RequestBody SaveRegisteredShareholdersRequest request) {
+        return ok(service.saveRegisteredBusinessShareholders(service.mutation(user, key, version), request),
+                "Shareholders saved");
+    }
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse<ComplianceResponse>> submit(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,

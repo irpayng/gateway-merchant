@@ -63,6 +63,92 @@ class ComplianceControllerTest {
     }
 
     @Test
+    void registeredBusinessDetailsAreSavedAsOneScreenWithAmountOnly() throws Exception {
+        when(client.saveRegisteredBusinessDetails(any(), any()))
+                .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
+
+        mvc.perform(put("/compliance/business/details").header("Idempotency-Key", "business-details-1")
+                .header("X-Expected-Version", "5").contentType(MediaType.APPLICATION_JSON).content("""
+                        {
+                          "country": "NG",
+                          "industry": "technology",
+                          "category": "software",
+                          "trading_name": "Acme",
+                          "sales_volume": "250000.00",
+                          "business_description": "Digital services",
+                          "business_type": "registered",
+                          "support_email": "support@example.com",
+                          "dispute_email": "disputes@example.com",
+                          "same_as_support_email": false,
+                          "phone": "+2348012345678",
+                          "address": "1 Main Street",
+                          "lga": "ikeja",
+                          "business_address_document_id": "doc-1",
+                          "online_links": [{"platform": "website", "url": "https://example.com"}]
+                        }
+                        """)).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(6));
+
+        verify(client).saveRegisteredBusinessDetails(
+                argThat(context -> context.getActorUserId() == 4 && context.getMerchantId().equals("m1")
+                        && context.getExpectedVersion() == 5),
+                argThat(request -> "registered".equals(request.businessType())
+                        && "250000.00".equals(request.salesVolume()) && request.onlineLinks().size() == 1
+                        && "support@example.com".equals(request.supportEmail())));
+    }
+
+    @Test
+    void registeredBusinessRegistrationEndpointAcceptsOnlyRegistrationFields() throws Exception {
+        when(client.saveRegisteredBusinessRegistration(any(), any()))
+                .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(7).setStatus("draft").build());
+
+        mvc.perform(put("/compliance/business/registration").header("Idempotency-Key", "registration-1")
+                .header("X-Expected-Version", "6").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"registration_number\":\"RC1234\",\"tax_identification_number\":\"1234567-1234\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(7));
+
+        verify(client).saveRegisteredBusinessRegistration(any(),
+                argThat(request -> "RC1234".equals(request.registrationNumber())
+                        && "1234567-1234".equals(request.taxIdentificationNumber())));
+    }
+
+    @Test
+    void registeredShareholdersEndpointAcceptsTheScreenFields() throws Exception {
+        when(client.saveRegisteredBusinessShareholders(any(), any()))
+                .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(8).setStatus("draft").build());
+
+        mvc.perform(put("/compliance/business/shareholders").header("Idempotency-Key", "shareholders-1")
+                .header("X-Expected-Version", "7").contentType(MediaType.APPLICATION_JSON).content("""
+                        {
+                          "shareholders": [{
+                            "full_name": "Jane Doe",
+                            "date_of_birth": "15-04-1980",
+                            "nationality": "Nigerian",
+                            "role": "director",
+                            "id_document_type": "national_id",
+                            "id_document_id": "doc-id",
+                            "address": "2 Home Street",
+                            "same_as_business_address": false,
+                            "lga": "ikeja",
+                            "proof_of_address_document_id": "doc-address"
+                          }]
+                        }
+                        """)).andExpect(status().isOk()).andExpect(jsonPath("$.data.version").value(8));
+
+        verify(client).saveRegisteredBusinessShareholders(any(),
+                argThat(shareholders -> shareholders.size() == 1
+                        && "Jane Doe".equals(shareholders.getFirst().fullName())
+                        && "15-04-1980".equals(shareholders.getFirst().dateOfBirth())));
+    }
+
+    @Test
+    void registeredBusinessSalesVolumeRejectsCurrencyText() throws Exception {
+        mvc.perform(put("/compliance/business/details").header("Idempotency-Key", "business-details-2")
+                .header("X-Expected-Version", "5").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"sales_volume\":\"NGN 250,000\"}")).andExpect(status().isUnprocessableEntity());
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void nullOwnerEntriesAreRejected() throws Exception {
         mvc.perform(put("/compliance/owners").header("Idempotency-Key", "owners-1").header("X-Expected-Version", "4")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"owners\":[null]}"))

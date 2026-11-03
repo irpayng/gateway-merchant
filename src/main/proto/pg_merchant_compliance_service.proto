@@ -18,6 +18,10 @@ service PgMerchantComplianceService {
   rpc SaveMerchantOwnersDraft (MerchantOwnersDraftRequest) returns (ComplianceResponse);
   rpc SaveMerchantBankAccountsDraft (MerchantBankAccountsDraftRequest) returns (ComplianceResponse);
   rpc SaveMerchantRegistrationDraft (MerchantRegistrationDraftRequest) returns (ComplianceResponse);
+  // Registered flow writes correspond to the three registered-business screens.
+  rpc SaveRegisteredBusinessDetailsDraft (RegisteredBusinessDetailsDraftRequest) returns (ComplianceResponse);
+  rpc SaveRegisteredBusinessRegistrationDraft (RegisteredBusinessRegistrationDraftRequest) returns (ComplianceResponse);
+  rpc SaveRegisteredBusinessShareholdersDraft (RegisteredBusinessShareholdersDraftRequest) returns (ComplianceResponse);
   rpc AcceptAgreementAndSubmit (MerchantSubmissionRequest) returns (ComplianceResponse);
   rpc ListComplianceReferenceData (ReferenceDataRequest) returns (ReferenceDataResponse);
   rpc CreateComplianceDocumentUpload (DocumentUploadRequest) returns (DocumentUploadResponse);
@@ -245,6 +249,56 @@ message MerchantOwnersDraftRequest { MutationContext context = 1; repeated Owner
 message FieldPresence { repeated string fields = 1; }
 message MerchantBankAccountsDraftRequest { MutationContext context = 1; repeated BankAccountData bank_accounts = 2; repeated FieldPresence account_fields = 3; }
 message MerchantRegistrationDraftRequest { MutationContext context = 1; RegistrationData data = 2; repeated string supplied_fields = 3; }
+message RegisteredBusinessDetailsDraftRequest {
+  MutationContext context = 1;
+  RegisteredBusinessDetailsData data = 2;
+  repeated string supplied_fields = 3;
+}
+message RegisteredBusinessDetailsData {
+  string country = 1;
+  string industry = 2;
+  string category = 3;
+  string trading_name = 4;
+  // Amount only, as a decimal string; currency is not part of this screen.
+  string sales_volume = 5;
+  string business_description = 6;
+  string business_type = 7;
+  string support_email = 8;
+  string dispute_email = 9;
+  bool same_as_support_email = 10;
+  string phone = 11;
+  string address = 12;
+  string lga = 13;
+  string business_address_document_id = 14;
+  repeated OnlineLinkData online_links = 15;
+}
+message RegisteredBusinessRegistrationDraftRequest {
+  MutationContext context = 1;
+  RegisteredBusinessRegistrationData data = 2;
+  repeated string supplied_fields = 3;
+}
+message RegisteredBusinessRegistrationData {
+  string registration_number = 1;
+  string tax_identification_number = 2;
+}
+message RegisteredBusinessShareholdersDraftRequest {
+  MutationContext context = 1;
+  // Replaces the complete draft list; submit the full intended collection.
+  repeated RegisteredShareholderData shareholders = 2;
+}
+message RegisteredShareholderData {
+  string full_name = 1;
+  // Gateway converts the screen's DD-MM-YYYY input to ISO YYYY-MM-DD.
+  string date_of_birth = 2;
+  string nationality = 3;
+  string role = 4;
+  string id_document_type = 5;
+  string id_document_id = 6;
+  string address = 7;
+  bool same_as_business_address = 8;
+  string lga = 9;
+  string proof_of_address_document_id = 10;
+}
 message MerchantSubmissionRequest {
   MutationContext context = 1;
   bool agreement_accepted = 2;
