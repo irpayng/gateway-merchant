@@ -28,6 +28,21 @@ public class GlobalExceptionHandler {
                 .body(Map.of("code", 422, "message", ex.getMessage(), "errors", ex.getErrors()));
     }
 
+    @ExceptionHandler(com.tms.gateway.modules.compliance.service.CompliancePartialSaveException.class)
+    public ResponseEntity<Map<String, Object>> handleCompliancePartialSave(
+            com.tms.gateway.modules.compliance.service.CompliancePartialSaveException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", ex.getStatus().value());
+        body.put("message",
+                "Business profile was saved, but contact details were not. Refresh the compliance draft before retrying.");
+        body.put("partial_save", true);
+        body.put("saved_version", ex.getSavedVersion());
+        body.put("saved_sections", java.util.List.of("profile"));
+        if (!ex.getErrors().isEmpty())
+            body.put("errors", ex.getErrors());
+        return ResponseEntity.status(ex.getStatus()).body(body);
+    }
+
     @ExceptionHandler({org.springframework.web.bind.ServletRequestBindingException.class,
             org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
             org.springframework.http.converter.HttpMessageNotReadableException.class})

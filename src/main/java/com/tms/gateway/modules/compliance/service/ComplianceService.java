@@ -5,6 +5,9 @@ import com.tms.gateway.modules.compliance.dto.*;
 import com.tms.gateway.modules.grpc.compliance.ComplianceData;
 import com.tms.gateway.modules.grpc.compliance.MutationContext;
 import com.tms.gateway.modules.grpc.service.ComplianceGrpcClient;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -75,16 +78,71 @@ public class ComplianceService {
     }
     public ComplianceResponse saveRegisteredBusinessDetails(MutationContext c, RegisteredBusinessDetailsRequest r) {
         ComplianceDraftValidator.registeredBusinessDetails(r);
-        return checked(c, grpcClient.saveRegisteredBusinessDetails(c, r));
+        SaveProfileRequest profile = new SaveProfileRequest(r.country(), r.industry(), r.category(), r.tradingName(),
+                r.salesVolume(), r.businessType(), r.businessDescription());
+        SaveContactRequest contact = new SaveContactRequest(null, r.phone(), r.address(), r.supportEmail(),
+                r.disputeEmail(), r.lga(), r.sameAsSupportEmail(), r.businessAddressDocumentId(), r.onlineLinks());
+
+        boolean hasProfileFields = r.country() != null || r.industry() != null || r.category() != null
+                || r.tradingName() != null || r.salesVolume() != null || r.businessType() != null
+                || r.businessDescription() != null;
+        boolean hasContactFields = r.phone() != null || r.address() != null || r.supportEmail() != null
+                || r.disputeEmail() != null || r.lga() != null || r.sameAsSupportEmail() != null
+                || r.businessAddressDocumentId() != null || r.onlineLinks() != null;
+        if (!hasProfileFields && !hasContactFields)
+            throw new ComplianceValidationException(List.of(new ComplianceResponse.CorrectionData("business_details",
+                    "business_details", "At least one field must be supplied")));
+
+        ComplianceResponse response = null;
+        MutationContext current = c;
+        if (hasProfileFields) {
+            response = checkedRequired(current, grpcClient.saveProfile(current, profile));
+            current = withExpectedVersion(c, response.version());
+        }
+        if (hasContactFields) {
+            try {
+                response = checkedRequired(current, grpcClient.saveContact(current, contact));
+            } catch (AppException e) {
+                if (hasProfileFields)
+                    throw new CompliancePartialSaveException(e, response.version());
+                throw e;
+            } catch (ComplianceValidationException e) {
+                if (hasProfileFields)
+                    throw new CompliancePartialSaveException(e, response.version());
+                throw e;
+            }
+        }
+        return response;
     }
     public ComplianceResponse saveRegisteredBusinessRegistration(MutationContext c,
             RegisteredBusinessRegistrationRequest r) {
-        return checked(c, grpcClient.saveRegisteredBusinessRegistration(c, r));
+        var request = new SaveRegistrationRequest(null, r.registrationNumber(), r.taxIdentificationNumber());
+        return checked(c, grpcClient.saveRegistration(c, request));
     }
     public ComplianceResponse saveRegisteredBusinessShareholders(MutationContext c,
             SaveRegisteredShareholdersRequest r) {
         ComplianceDraftValidator.registeredShareholders(r);
-        return checked(c, grpcClient.saveRegisteredBusinessShareholders(c, r.shareholders()));
+        List<SaveOwnerRequest> owners = r.shareholders().stream().map(shareholder -> {
+            String dateOfBirth = shareholder.dateOfBirth();
+            if (dateOfBirth != null && !dateOfBirth.isEmpty())
+                dateOfBirth = LocalDate.parse(dateOfBirth, DateTimeFormatter.ofPattern("dd-MM-uuuu")).toString();
+            return new SaveOwnerRequest(null, shareholder.role(), dateOfBirth, shareholder.address(),
+                    shareholder.idDocumentType(), shareholder.fullName(), shareholder.nationality(), shareholder.lga(),
+                    shareholder.sameAsBusinessAddress(), shareholder.idDocumentId(),
+                    shareholder.proofOfAddressDocumentId());
+        }).toList();
+        return checkedRequired(c, grpcClient.saveOwners(c, owners));
+    }
+    private ComplianceResponse checkedRequired(MutationContext context, ComplianceData data) {
+        ComplianceResponse response = checked(context, data);
+        if (response == null)
+            throw new AppException("KYC returned no compliance data", HttpStatus.BAD_GATEWAY);
+        return response;
+    }
+    private MutationContext withExpectedVersion(MutationContext context, long version) {
+        return MutationContext.newBuilder().setActorUserId(context.getActorUserId())
+                .setMerchantId(context.getMerchantId()).setIdempotencyKey(context.getIdempotencyKey())
+                .setExpectedVersion(version).build();
     }
     public ComplianceResponse submitCompliance(MutationContext c, SubmitComplianceRequest r, String ip, String agent) {
         if (!Boolean.TRUE.equals(r.agreementAccepted()))

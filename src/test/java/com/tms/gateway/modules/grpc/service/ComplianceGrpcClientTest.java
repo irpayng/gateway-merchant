@@ -41,45 +41,6 @@ class ComplianceGrpcClientTest {
         assertEquals("ACME", captor.getValue().getData().getTradingName());
     }
     @Test
-    void registeredBusinessDetailsForwardOnlySuppliedScreenFields() throws Exception {
-        when(stub.saveRegisteredBusinessDetailsDraft(any())).thenReturn(success());
-        var request = new ObjectMapper().readValue("""
-                {
-                  "sales_volume": "250000.00",
-                  "business_type": "registered",
-                  "same_as_support_email": false,
-                  "online_links": []
-                }
-                """, com.tms.gateway.modules.compliance.dto.RegisteredBusinessDetailsRequest.class);
-
-        client.saveRegisteredBusinessDetails(context, request);
-
-        var captor = ArgumentCaptor.forClass(RegisteredBusinessDetailsDraftRequest.class);
-        verify(stub).saveRegisteredBusinessDetailsDraft(captor.capture());
-        assertEquals(context, captor.getValue().getContext());
-        assertEquals(java.util.List.of("sales_volume", "business_type", "same_as_support_email", "online_links"),
-                captor.getValue().getSuppliedFieldsList());
-        assertEquals("250000.00", captor.getValue().getData().getSalesVolume());
-        assertFalse(captor.getValue().getData().getSameAsSupportEmail());
-    }
-    @Test
-    void registeredShareholdersForwardAllFieldsAndNormalizeDate() {
-        when(stub.saveRegisteredBusinessShareholdersDraft(any())).thenReturn(success());
-        var shareholder = new com.tms.gateway.modules.compliance.dto.RegisteredShareholderRequest("Jane Doe",
-                "15-04-1980", "Nigerian", "director", "national_id", "doc-id", "2 Home Street", false, "ikeja",
-                "doc-address");
-
-        client.saveRegisteredBusinessShareholders(context, java.util.List.of(shareholder));
-
-        var captor = ArgumentCaptor.forClass(RegisteredBusinessShareholdersDraftRequest.class);
-        verify(stub).saveRegisteredBusinessShareholdersDraft(captor.capture());
-        assertEquals(context, captor.getValue().getContext());
-        assertEquals(1, captor.getValue().getShareholdersCount());
-        assertEquals("Jane Doe", captor.getValue().getShareholders(0).getFullName());
-        assertEquals("1980-04-15", captor.getValue().getShareholders(0).getDateOfBirth());
-        assertEquals("doc-address", captor.getValue().getShareholders(0).getProofOfAddressDocumentId());
-    }
-    @Test
     void explicitFalseIsNotTreatedAsOmitted() throws Exception {
         when(stub.saveMerchantContactDraft(any())).thenReturn(success());
         var r = new ObjectMapper().readValue("{\"same_as_support_email\":false}",
