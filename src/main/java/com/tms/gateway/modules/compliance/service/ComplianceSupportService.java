@@ -35,13 +35,20 @@ public class ComplianceSupportService {
         if (!Set.of("identity", "owner_address", "business_address", "shareholder_identity", "shareholder_address")
                 .contains(r.purpose()))
             throw new AppException("Invalid document purpose");
+        // Shareholder documents require owner_id
+        if ((r.purpose().equals("shareholder_identity") || r.purpose().equals("shareholder_address"))
+                && r.ownerId() == null)
+            throw new AppException("owner_id is required for shareholder documents");
         if (!Set.of("application/pdf", "image/jpeg", "image/png").contains(r.contentType()))
             throw new AppException("Only PDF, JPEG and PNG documents are accepted");
         if (r.fileName().contains("/") || r.fileName().contains("\\")
                 || r.fileName().chars().anyMatch(Character::isISOControl))
             throw new AppException("Invalid file name");
-        var d = client.createUpload(DocumentUploadRequest.newBuilder().setContext(context).setPurpose(r.purpose())
-                .setFileName(r.fileName()).setContentType(r.contentType()).setSizeBytes(r.sizeBytes()).build());
+        var builder = DocumentUploadRequest.newBuilder().setContext(context).setPurpose(r.purpose())
+                .setFileName(r.fileName()).setContentType(r.contentType()).setSizeBytes(r.sizeBytes());
+        if (r.ownerId() != null)
+            builder.setOwnerId(r.ownerId());
+        var d = client.createUpload(builder.build());
         return new Upload(d.getDocumentId(), d.getUploadUrl(), d.getExpiresAt(), d.getHeadersMap(), d.getMethod());
     }
     public Document document(MutationContext context, String id, String action) {

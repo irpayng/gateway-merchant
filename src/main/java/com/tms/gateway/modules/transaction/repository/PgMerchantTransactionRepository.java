@@ -26,21 +26,36 @@ public interface PgMerchantTransactionRepository extends JpaRepository<PgMerchan
     /**
      * Search and filter transactions with optional parameters. All filter
      * parameters are optional (null = no filter).
+     * 
+     * Uses native SQL to properly handle null parameters in PostgreSQL, avoiding
+     * Hibernate's bytea type inference issues with LOWER().
      */
-    @Query("""
-            SELECT t FROM PgMerchantTransactionEntity t
-            WHERE t.userId = :userId
-            AND (:statusCode IS NULL OR t.statusCode = :statusCode)
-            AND (:paymentMethod IS NULL OR t.paymentMethod = :paymentMethod)
-            AND (:startDate IS NULL OR t.createdAt >= :startDate)
-            AND (:endDate IS NULL OR t.createdAt <= :endDate)
-            AND (:search IS NULL OR (
-                LOWER(t.reference) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(t.customerEmail) LIKE LOWER(CONCAT('%', :search, '%'))
-                OR LOWER(t.customerName) LIKE LOWER(CONCAT('%', :search, '%'))
+    @Query(value = """
+            SELECT * FROM pg_merchant_transactions t
+            WHERE t.user_id = :userId
+            AND (CAST(:statusCode AS VARCHAR) IS NULL OR t.status_code = :statusCode)
+            AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR t.payment_method = :paymentMethod)
+            AND (CAST(:startDate AS TIMESTAMP) IS NULL OR t.created_at >= :startDate)
+            AND (CAST(:endDate AS TIMESTAMP) IS NULL OR t.created_at <= :endDate)
+            AND (COALESCE(CAST(:search AS VARCHAR), '') = '' OR (
+                LOWER(t.reference) LIKE LOWER(CONCAT('%', CAST(:search AS VARCHAR), '%'))
+                OR LOWER(COALESCE(t.customer_email, '')) LIKE LOWER(CONCAT('%', CAST(:search AS VARCHAR), '%'))
+                OR LOWER(COALESCE(t.customer_name, '')) LIKE LOWER(CONCAT('%', CAST(:search AS VARCHAR), '%'))
             ))
-            ORDER BY t.createdAt DESC
-            """)
+            ORDER BY t.created_at DESC
+            """, countQuery = """
+            SELECT COUNT(*) FROM pg_merchant_transactions t
+            WHERE t.user_id = :userId
+            AND (CAST(:statusCode AS VARCHAR) IS NULL OR t.status_code = :statusCode)
+            AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR t.payment_method = :paymentMethod)
+            AND (CAST(:startDate AS TIMESTAMP) IS NULL OR t.created_at >= :startDate)
+            AND (CAST(:endDate AS TIMESTAMP) IS NULL OR t.created_at <= :endDate)
+            AND (COALESCE(CAST(:search AS VARCHAR), '') = '' OR (
+                LOWER(t.reference) LIKE LOWER(CONCAT('%', CAST(:search AS VARCHAR), '%'))
+                OR LOWER(COALESCE(t.customer_email, '')) LIKE LOWER(CONCAT('%', CAST(:search AS VARCHAR), '%'))
+                OR LOWER(COALESCE(t.customer_name, '')) LIKE LOWER(CONCAT('%', CAST(:search AS VARCHAR), '%'))
+            ))
+            """, nativeQuery = true)
     Page<PgMerchantTransactionEntity> findByFilters(@Param("userId") Long userId,
             @Param("statusCode") String statusCode, @Param("paymentMethod") String paymentMethod,
             @Param("startDate") Instant startDate, @Param("endDate") Instant endDate, @Param("search") String search,
