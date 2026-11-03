@@ -415,13 +415,16 @@ Body: <binary file data>
 Response: 200 OK
 
 
-6c. Confirm upload complete
+6c. Confirm upload complete → AUTO-LINKS to owner!
 POST /compliance/documents/doc_id_001/complete
 Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid-6>
 
 Response: { "document_id": "doc_id_001", "status": "uploaded" }
+
+The backend AUTOMATICALLY sets:
+  owner.id_document_id = "doc_id_001"
 
 
 STEP 7: UPLOAD OWNER PROOF OF ADDRESS
@@ -443,36 +446,29 @@ Response: { "document_id": "doc_addr_001", "upload_url": "...", ... }
 7b. Upload to S3
 PUT <upload_url> with file data
 
-7c. Confirm complete
+7c. Confirm complete → AUTO-LINKS to owner!
 POST /compliance/documents/doc_addr_001/complete
 
+The backend AUTOMATICALLY sets:
+  owner.proof_of_address_document_id = "doc_addr_001"
 
-STEP 8: UPDATE OWNER WITH DOCUMENT IDs
+
+STEP 8: VERIFY (Optional)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/owners
-Headers:
-  Authorization: Bearer <token>
-  Idempotency-Key: <uuid-7>
-  X-Expected-Version: 4
+GET /compliance
 
-Body:
+Response shows owners_complete: true and documents auto-linked:
 {
-  "owners": [{
-    "id": 42,                                    ← Include the owner ID!
-    "full_name": "John Doe",
-    "date_of_birth": "1985-03-15",
-    "nationality": "Nigerian",
-    "role": "owner",
-    "id_document_type": "international_passport",
-    "id_document_id": "doc_id_001",              ← Link ID document
-    "proof_of_address_document_id": "doc_addr_001",  ← Link address doc
-    "address": "456 Ikoyi, Lagos",
-    "lga": "eti-osa",
-    "same_as_business_address": false
-  }]
+  "owners": [
+    { 
+      "id": 42, 
+      "full_name": "John Doe",
+      "id_document_id": "doc_id_001",              ← Auto-linked!
+      "proof_of_address_document_id": "doc_addr_001"  ← Auto-linked!
+    }
+  ],
+  "owners_complete": true
 }
-
-Response: { "version": 5, "owners_complete": true }
 
 
 STEP 9: SAVE BANK ACCOUNT
@@ -480,8 +476,8 @@ STEP 9: SAVE BANK ACCOUNT
 PUT /compliance/bank-accounts
 Headers:
   Authorization: Bearer <token>
-  Idempotency-Key: <uuid-8>
-  X-Expected-Version: 5
+  Idempotency-Key: <uuid-7>
+  X-Expected-Version: 4
 
 Body:
 {
@@ -492,7 +488,7 @@ Body:
   }]
 }
 
-Response: { "version": 6, "bank_accounts_complete": true }
+Response: { "version": 5, "bank_accounts_complete": true }
 
 
 STEP 10: SUBMIT FOR REVIEW
@@ -500,8 +496,8 @@ STEP 10: SUBMIT FOR REVIEW
 POST /compliance/submit
 Headers:
   Authorization: Bearer <token>
-  Idempotency-Key: <uuid-9>
-  X-Expected-Version: 6
+  Idempotency-Key: <uuid-8>
+  X-Expected-Version: 5
 
 Body:
 {
@@ -518,12 +514,12 @@ Response: { "version": 7, "status": "submitted" }
 
 ### Starter Business Document Purposes
 
-| Purpose | Description | owner_id Required? |
-|---------|-------------|-------------------|
-| `identity` | Owner's ID document | NO |
-| `owner_address` | Owner's proof of address | NO |
+| Purpose | Description | owner_id Required? | Auto-Links? |
+|---------|-------------|-------------------|-------------|
+| `identity` | Owner's ID document | NO | YES |
+| `owner_address` | Owner's proof of address | NO | YES |
 
-For starter business, there's only ONE owner, so the system knows which owner to link documents to.
+For starter business, there's only ONE owner, so the system automatically links documents to that owner on upload completion. No second call to `/compliance/owners` is needed.
 
 ---
 
