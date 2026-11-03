@@ -47,7 +47,15 @@ public class OpenApiConfig {
                             ? "Compliance Documents"
                             : path.startsWith("/compliance/reference-data")
                                     ? "Compliance Reference Data"
-                                    : path.startsWith("/compliance") ? "Compliance" : "Health";
+                                    : path.startsWith("/compliance")
+                                            ? "Compliance"
+                                            : path.startsWith("/dashboard")
+                                                    ? "Dashboard"
+                                                    : path.startsWith("/payouts")
+                                                            ? "Payouts"
+                                                            : path.startsWith("/transactions")
+                                                                    ? "Transactions"
+                                                                    : "Health";
             operation.setTags(List.of(tag));
             if (summaries.containsKey(path)) {
                 operation.setSummary(summaries.get(path));
