@@ -32,7 +32,8 @@ public class ComplianceSupportService {
                 .toList();
     }
     public Upload upload(MutationContext context, CreateDocumentUploadRequest r) {
-        if (!Set.of("identity", "owner_address", "business_address").contains(r.purpose()))
+        if (!Set.of("identity", "owner_address", "business_address", "shareholder_identity", "shareholder_address")
+                .contains(r.purpose()))
             throw new AppException("Invalid document purpose");
         if (!Set.of("application/pdf", "image/jpeg", "image/png").contains(r.contentType()))
             throw new AppException("Only PDF, JPEG and PNG documents are accepted");
