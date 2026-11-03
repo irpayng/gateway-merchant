@@ -267,6 +267,10 @@ message ReferenceDataResponse { repeated ReferenceOption options = 1; }
 message DocumentUploadRequest {
   MutationContext context = 1; string purpose = 2; string file_name = 3;
   string content_type = 4; int64 size_bytes = 5;
+  // Optional: owner ID for shareholder documents. When provided and purpose is
+  // shareholder_identity or shareholder_address, the document will be auto-linked
+  // to this owner when upload completes.
+  int64 owner_id = 6;
 }
 message DocumentUploadResponse {
   string document_id = 1; string upload_url = 2; string expires_at = 3;
