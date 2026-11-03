@@ -291,6 +291,12 @@ public class ComplianceGrpcClient {
     public ComplianceData saveBankAccounts(MutationContext context,
             List<com.tms.gateway.modules.compliance.dto.SaveBankAccountRequest> items) {
         var request = MerchantBankAccountsDraftRequest.newBuilder().setContext(context);
+        // Auto-set first account as primary if only one account and no explicit primary
+        // set
+        boolean hasExplicitPrimary = items.stream().anyMatch(r -> Boolean.TRUE.equals(r.isPrimary()));
+        boolean autoSetPrimary = items.size() == 1 && !hasExplicitPrimary;
+
+        boolean firstAccount = true;
         for (var r : items) {
             var data = BankAccountData.newBuilder();
             var supplied = FieldPresence.newBuilder();
@@ -314,6 +320,15 @@ public class ComplianceGrpcClient {
                 data.setAccountName(r.accountName());
                 supplied.addFields("account_name");
             }
+            // Set is_primary: explicit value wins, else auto-set for single account
+            if (r.isPrimary() != null) {
+                data.setIsPrimary(r.isPrimary());
+                supplied.addFields("is_primary");
+            } else if (autoSetPrimary && firstAccount) {
+                data.setIsPrimary(true);
+                supplied.addFields("is_primary");
+            }
+            firstAccount = false;
             request.addBankAccounts(data).addAccountFields(supplied);
         }
         return result(invoke("saveBankAccounts", () -> timed().saveMerchantBankAccountsDraft(request.build())));
