@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.compliance.dto.*;
+import com.tms.gateway.modules.compliance.dto.SubmitComplianceRequest;
 import com.tms.gateway.modules.grpc.compliance.*;
 import com.tms.gateway.modules.grpc.service.ComplianceGrpcClient;
 import java.time.Instant;

@@ -101,6 +101,8 @@ public class ComplianceService {
         }
         if (hasContactFields) {
             try {
+                // The existing KYC methods are separate writes, so contact uses the version
+                // returned by profile.
                 response = checkedRequired(current, grpcClient.saveContact(current, contact));
             } catch (AppException e) {
                 if (hasProfileFields)

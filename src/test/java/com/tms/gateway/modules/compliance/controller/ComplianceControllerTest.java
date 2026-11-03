@@ -171,6 +171,14 @@ class ComplianceControllerTest {
     }
 
     @Test
+    void registeredBusinessDetailsRejectEmptyPatch() throws Exception {
+        mvc.perform(put("/compliance/business/details").header("Idempotency-Key", "business-details-empty")
+                .header("X-Expected-Version", "5").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnprocessableEntity());
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void nullOwnerEntriesAreRejected() throws Exception {
         mvc.perform(put("/compliance/owners").header("Idempotency-Key", "owners-1").header("X-Expected-Version", "4")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"owners\":[null]}"))
