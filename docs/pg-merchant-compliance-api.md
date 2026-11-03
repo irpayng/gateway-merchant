@@ -334,6 +334,7 @@ Body:
   "same_as_support_email": true,
   "phone": "+2348012345678",
   "address": "123 Victoria Island, Lagos",
+  "state": "Lagos",
   "lga": "eti-osa",
   "online_links": [
     { "platform": "website", "url": "https://acme.com" }
@@ -609,6 +610,7 @@ Body:
   "dispute_email": "disputes@techcorp.ng",
   "phone": "+2349012345678",
   "address": "Plot 123 Tech Hub, Lekki",
+  "state": "Lagos",
   "lga": "eti-osa",
   "business_address_document_id": "doc_biz_addr",
   "online_links": [
