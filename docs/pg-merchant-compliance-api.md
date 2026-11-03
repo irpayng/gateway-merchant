@@ -907,6 +907,8 @@ Every document upload follows these 3 steps:
 | email | 255 | Valid email |
 | phone | 20 | Include country code |
 | address | 500 | |
+| state | 100 | Nigerian state (e.g., "Lagos") |
+| lga | 100 | Local Government Area |
 | full_name | 200 | |
 | registration_number | 50 | RC number |
 | account_number | 10 | Exactly 10 digits |
