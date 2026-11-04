@@ -35,17 +35,22 @@ public class ComplianceGrpcClient {
     private PgMerchantComplianceServiceGrpc.PgMerchantComplianceServiceBlockingStub stub;
     @Value("${grpc.api.key}")
     private String apiKey;
+
+    /** 20MB max message size for file uploads */
+    private static final int MAX_MESSAGE_SIZE = 20 * 1024 * 1024;
+
     public ComplianceGrpcClient(GrpcProperties properties) {
         this.properties = properties;
     }
     @PostConstruct
     public void init() {
         channel = ManagedChannelBuilder.forAddress(properties.getKycServiceHost(), properties.getKycServicePort())
-                .usePlaintext().build();
+                .usePlaintext().maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
         Metadata headers = new Metadata();
         headers.put(Metadata.Key.of("x-api-key", Metadata.ASCII_STRING_MARSHALLER), apiKey);
         stub = PgMerchantComplianceServiceGrpc.newBlockingStub(channel)
-                .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers));
+                .withInterceptors(MetadataUtils.newAttachHeadersInterceptor(headers))
+                .withMaxInboundMessageSize(MAX_MESSAGE_SIZE).withMaxOutboundMessageSize(MAX_MESSAGE_SIZE);
     }
     private PgMerchantComplianceServiceGrpc.PgMerchantComplianceServiceBlockingStub timed() {
         return stub.withDeadlineAfter(properties.getTimeout(), TimeUnit.SECONDS);
