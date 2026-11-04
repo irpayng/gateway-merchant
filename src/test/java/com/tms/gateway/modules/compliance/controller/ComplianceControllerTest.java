@@ -244,16 +244,16 @@ class ComplianceControllerTest {
                 .andExpect(jsonPath("$.data.steps[1].fields[6].name").value("state"))
                 .andExpect(jsonPath("$.data.steps[1].fields[6].options_ref").value("states"))
                 .andExpect(jsonPath("$.data.steps[1].fields[7].name").value("lga"))
-                .andExpect(jsonPath("$.data.steps[2].fields[7].name").value("state"))
-                .andExpect(jsonPath("$.data.steps[2].fields[7].options_ref").value("states"))
-                .andExpect(jsonPath("$.data.steps[2].fields[8].name").value("lga"));
+                .andExpect(jsonPath("$.data.steps[2].fields[6].name").value("state"))
+                .andExpect(jsonPath("$.data.steps[2].fields[6].options_ref").value("states"))
+                .andExpect(jsonPath("$.data.steps[2].fields[7].name").value("lga"));
 
         mvc.perform(get("/compliance/schema").param("business_type", "registered")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.steps[0].fields[12].name").value("state"))
                 .andExpect(jsonPath("$.data.steps[0].fields[12].options_ref").value("states"))
                 .andExpect(jsonPath("$.data.steps[0].fields[13].name").value("lga"))
-                .andExpect(jsonPath("$.data.steps[2].fields[8].name").value("state"))
-                .andExpect(jsonPath("$.data.steps[2].fields[8].options_ref").value("states"))
-                .andExpect(jsonPath("$.data.steps[2].fields[9].name").value("lga"));
+                .andExpect(jsonPath("$.data.steps[2].fields[7].name").value("state"))
+                .andExpect(jsonPath("$.data.steps[2].fields[7].options_ref").value("states"))
+                .andExpect(jsonPath("$.data.steps[2].fields[8].name").value("lga"));
     }
 }
