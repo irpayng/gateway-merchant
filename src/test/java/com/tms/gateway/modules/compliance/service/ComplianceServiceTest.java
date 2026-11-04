@@ -71,7 +71,7 @@ class ComplianceServiceTest {
         var context = service.mutation(user(1, "m1"), "business-details", 5);
         var request = new RegisteredBusinessDetailsRequest("NG", "technology", "software", "Acme", "250000.00",
                 "Digital services", "registered", "support@example.com", "disputes@example.com", false,
-                "+2348012345678", "1 Main Street", "Lagos", "ikeja", "doc-1",
+                "+2348012345678", "1 Main Street", "Lagos", "ikeja",
                 java.util.List.of(new OnlineLink("website", "https://example.com")));
         var profile = ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build();
         var contact = ComplianceData.newBuilder().setMerchantId("m1").setVersion(7).setStatus("draft").build();
@@ -96,7 +96,7 @@ class ComplianceServiceTest {
     void registeredDetailsWithOnlyContactFieldsSkipProfileWrite() {
         var context = service.mutation(user(1, "m1"), "contact-only", 5);
         var request = new RegisteredBusinessDetailsRequest(null, null, null, null, null, null, null, null, null, null,
-                null, null, "Lagos", null, null, null);
+                null, null, "Lagos", null, null);
         when(client.saveContact(eq(context), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
 
@@ -109,7 +109,7 @@ class ComplianceServiceTest {
     void registeredDetailsDoNotHideContactFailureAfterProfileWasSaved() {
         var context = service.mutation(user(1, "m1"), "business-partial", 5);
         var request = new RegisteredBusinessDetailsRequest("NG", null, null, null, null, null, null,
-                "support@example.com", null, null, null, null, null, null, null, null);
+                "support@example.com", null, null, null, null, null, null, null);
         when(client.saveProfile(eq(context), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
         when(client.saveContact(argThat(next -> next.getExpectedVersion() == 6), any()))
@@ -141,7 +141,7 @@ class ComplianceServiceTest {
     void registeredShareholdersUseExistingOwnersDraftRpc() {
         var context = service.mutation(user(1, "m1"), "shareholders", 3);
         var shareholder = new RegisteredShareholderRequest("Jane Doe", "15-04-1980", "Nigerian", "director",
-                "national_id", "doc-id", "2 Home Street", false, "Lagos", "ikeja", "doc-address");
+                "national_id", "2 Home Street", false, "Lagos", "ikeja");
         when(client.saveOwners(eq(context), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(4).setStatus("draft").build());
 
@@ -152,7 +152,6 @@ class ComplianceServiceTest {
         verify(client).saveOwners(eq(context),
                 argThat(owners -> owners.size() == 1 && "Jane Doe".equals(owners.getFirst().fullName())
                         && "1980-04-15".equals(owners.getFirst().dateOfBirth())
-                        && "Lagos".equals(owners.getFirst().state())
-                        && "doc-id".equals(owners.getFirst().idDocumentId())));
+                        && "Lagos".equals(owners.getFirst().state())));
     }
 }

@@ -56,7 +56,7 @@ class ComplianceGrpcClientTest {
     void ownerStateIsForwardedWithPresenceToKyc() {
         when(stub.saveMerchantOwnersDraft(any())).thenReturn(success());
         var owner = new com.tms.gateway.modules.compliance.dto.SaveOwnerRequest(null, null, null, null, null, null,
-                null, "Lagos", null, null, null, null);
+                null, "Lagos", null, null);
 
         client.saveOwners(context, java.util.List.of(owner));
 

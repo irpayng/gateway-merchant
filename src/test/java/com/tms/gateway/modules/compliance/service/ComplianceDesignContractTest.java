@@ -53,8 +53,8 @@ class ComplianceDesignContractTest {
 
     @Test
     void stateIsExposedOnContactAndOwnerRequests() {
-        var contact = new SaveContactRequest(null, null, null, null, null, "Lagos", "ikeja", null, null, null);
-        var owner = new SaveOwnerRequest(null, null, null, null, null, null, null, "Lagos", "ikeja", null, null, null);
+        var contact = new SaveContactRequest(null, null, null, null, null, "Lagos", "ikeja", null, null);
+        var owner = new SaveOwnerRequest(null, null, null, null, null, null, null, "Lagos", "ikeja", null);
 
         assertEquals("Lagos", json.valueToTree(contact).get("state").asText());
         assertEquals("Lagos", json.valueToTree(owner).get("state").asText());
