@@ -291,6 +291,7 @@ public class ComplianceGrpcClient {
     public ComplianceData saveBankAccounts(MutationContext context,
             List<com.tms.gateway.modules.compliance.dto.SaveBankAccountRequest> items) {
         var request = MerchantBankAccountsDraftRequest.newBuilder().setContext(context);
+        boolean firstAccount = true;
         for (var r : items) {
             var data = BankAccountData.newBuilder();
             var supplied = FieldPresence.newBuilder();
@@ -314,6 +315,12 @@ public class ComplianceGrpcClient {
                 data.setAccountName(r.accountName());
                 supplied.addFields("account_name");
             }
+            // Auto-set is_primary=true for the first account (not exposed in API by design)
+            if (firstAccount) {
+                data.setIsPrimary(true);
+                supplied.addFields("is_primary");
+            }
+            firstAccount = false;
             request.addBankAccounts(data).addAccountFields(supplied);
         }
         return result(invoke("saveBankAccounts", () -> timed().saveMerchantBankAccountsDraft(request.build())));
