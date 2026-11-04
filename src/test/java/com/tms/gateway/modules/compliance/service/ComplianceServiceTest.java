@@ -76,7 +76,8 @@ class ComplianceServiceTest {
         var profile = ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build();
         var contact = ComplianceData.newBuilder().setMerchantId("m1").setVersion(7).setStatus("draft").build();
         when(client.saveProfile(eq(context), any())).thenReturn(profile);
-        when(client.saveContact(argThat(next -> next.getExpectedVersion() == 6), any())).thenReturn(contact);
+        when(client.saveContactWithFile(argThat(next -> next.getExpectedVersion() == 6), any(), any()))
+                .thenReturn(contact);
 
         var response = service.saveRegisteredBusinessDetails(context, request);
 
@@ -84,26 +85,27 @@ class ComplianceServiceTest {
         verify(client).saveProfile(eq(context),
                 argThat(profileRequest -> "250000.00".equals(profileRequest.salesVolume())
                         && "registered".equals(profileRequest.businessType())));
-        verify(client).saveContact(
+        verify(client).saveContactWithFile(
                 argThat(next -> next.getActorUserId() == 1 && next.getMerchantId().equals("m1")
                         && next.getIdempotencyKey().equals("business-details") && next.getExpectedVersion() == 6),
                 argThat(contactRequest -> "support@example.com".equals(contactRequest.supportEmail())
                         && "Lagos".equals(contactRequest.state()) && "ikeja".equals(contactRequest.lga())
                         && Boolean.FALSE.equals(contactRequest.sameAsSupportEmail())
-                        && contactRequest.onlineLinks().size() == 1));
+                        && contactRequest.onlineLinks().size() == 1),
+                isNull());
     }
     @Test
     void registeredDetailsWithOnlyContactFieldsSkipProfileWrite() {
         var context = service.mutation(user(1, "m1"), "contact-only", 5);
         var request = new RegisteredBusinessDetailsRequest(null, null, null, null, null, null, null, null, null, null,
                 null, null, "Lagos", null, null);
-        when(client.saveContact(eq(context), any()))
+        when(client.saveContactWithFile(eq(context), any(), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
 
         assertEquals(6, service.saveRegisteredBusinessDetails(context, request).version());
 
         verify(client, never()).saveProfile(any(), any());
-        verify(client).saveContact(eq(context), argThat(contact -> "Lagos".equals(contact.state())));
+        verify(client).saveContactWithFile(eq(context), argThat(contact -> "Lagos".equals(contact.state())), isNull());
     }
     @Test
     void registeredDetailsDoNotHideContactFailureAfterProfileWasSaved() {
@@ -112,7 +114,7 @@ class ComplianceServiceTest {
                 "support@example.com", null, null, null, null, null, null, null);
         when(client.saveProfile(eq(context), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
-        when(client.saveContact(argThat(next -> next.getExpectedVersion() == 6), any()))
+        when(client.saveContactWithFile(argThat(next -> next.getExpectedVersion() == 6), any(), any()))
                 .thenThrow(new AppException("Contact save failed", org.springframework.http.HttpStatus.CONFLICT));
 
         var failure = assertThrows(CompliancePartialSaveException.class,
@@ -121,7 +123,7 @@ class ComplianceServiceTest {
         assertEquals(409, failure.getStatus().value());
         assertEquals(6, failure.getSavedVersion());
         verify(client).saveProfile(eq(context), any());
-        verify(client).saveContact(argThat(next -> next.getExpectedVersion() == 6), any());
+        verify(client).saveContactWithFile(argThat(next -> next.getExpectedVersion() == 6), any(), any());
     }
     @Test
     void registeredRegistrationUsesExistingDraftRpc() {

@@ -67,7 +67,7 @@ class ComplianceControllerTest {
     void registeredBusinessDetailsAreSavedAsOneScreenWithAmountOnly() throws Exception {
         when(client.saveProfile(any(), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
-        when(client.saveContact(any(), any()))
+        when(client.saveContactWithFile(any(), any(), isNull()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(7).setStatus("draft").build());
 
         mvc.perform(put("/compliance/business/details").header("Idempotency-Key", "business-details-1")
@@ -87,7 +87,6 @@ class ComplianceControllerTest {
                           "address": "1 Main Street",
                           "state": "Lagos",
                           "lga": "ikeja",
-                          "business_address_document_id": "doc-1",
                           "online_links": [{"platform": "website", "url": "https://example.com"}]
                         }
                         """)).andExpect(status().isOk()).andExpect(header().string("ETag", "\"7\""))
@@ -97,12 +96,13 @@ class ComplianceControllerTest {
                 argThat(request -> "registered".equals(request.businessType())
                         && "250000.00".equals(request.salesVolume())
                         && "Digital services".equals(request.businessDescription())));
-        verify(client).saveContact(
+        verify(client).saveContactWithFile(
                 argThat(context -> context.getActorUserId() == 4 && context.getMerchantId().equals("m1")
                         && context.getExpectedVersion() == 6),
                 argThat(request -> "support@example.com".equals(request.supportEmail())
                         && "Lagos".equals(request.state()) && "ikeja".equals(request.lga())
-                        && request.onlineLinks().size() == 1));
+                        && request.onlineLinks().size() == 1),
+                isNull());
     }
 
     @Test
@@ -143,7 +143,7 @@ class ComplianceControllerTest {
     void registeredBusinessDetailsReportPartialSaveIfSecondExistingRpcFails() throws Exception {
         when(client.saveProfile(any(), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(6).setStatus("draft").build());
-        when(client.saveContact(any(), any()))
+        when(client.saveContactWithFile(any(), any(), isNull()))
                 .thenThrow(new AppException("Contact service conflict", org.springframework.http.HttpStatus.CONFLICT));
 
         mvc.perform(put("/compliance/business/details").header("Idempotency-Key", "business-details-partial")
