@@ -1,647 +1,1496 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Gateway Merchant Compliance API Documentation</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
-            background: #fff;
-        }
-        
-        h1 {
-            color: #1a1a1a;
-            font-size: 28px;
-            margin-bottom: 10px;
-            border-bottom: 3px solid #e67e22;
-            padding-bottom: 10px;
-        }
-        
-        h2 {
-            color: #2c3e50;
-            font-size: 22px;
-            margin-top: 40px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #ecf0f1;
-            padding-bottom: 8px;
-        }
-        
-        h3 {
-            color: #34495e;
-            font-size: 18px;
-            margin-top: 25px;
-            margin-bottom: 10px;
-        }
-        
-        h4 {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-top: 20px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        p {
-            margin-bottom: 15px;
-        }
-        
-        .subtitle {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 30px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        
-        th, td {
-            border: 1px solid #ddd;
-            padding: 10px 12px;
-            text-align: left;
-        }
-        
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #2c3e50;
-        }
-        
-        tr:nth-child(even) {
-            background: #fafafa;
-        }
-        
-        code {
-            background: #f4f4f4;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 13px;
-            color: #c0392b;
-        }
-        
-        pre {
-            background: #2d3436;
-            color: #dfe6e9;
-            padding: 15px;
-            border-radius: 6px;
-            overflow-x: auto;
-            margin: 15px 0;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-        
-        pre code {
-            background: none;
-            color: inherit;
-            padding: 0;
-        }
-        
-        .note {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px 15px;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        
-        .important {
-            background: #f8d7da;
-            border-left: 4px solid #dc3545;
-            padding: 12px 15px;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        
-        .success {
-            background: #d4edda;
-            border-left: 4px solid #28a745;
-            padding: 12px 15px;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        
-        .flow-step {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-        
-        .flow-step h4 {
-            color: #e67e22;
-            margin-top: 0;
-            margin-bottom: 10px;
-            text-transform: none;
-            font-size: 16px;
-        }
-        
-        .endpoint {
-            display: inline-block;
-            background: #3498db;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 13px;
-            margin-right: 5px;
-        }
-        
-        .method {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-family: monospace;
-            font-size: 12px;
-            font-weight: bold;
-            margin-right: 5px;
-        }
-        
-        .method.get { background: #27ae60; color: white; }
-        .method.post { background: #f39c12; color: white; }
-        .method.put { background: #3498db; color: white; }
-        .method.delete { background: #e74c3c; color: white; }
-        
-        .toc {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 6px;
-            margin: 20px 0;
-        }
-        
-        .toc h3 {
-            margin-top: 0;
-        }
-        
-        .toc ol {
-            margin: 0;
-            padding-left: 25px;
-        }
-        
-        .toc li {
-            margin: 5px 0;
-        }
-        
-        .toc a {
-            color: #3498db;
-            text-decoration: none;
-        }
-        
-        .toc a:hover {
-            text-decoration: underline;
-        }
-        
-        ul, ol {
-            margin: 10px 0 15px 25px;
-        }
-        
-        li {
-            margin: 5px 0;
-        }
-        
-        .page-break {
-            page-break-before: always;
-        }
-        
-        .endpoint-table {
-            background: #1a1a2e;
-            color: #eee;
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-        
-        .endpoint-table th {
-            background: #16213e;
-            color: #fff;
-            border-color: #0f3460;
-        }
-        
-        .endpoint-table td {
-            border-color: #0f3460;
-        }
-        
-        .endpoint-table tr:nth-child(even) {
-            background: #1f1f38;
-        }
-        
-        .endpoint-table code {
-            background: #0f3460;
-            color: #00d9ff;
-        }
-        
-        @media print {
-            body {
-                padding: 20px;
-                font-size: 12px;
-            }
-            
-            pre {
-                white-space: pre-wrap;
-                word-wrap: break-word;
-            }
-            
-            .no-print {
-                display: none;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc 3.13" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>PG Merchant Compliance API Documentation</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      color: light-dark(#1a1a1a, #fdfdfd);
+      background-color: #fdfdfd;
+      background-color: light-dark(#fdfdfd, #1a1a1a);
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        color-scheme: light only;
+      }
+      html, body, pre, code {
+        background-color: transparent;
+      }
+      body, a, a:visited, blockquote {
+        color: black;
+      }
+      pre, code {
+        padding: 0;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a, a:visited {
+      color: inherit;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid;
+      border-color: #e6e6e6;
+      border-color: light-dark(#e6e6e6, #4c4c4c);
+      color: #606060;
+      color: light-dark(#606060, #b6b6b6);
+    }
+    code {
+      white-space: pre-wrap;
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid currentColor;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid currentColor;
+      border-bottom: 1px solid currentColor;
+    }
+    th {
+      border-top: 1px solid currentColor;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
 </head>
 <body>
-    <h1>Payment Gateway Merchant Compliance API</h1>
-    <p class="subtitle">
-        <strong>Version:</strong> 2.1 &nbsp;|&nbsp; 
-        <strong>Last Updated:</strong> November 2026 &nbsp;|&nbsp; 
-        <strong>Service:</strong> gateway-merchant
-    </p>
-    
-    <div class="toc">
-        <h3>Table of Contents</h3>
-        <ol>
-            <li><a href="#overview">Overview</a></li>
-            <li><a href="#authentication">Authentication</a></li>
-            <li><a href="#idempotency">Idempotency</a></li>
-            <li><a href="#versioning">Optimistic Concurrency Control</a></li>
-            <li><a href="#business-types">Business Types & Endpoint Flows</a></li>
-            <li><a href="#endpoints">API Endpoints Reference</a></li>
-            <li><a href="#starter-flow">Starter Business Flow</a></li>
-            <li><a href="#registered-flow">Registered Business Flow</a></li>
-            <li><a href="#document-upload">Document Upload</a></li>
-            <li><a href="#errors">Error Handling</a></li>
-        </ol>
-    </div>
+<header id="title-block-header">
+<h1 class="title">PG Merchant Compliance API Documentation</h1>
+</header>
+<h1 id="payment-gateway-merchant-compliance-api-documentation">Payment
+Gateway Merchant Compliance API Documentation</h1>
+<p><strong>Version:</strong> 2.1<br />
+<strong>Last Updated:</strong> November 2026<br />
+<strong>Service:</strong> gateway-merchant</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#1-overview">Overview</a></li>
+<li><a href="#2-authentication">Authentication</a></li>
+<li><a href="#3-idempotency">Idempotency</a></li>
+<li><a href="#4-optimistic-concurrency-control">Optimistic Concurrency
+Control</a></li>
+<li><a href="#5-business-types--endpoint-flows">Business Types &amp;
+Endpoint Flows</a></li>
+<li><a href="#6-api-endpoints-reference">API Endpoints
+Reference</a></li>
+<li><a href="#7-starter-business-flow">Starter Business Flow</a></li>
+<li><a href="#8-registered-business-flow">Registered Business
+Flow</a></li>
+<li><a href="#9-document-upload">Document Upload</a></li>
+<li><a href="#10-error-handling">Error Handling</a></li>
+<li><a href="#11-faq-frontend-integration-questions">FAQ (Frontend
+Integration Questions)</a></li>
+<li><a href="#12-completion-checks">Completion Checks</a></li>
+</ol>
+<hr />
+<h2 id="overview">1. Overview</h2>
+<p>The Payment Gateway Merchant Compliance API enables merchants to
+complete their KYC (Know Your Customer) compliance requirements for
+payment gateway access. The API supports two business types with
+different requirements and <strong>different endpoint
+flows</strong>:</p>
+<ul>
+<li><strong>Starter Business</strong>: For unregistered businesses/sole
+proprietors (single owner)</li>
+<li><strong>Registered Business</strong>: For CAC-registered companies
+(multiple shareholders)</li>
+</ul>
+<h3 id="architecture">Architecture</h3>
+<pre><code>┌─────────────────┐     REST/Multipart     ┌───────────────────┐      gRPC       ┌─────────────┐
+│   Frontend      │ ◄───────────────────► │  gateway-merchant │ ◄─────────────► │   tms-kyc   │
+│  (merchant-fe)  │                        │   (API Gateway)   │                 │  (Storage)  │
+└─────────────────┘                        └───────────────────┘                 └─────────────┘
+                                                    │
+                                                    │ Internal Upload
+                                                    ▼
+                                               AWS S3</code></pre>
+<h3 id="key-design-multipart-form-upload">Key Design: Multipart Form
+Upload</h3>
+<p>Documents are submitted <strong>inline with form data</strong> at
+each step using <code>multipart/form-data</code>. This reduces the total
+API calls to a maximum of <strong>2 calls per step</strong> (one save +
+optional submit), regardless of how many documents are attached.</p>
+<h3 id="base-url">Base URL</h3>
+<pre><code>Production: https://gm.irpay.dev
+Staging:    https://staging-gm.irpay.dev</code></pre>
+<hr />
+<h2 id="authentication">2. Authentication</h2>
+<p>All endpoints (except <code>/compliance/schema</code>) require Bearer
+token authentication.</p>
+<h3 id="required-headers">Required Headers</h3>
+<pre class="http"><code>Authorization: Bearer &lt;access_token&gt;</code></pre>
+<h3 id="obtaining-a-token">Obtaining a Token</h3>
+<pre class="http"><code>POST /auth/login
+Content-Type: application/json
 
-    <!-- Section 1: Overview -->
-    <h2 id="overview">1. Overview</h2>
-    <p>The Payment Gateway Merchant Compliance API enables merchants to complete their KYC (Know Your Customer) requirements for payment gateway access. The API supports two business types with <strong>different endpoint flows</strong>:</p>
-    <ul>
-        <li><strong>Starter Business:</strong> For unregistered businesses/sole proprietors (single owner)</li>
-        <li><strong>Registered Business:</strong> For CAC-registered companies (multiple shareholders)</li>
-    </ul>
-    
-    <h3>Base URLs</h3>
-    <table>
-        <tr><th>Environment</th><th>URL</th></tr>
-        <tr><td>Production</td><td><code>https://gm.irpay.dev</code></td></tr>
-        <tr><td>Staging</td><td><code>https://staging-gm.irpay.dev</code></td></tr>
-    </table>
+{
+  &quot;email&quot;: &quot;merchant@example.com&quot;,
+  &quot;password&quot;: &quot;secure_password&quot;
+}</code></pre>
+<p><strong>Response:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;success&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;data&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;access_token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGciOiJIUzI1NiIs...&quot;</span><span class="fu">,</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;refresh_token&quot;</span><span class="fu">:</span> <span class="st">&quot;eyJhbGciOiJIUzI1NiIs...&quot;</span><span class="fu">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;expires_in&quot;</span><span class="fu">:</span> <span class="dv">3600</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<hr />
+<h2 id="idempotency">3. Idempotency</h2>
+<h3 id="what-is-idempotency">What is Idempotency?</h3>
+<p>Idempotency ensures that if a request fails (network timeout, server
+error) and you retry it with the <strong>same idempotency key</strong>,
+the server will: - Return the same response as the first successful
+attempt - NOT create duplicate records or perform the action twice</p>
+<h3 id="how-to-use">How to Use</h3>
+<p>All mutating endpoints (POST, PUT, PATCH, DELETE) require an
+<code>Idempotency-Key</code> header:</p>
+<pre class="http"><code>Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000</code></pre>
+<h3 id="rules-for-idempotency-keys">Rules for Idempotency Keys</h3>
+<table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Format</strong></td>
+<td>UUID v4 or alphanumeric string (max 128 chars)</td>
+</tr>
+<tr>
+<td><strong>Uniqueness</strong></td>
+<td>Each distinct operation needs a unique key</td>
+</tr>
+<tr>
+<td><strong>Scope</strong></td>
+<td>Keys are scoped per merchant</td>
+</tr>
+<tr>
+<td><strong>TTL</strong></td>
+<td>Keys expire 24 hours after first use</td>
+</tr>
+<tr>
+<td><strong>Retry</strong></td>
+<td>Same key + same request = returns cached response</td>
+</tr>
+<tr>
+<td><strong>Conflict</strong></td>
+<td>Same key + different request = HTTP 409 error</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="optimistic-concurrency-control">4. Optimistic Concurrency
+Control</h2>
+<h3 id="how-it-works">How It Works</h3>
+<ol type="1">
+<li><strong>GET</strong> compliance → response includes
+<code>version: 5</code></li>
+<li><strong>PUT</strong> with header
+<code>X-Expected-Version: 5</code></li>
+<li>If current version is still 5 → update succeeds, version becomes
+6</li>
+<li>If current version changed → HTTP 409 Conflict (refresh and
+retry)</li>
+</ol>
+<h3 id="required-header">Required Header</h3>
+<pre class="http"><code>X-Expected-Version: 5</code></pre>
+<hr />
+<h2 id="business-types-endpoint-flows">5. Business Types &amp; Endpoint
+Flows</h2>
+<h3 id="important-different-endpoints-for-different-business-types">⚠️
+Important: Different Endpoints for Different Business Types</h3>
+<p>Starter and Registered businesses use <strong>different
+endpoints</strong> for some steps. Using the wrong endpoint will result
+in validation errors.</p>
+<h3 id="endpoint-flow-summary">Endpoint Flow Summary</h3>
+<h4 id="starter-business">Starter Business</h4>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 37%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr>
+<th>Step</th>
+<th>Endpoint</th>
+<th>Documents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Profile</td>
+<td><code>PUT /compliance/profile</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Contact</td>
+<td><code>PUT /compliance/contact</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Owners</td>
+<td><code>PUT /compliance/owners</code></td>
+<td><code>id_document_id</code> (ID),
+<code>proof_of_address_document_id</code> (address proof)</td>
+</tr>
+<tr>
+<td>Bank Accounts</td>
+<td><code>PUT /compliance/bank-accounts</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Agreement</td>
+<td><code>POST /compliance/submit</code></td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h4 id="registered-business">Registered Business</h4>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 37%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr>
+<th>Step</th>
+<th>Endpoint</th>
+<th>Documents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Business Details</td>
+<td><code>PUT /compliance/business/details</code></td>
+<td><code>business_address_document_id</code> (address proof)</td>
+</tr>
+<tr>
+<td>Registration</td>
+<td><code>PUT /compliance/business/registration</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Shareholders</td>
+<td><code>PUT /compliance/business/shareholders</code></td>
+<td>Per shareholder: <code>id_document_id</code>,
+<code>proof_of_address_document_id</code></td>
+</tr>
+<tr>
+<td>Bank Accounts</td>
+<td><code>PUT /compliance/bank-accounts</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Agreement</td>
+<td><code>POST /compliance/submit</code></td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="document-requirements">Document Requirements</h3>
+<p><strong>Starter Business:</strong> - Owner ID document (NIN, BVN,
+Passport, or Driver’s License) - Owner proof of address (Utility bill ≤
+3 months old)</p>
+<p><strong>Registered Business:</strong> - Business proof of address -
+Per shareholder: ID document + proof of address</p>
+<h3 id="valid-id-document-types">Valid ID Document Types</h3>
+<p>The following values are accepted for <code>id_document_type</code>:
+- <code>nin</code> - National Identification Number - <code>bvn</code> -
+Bank Verification Number - <code>international_passport</code> -
+International Passport - <code>drivers_license</code> - Driver’s
+License</p>
+<hr />
+<h2 id="api-endpoints-reference">6. API Endpoints Reference</h2>
+<h3 id="public-endpoint">Public Endpoint</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 32%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/compliance/schema?business_type=X</code></td>
+<td>Get form schema (no auth required)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="common-compliance-endpoints">Common Compliance Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/compliance/start</code></td>
+<td>Start new compliance</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/compliance</code></td>
+<td>Get current compliance state</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/bank-accounts</code></td>
+<td>Save bank accounts</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/compliance/submit</code></td>
+<td>Submit for review</td>
+</tr>
+</tbody>
+</table>
+<h3 id="starter-business-endpoints">Starter Business Endpoints</h3>
+<table>
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 22%" />
+<col style="width: 31%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Content-Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/profile</code></td>
+<td><code>application/json</code></td>
+<td>Save profile</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/contact</code></td>
+<td><code>application/json</code></td>
+<td>Save contact</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/owners</code></td>
+<td><code>multipart/form-data</code></td>
+<td>Save owners + documents</td>
+</tr>
+</tbody>
+</table>
+<h3 id="registered-business-endpoints">Registered Business
+Endpoints</h3>
+<table>
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 22%" />
+<col style="width: 31%" />
+<col style="width: 28%" />
+</colgroup>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Content-Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/business/details</code></td>
+<td><code>multipart/form-data</code></td>
+<td>Save business details + address proof</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/business/registration</code></td>
+<td><code>application/json</code></td>
+<td>Save RC number &amp; TIN</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/compliance/business/shareholders</code></td>
+<td><code>multipart/form-data</code></td>
+<td>Save shareholders + documents</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="starter-business-flow">7. Starter Business Flow</h2>
+<h3 id="complete-step-by-step">Complete Step-by-Step</h3>
+<pre><code>════════════════════════════════════════════════════════════════════════════════
+                         STARTER BUSINESS FLOW
+════════════════════════════════════════════════════════════════════════════════
 
-    <!-- Section 2: Authentication -->
-    <h2 id="authentication">2. Authentication</h2>
-    <p>All endpoints require Bearer token authentication (except <code>/compliance/schema</code>).</p>
-    
-    <h3>Required Headers</h3>
-    <pre><code>Authorization: Bearer &lt;access_token&gt;</code></pre>
+STEP 1: START COMPLIANCE
+──────────────────────────────────────────────────────────────────────────────
+POST /compliance/start
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-1&gt;
 
-    <!-- Section 3: Idempotency -->
-    <h2 id="idempotency">3. Idempotency</h2>
-    <p>All mutating endpoints (POST, PUT) require an <code>Idempotency-Key</code> header:</p>
-    <pre><code>Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000</code></pre>
-    
-    <table>
-        <tr><th>Rule</th><th>Description</th></tr>
-        <tr><td><strong>Format</strong></td><td>UUID v4</td></tr>
-        <tr><td><strong>TTL</strong></td><td>Keys expire 24 hours after first use</td></tr>
-        <tr><td><strong>Retry</strong></td><td>Same key + same request = returns cached response</td></tr>
-        <tr><td><strong>Conflict</strong></td><td>Same key + different request = HTTP 409 error</td></tr>
-    </table>
+Response:
+{
+  &quot;code&quot;: 200,
+  &quot;data&quot;: {
+    &quot;compliance_id&quot;: 100,
+    &quot;status&quot;: &quot;draft&quot;,
+    &quot;version&quot;: 1
+  }
+}
 
-    <!-- Section 4: Versioning -->
-    <h2 id="versioning">4. Optimistic Concurrency Control</h2>
-    <p>Prevents conflicts when multiple browser tabs edit the same record.</p>
-    <pre><code>X-Expected-Version: 5</code></pre>
-    <p>If version mismatch occurs → HTTP 409 Conflict (refresh and retry)</p>
 
-    <div class="page-break"></div>
+STEP 2: SAVE PROFILE
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/profile
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-2&gt;
+  X-Expected-Version: 1
+  Content-Type: application/json
 
-    <!-- Section 5: Business Types -->
-    <h2 id="business-types">5. Business Types & Endpoint Flows</h2>
-    
-    <div class="important">
-        <strong>⚠️ Important:</strong> Starter and Registered businesses use <strong>different endpoints</strong> for some steps. Using the wrong endpoint will result in validation errors.
-    </div>
+Body:
+{
+  &quot;country&quot;: &quot;NG&quot;,
+  &quot;industry&quot;: &quot;retail&quot;,
+  &quot;category&quot;: &quot;fashion&quot;,
+  &quot;trading_name&quot;: &quot;ACME Store&quot;,
+  &quot;sales_volume&quot;: &quot;100000&quot;,
+  &quot;business_type&quot;: &quot;starter&quot;,
+  &quot;business_description&quot;: &quot;Fashion retail business&quot;
+}
 
-    <h3>Starter Business Endpoint Flow</h3>
-    <div class="endpoint-table">
-        <table>
-            <tr><th>Step</th><th>Endpoint</th><th>Documents</th></tr>
-            <tr><td>Profile</td><td><code>PUT /compliance/profile</code></td><td>None</td></tr>
-            <tr><td>Contact</td><td><code>PUT /compliance/contact</code></td><td>None</td></tr>
-            <tr><td>Owners</td><td><code>PUT /compliance/owners</code></td><td><code>id_document_id</code> (ID)<br><code>proof_of_address_document_id</code> (address proof)</td></tr>
-            <tr><td>Bank Accounts</td><td><code>PUT /compliance/bank-accounts</code></td><td>None</td></tr>
-            <tr><td>Agreement</td><td><code>POST /compliance/submit</code></td><td>None</td></tr>
-        </table>
-    </div>
+Response: { &quot;data&quot;: { &quot;version&quot;: 2, &quot;profile_complete&quot;: true } }
 
-    <h3>Registered Business Endpoint Flow</h3>
-    <div class="endpoint-table">
-        <table>
-            <tr><th>Step</th><th>Endpoint</th><th>Documents</th></tr>
-            <tr><td>Business Details</td><td><code>PUT /compliance/business/details</code></td><td><code>business_address_document_id</code> (address proof)</td></tr>
-            <tr><td>Registration</td><td><code>PUT /compliance/business/registration</code></td><td>None</td></tr>
-            <tr><td>Shareholders</td><td><code>PUT /compliance/business/shareholders</code></td><td>Per shareholder:<br><code>id_document_id</code><br><code>proof_of_address_document_id</code></td></tr>
-            <tr><td>Bank Accounts</td><td><code>PUT /compliance/bank-accounts</code></td><td>None</td></tr>
-            <tr><td>Agreement</td><td><code>POST /compliance/submit</code></td><td>None</td></tr>
-        </table>
-    </div>
 
-    <h3>Valid ID Document Types</h3>
-    <p>The following values are accepted for <code>id_document_type</code>:</p>
-    <ul>
-        <li><code>nin</code> - National Identification Number</li>
-        <li><code>bvn</code> - Bank Verification Number</li>
-        <li><code>international_passport</code> - International Passport</li>
-        <li><code>drivers_license</code> - Driver's License</li>
-    </ul>
+STEP 3: SAVE CONTACT
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/contact
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-3&gt;
+  X-Expected-Version: 2
+  Content-Type: application/json
 
-    <!-- Section 6: Endpoints -->
-    <h2 id="endpoints">6. API Endpoints Reference</h2>
-    
-    <h3>Common Endpoints</h3>
-    <table>
-        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
-        <tr><td><span class="method get">GET</span></td><td><code>/compliance/schema?business_type=X</code></td><td>Get form schema (no auth)</td></tr>
-        <tr><td><span class="method post">POST</span></td><td><code>/compliance/start</code></td><td>Start new compliance</td></tr>
-        <tr><td><span class="method get">GET</span></td><td><code>/compliance</code></td><td>Get current compliance state</td></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/bank-accounts</code></td><td>Save bank accounts</td></tr>
-        <tr><td><span class="method post">POST</span></td><td><code>/compliance/submit</code></td><td>Submit for review</td></tr>
-    </table>
+Body:
+{
+  &quot;email&quot;: &quot;contact@acme.com&quot;,
+  &quot;support_email&quot;: &quot;support@acme.com&quot;,
+  &quot;dispute_email&quot;: &quot;support@acme.com&quot;,
+  &quot;same_as_support_email&quot;: true,
+  &quot;phone&quot;: &quot;08012345678&quot;,
+  &quot;address&quot;: &quot;123 Victoria Island, Lagos&quot;,
+  &quot;state&quot;: &quot;Lagos&quot;,
+  &quot;lga&quot;: &quot;Eti-Osa&quot;,
+  &quot;online_links&quot;: [
+    { &quot;platform&quot;: &quot;website&quot;, &quot;url&quot;: &quot;https://acme.com&quot; }
+  ]
+}
 
-    <h3>Starter Business Endpoints</h3>
-    <table>
-        <tr><th>Method</th><th>Endpoint</th><th>Content-Type</th></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/profile</code></td><td>application/json</td></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/contact</code></td><td>application/json</td></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/owners</code></td><td>multipart/form-data</td></tr>
-    </table>
+Response: { &quot;data&quot;: { &quot;version&quot;: 3, &quot;contact_complete&quot;: true } }
 
-    <h3>Registered Business Endpoints</h3>
-    <table>
-        <tr><th>Method</th><th>Endpoint</th><th>Content-Type</th></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/business/details</code></td><td>multipart/form-data</td></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/business/registration</code></td><td>application/json</td></tr>
-        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/business/shareholders</code></td><td>multipart/form-data</td></tr>
-    </table>
 
-    <div class="page-break"></div>
+STEP 4: SAVE OWNERS WITH DOCUMENTS (Multipart)
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/owners
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-4&gt;
+  X-Expected-Version: 3
+  Content-Type: multipart/form-data
 
-    <!-- Section 7: Starter Flow -->
-    <h2 id="starter-flow">7. Starter Business Flow</h2>
-    
-    <div class="flow-step">
-        <h4>Step 1: Start Compliance</h4>
-        <pre><code>POST /compliance/start
+Form Parts:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Part: &quot;data&quot; (JSON string)                                                  │
+│ {                                                                           │
+│   &quot;owners&quot;: [{                                                              │
+│     &quot;full_name&quot;: &quot;John Doe&quot;,                                                │
+│     &quot;date_of_birth&quot;: &quot;15-03-1985&quot;,                                          │
+│     &quot;nationality&quot;: &quot;NG&quot;,                                                    │
+│     &quot;id_document_type&quot;: &quot;nin&quot;,                                              │
+│     &quot;address&quot;: &quot;456 Ikoyi, Lagos&quot;,                                          │
+│     &quot;same_as_business_address&quot;: false,                                      │
+│     &quot;state&quot;: &quot;Lagos&quot;,                                                       │
+│     &quot;lga&quot;: &quot;Eti-Osa&quot;                                                        │
+│   }]                                                                        │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;owner_0_identity&quot; (file) → passport.pdf                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;owner_0_address&quot; (file) → utility-bill.pdf                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+File part naming convention:
+  - owner_{index}_identity  → ID document for owner at index
+  - owner_{index}_address   → Proof of address for owner at index
+
+Response: { &quot;data&quot;: { &quot;version&quot;: 4, &quot;owners_complete&quot;: true } }
+
+
+STEP 5: SAVE BANK ACCOUNT
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/bank-accounts
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-5&gt;
+  X-Expected-Version: 4
+  Content-Type: application/json
+
+Body:
+{
+  &quot;bank_accounts&quot;: [{
+    &quot;bank_code&quot;: &quot;044&quot;,
+    &quot;account_number&quot;: &quot;0123456789&quot;,
+    &quot;account_name&quot;: &quot;John Doe&quot;
+  }]
+}
+
+Response: { &quot;data&quot;: { &quot;version&quot;: 5, &quot;bank_accounts_complete&quot;: true } }
+
+
+STEP 6: SUBMIT FOR REVIEW
+──────────────────────────────────────────────────────────────────────────────
+POST /compliance/submit
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-6&gt;
+  X-Expected-Version: 5
+  Content-Type: application/json
+
+Body:
+{
+  &quot;agreement_accepted&quot;: true
+}
+
+Response: { &quot;data&quot;: { &quot;version&quot;: 6, &quot;status&quot;: &quot;submitted&quot;, &quot;agreement_complete&quot;: true } }
+
+
+════════════════════════════════════════════════════════════════════════════════
+                         STARTER FLOW COMPLETE!
+                         Total API calls: 6
+════════════════════════════════════════════════════════════════════════════════</code></pre>
+<hr />
+<h2 id="registered-business-flow">8. Registered Business Flow</h2>
+<h3 id="complete-step-by-step-1">Complete Step-by-Step</h3>
+<pre><code>════════════════════════════════════════════════════════════════════════════════
+                       REGISTERED BUSINESS FLOW
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 1: START COMPLIANCE
+──────────────────────────────────────────────────────────────────────────────
+POST /compliance/start
 Headers:
   Authorization: Bearer &lt;token&gt;
   Idempotency-Key: &lt;uuid&gt;
 
-Response: { "data": { "compliance_id": 100, "version": 1 } }</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 2: Save Profile</h4>
-        <pre><code>PUT /compliance/profile
-Headers:
-  X-Expected-Version: 1
-  Content-Type: application/json
+Response: { &quot;data&quot;: { &quot;compliance_id&quot;: 200, &quot;version&quot;: 1 } }
 
-Body:
-{
-  "country": "NG",
-  "industry": "retail",
-  "category": "fashion",
-  "trading_name": "ACME Store",
-  "sales_volume": "100000",
-  "business_type": "starter",
-  "business_description": "Fashion retail business"
-}</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 3: Save Contact</h4>
-        <pre><code>PUT /compliance/contact
+
+STEP 2: SAVE BUSINESS DETAILS WITH ADDRESS PROOF (Multipart)
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/business/details      ← NOTE: Different endpoint!
 Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 1
+  Content-Type: multipart/form-data
+
+Form Parts:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Part: &quot;data&quot; (JSON string)                                                  │
+│ {                                                                           │
+│   &quot;country&quot;: &quot;NG&quot;,                                                          │
+│   &quot;industry&quot;: &quot;technology&quot;,                                                 │
+│   &quot;category&quot;: &quot;fintech&quot;,                                                    │
+│   &quot;trading_name&quot;: &quot;TechCorp Limited&quot;,                                       │
+│   &quot;sales_volume&quot;: &quot;5000000&quot;,                                                │
+│   &quot;business_type&quot;: &quot;registered&quot;,                                            │
+│   &quot;business_description&quot;: &quot;Financial technology solutions&quot;,                 │
+│   &quot;phone&quot;: &quot;09012345678&quot;,                                                   │
+│   &quot;address&quot;: &quot;Plot 123 Tech Hub, Lekki&quot;,                                    │
+│   &quot;support_email&quot;: &quot;support@techcorp.ng&quot;,                                   │
+│   &quot;dispute_email&quot;: &quot;disputes@techcorp.ng&quot;,                                  │
+│   &quot;state&quot;: &quot;Lagos&quot;,                                                         │
+│   &quot;lga&quot;: &quot;Eti-Osa&quot;,                                                         │
+│   &quot;online_links&quot;: [                                                         │
+│     { &quot;platform&quot;: &quot;website&quot;, &quot;url&quot;: &quot;https://techcorp.ng&quot; }                 │
+│   ]                                                                         │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;business_address_proof&quot; (file) → office-lease.pdf                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Response: { &quot;data&quot;: { &quot;version&quot;: 2, &quot;profile_complete&quot;: true, &quot;contact_complete&quot;: true } }
+
+
+STEP 3: SAVE REGISTRATION DETAILS
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/business/registration      ← NOTE: Different endpoint!
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid&gt;
   X-Expected-Version: 2
   Content-Type: application/json
 
 Body:
 {
-  "email": "contact@acme.com",
-  "support_email": "support@acme.com",
-  "phone": "08012345678",
-  "address": "123 Victoria Island, Lagos",
-  "state": "Lagos",
-  "lga": "Eti-Osa"
-}</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 4: Save Owner with Documents (Multipart)</h4>
-        <pre><code>PUT /compliance/owners
+  &quot;registration_number&quot;: &quot;RC1234567&quot;,
+  &quot;tax_identification_number&quot;: &quot;12345678-0001&quot;
+}
+
+Response: { &quot;data&quot;: { &quot;version&quot;: 3, &quot;registration_complete&quot;: true } }
+
+
+STEP 4: SAVE SHAREHOLDERS WITH DOCUMENTS (Multipart)
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/business/shareholders      ← NOTE: Different endpoint!
 Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid&gt;
   X-Expected-Version: 3
   Content-Type: multipart/form-data
 
 Form Parts:
-  "data" (JSON string): {
-    "owners": [{
-      "full_name": "John Doe",
-      "date_of_birth": "15-03-1985",
-      "nationality": "NG",
-      "id_document_type": "nin",
-      "address": "456 Ikoyi, Lagos",
-      "state": "Lagos",
-      "lga": "Eti-Osa"
-    }]
-  }
-  "owner_0_identity" (file): passport.pdf
-  "owner_0_address" (file): utility-bill.pdf</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 5: Save Bank Account</h4>
-        <pre><code>PUT /compliance/bank-accounts
-Body: { "bank_accounts": [{ "bank_code": "044", "account_number": "0123456789", "account_name": "John Doe" }] }</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 6: Submit</h4>
-        <pre><code>POST /compliance/submit
-Body: { "agreement_accepted": true }</code></pre>
-    </div>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Part: &quot;data&quot; (JSON string)                                                  │
+│ {                                                                           │
+│   &quot;shareholders&quot;: [                                                         │
+│     {                                                                       │
+│       &quot;full_name&quot;: &quot;Adaora Okafor&quot;,                                         │
+│       &quot;date_of_birth&quot;: &quot;20-05-1980&quot;,                                        │
+│       &quot;nationality&quot;: &quot;NG&quot;,                                                  │
+│       &quot;role&quot;: &quot;director&quot;,                                                   │
+│       &quot;id_document_type&quot;: &quot;international_passport&quot;,                         │
+│       &quot;address&quot;: &quot;12 Executive Estate, Ikoyi&quot;,                              │
+│       &quot;same_as_business_address&quot;: false,                                    │
+│       &quot;state&quot;: &quot;Lagos&quot;,                                                     │
+│       &quot;lga&quot;: &quot;Eti-Osa&quot;                                                      │
+│     },                                                                      │
+│     {                                                                       │
+│       &quot;full_name&quot;: &quot;Chidi Eze&quot;,                                             │
+│       &quot;date_of_birth&quot;: &quot;08-11-1975&quot;,                                        │
+│       &quot;nationality&quot;: &quot;NG&quot;,                                                  │
+│       &quot;role&quot;: &quot;shareholder&quot;,                                                │
+│       &quot;id_document_type&quot;: &quot;nin&quot;,                                            │
+│       &quot;address&quot;: &quot;45 Business District, VI&quot;,                                │
+│       &quot;same_as_business_address&quot;: false,                                    │
+│       &quot;state&quot;: &quot;Lagos&quot;,                                                     │
+│       &quot;lga&quot;: &quot;Eti-Osa&quot;                                                      │
+│     }                                                                       │
+│   ]                                                                         │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;owner_0_identity&quot; (file) → adaora-passport.pdf                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;owner_0_address&quot; (file) → adaora-utility.pdf                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;owner_1_identity&quot; (file) → chidi-nin.pdf                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: &quot;owner_1_address&quot; (file) → chidi-utility.pdf                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-    <div class="page-break"></div>
+File part naming convention:
+  - owner_{index}_identity  → ID document for shareholder at index
+  - owner_{index}_address   → Proof of address for shareholder at index
 
-    <!-- Section 8: Registered Flow -->
-    <h2 id="registered-flow">8. Registered Business Flow</h2>
-    
-    <div class="flow-step">
-        <h4>Step 1: Start Compliance</h4>
-        <pre><code>POST /compliance/start
-Response: { "data": { "compliance_id": 200, "version": 1 } }</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 2: Save Business Details with Address Proof (Multipart)</h4>
-        <pre><code>PUT /compliance/business/details    ← Different endpoint!
+Response: { &quot;data&quot;: { &quot;version&quot;: 4, &quot;owners_complete&quot;: true } }
+
+
+STEP 5: SAVE BANK ACCOUNT
+──────────────────────────────────────────────────────────────────────────────
+PUT /compliance/bank-accounts
 Headers:
-  X-Expected-Version: 1
-  Content-Type: multipart/form-data
-
-Form Parts:
-  "data" (JSON string): {
-    "country": "NG",
-    "industry": "technology",
-    "category": "fintech",
-    "trading_name": "TechCorp Limited",
-    "sales_volume": "5000000",
-    "business_type": "registered",
-    "business_description": "Financial technology solutions",
-    "phone": "09012345678",
-    "address": "Plot 123 Tech Hub, Lekki",
-    "support_email": "support@techcorp.ng",
-    "state": "Lagos",
-    "lga": "Eti-Osa"
-  }
-  "business_address_proof" (file): office-lease.pdf</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 3: Save Registration Details</h4>
-        <pre><code>PUT /compliance/business/registration    ← Different endpoint!
-Headers:
-  X-Expected-Version: 2
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 4
   Content-Type: application/json
 
 Body:
 {
-  "registration_number": "RC1234567",
-  "tax_identification_number": "12345678-0001"
-}</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 4: Save Shareholders with Documents (Multipart)</h4>
-        <pre><code>PUT /compliance/business/shareholders    ← Different endpoint!
+  &quot;bank_accounts&quot;: [{
+    &quot;bank_code&quot;: &quot;058&quot;,
+    &quot;account_number&quot;: &quot;1234567890&quot;,
+    &quot;account_name&quot;: &quot;TECHCORP LIMITED&quot;
+  }]
+}
+
+Response: { &quot;data&quot;: { &quot;version&quot;: 5, &quot;bank_accounts_complete&quot;: true } }
+
+
+STEP 6: SUBMIT FOR REVIEW
+──────────────────────────────────────────────────────────────────────────────
+POST /compliance/submit
 Headers:
-  X-Expected-Version: 3
-  Content-Type: multipart/form-data
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 5
+  Content-Type: application/json
 
-Form Parts:
-  "data" (JSON string): {
-    "shareholders": [
-      {
-        "full_name": "Adaora Okafor",
-        "date_of_birth": "20-05-1980",
-        "nationality": "NG",
-        "role": "director",
-        "id_document_type": "international_passport",
-        "address": "12 Executive Estate, Ikoyi",
-        "state": "Lagos",
-        "lga": "Eti-Osa"
-      },
-      {
-        "full_name": "Chidi Eze",
-        "date_of_birth": "08-11-1975",
-        "nationality": "NG",
-        "role": "shareholder",
-        "id_document_type": "nin",
-        "address": "45 Business District, VI",
-        "state": "Lagos",
-        "lga": "Eti-Osa"
-      }
-    ]
-  }
-  "owner_0_identity" (file): adaora-passport.pdf
-  "owner_0_address" (file): adaora-utility.pdf
-  "owner_1_identity" (file): chidi-nin.pdf
-  "owner_1_address" (file): chidi-utility.pdf</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 5: Save Bank Account</h4>
-        <pre><code>PUT /compliance/bank-accounts
-Body: { "bank_accounts": [{ "bank_code": "058", "account_number": "1234567890", "account_name": "TECHCORP LIMITED" }] }</code></pre>
-    </div>
-    
-    <div class="flow-step">
-        <h4>Step 6: Submit</h4>
-        <pre><code>POST /compliance/submit
-Body: { "agreement_accepted": true }</code></pre>
-    </div>
+Body:
+{
+  &quot;agreement_accepted&quot;: true
+}
 
-    <div class="page-break"></div>
+Response: { &quot;data&quot;: { &quot;version&quot;: 6, &quot;status&quot;: &quot;submitted&quot;, &quot;agreement_complete&quot;: true } }
 
-    <!-- Section 9: Document Upload -->
-    <h2 id="document-upload">9. Document Upload</h2>
-    
-    <h3>File Part Naming Convention</h3>
-    <table>
-        <tr><th>Endpoint</th><th>File Part Name</th><th>Description</th></tr>
-        <tr><td><code>/compliance/business/details</code></td><td><code>business_address_proof</code></td><td>Business address proof</td></tr>
-        <tr><td><code>/compliance/owners</code></td><td><code>owner_{n}_identity</code></td><td>Owner's ID document</td></tr>
-        <tr><td><code>/compliance/owners</code></td><td><code>owner_{n}_address</code></td><td>Owner's proof of address</td></tr>
-        <tr><td><code>/compliance/business/shareholders</code></td><td><code>owner_{n}_identity</code></td><td>Shareholder's ID document</td></tr>
-        <tr><td><code>/compliance/business/shareholders</code></td><td><code>owner_{n}_address</code></td><td>Shareholder's proof of address</td></tr>
-    </table>
-    
-    <div class="note">
-        <strong>Note:</strong> <code>{n}</code> is the 0-based array index matching the position in the JSON array.
-    </div>
 
-    <h3>Supported File Types</h3>
-    <table>
-        <tr><th>Content Type</th><th>Max Size</th></tr>
-        <tr><td>application/pdf</td><td>1 MB</td></tr>
-        <tr><td>image/jpeg</td><td>1 MB</td></tr>
-        <tr><td>image/png</td><td>1 MB</td></tr>
-    </table>
-
-    <!-- Section 10: Errors -->
-    <h2 id="errors">10. Error Handling</h2>
-    
-    <h3>HTTP Status Codes</h3>
-    <table>
-        <tr><th>Code</th><th>Meaning</th><th>Action</th></tr>
-        <tr><td>200</td><td>Success</td><td>Process response</td></tr>
-        <tr><td>400</td><td>Bad Request</td><td>Fix request data</td></tr>
-        <tr><td>401</td><td>Unauthorized</td><td>Refresh token</td></tr>
-        <tr><td>409</td><td>Conflict</td><td>Version mismatch - refresh and retry</td></tr>
-        <tr><td>413</td><td>Payload Too Large</td><td>Reduce file size (max 1 MB)</td></tr>
-        <tr><td>422</td><td>Validation Error</td><td>Fix field errors</td></tr>
-    </table>
-
-    <h3>Error Response Format</h3>
-    <pre><code>{
-  "code": 422,
-  "message": "Compliance validation failed",
-  "errors": [
-    { "step": "owners[0]", "field": "full_name", "message": "This field is required" },
-    { "step": "owners[0]", "field": "id_document_type", "message": "Invalid value. Allowed: nin, bvn, international_passport, drivers_license" }
-  ]
-}</code></pre>
-
-    <hr style="margin-top: 40px;">
-    <p style="text-align: center; color: #7f8c8d; font-size: 12px;">
-        <strong>End of Document</strong> &nbsp;|&nbsp; Version 2.1 &nbsp;|&nbsp; November 2026
-    </p>
+════════════════════════════════════════════════════════════════════════════════
+                      REGISTERED FLOW COMPLETE!
+                      Total API calls: 6
+════════════════════════════════════════════════════════════════════════════════</code></pre>
+<hr />
+<h2 id="document-upload">9. Document Upload</h2>
+<h3 id="multipart-upload-design">Multipart Upload Design</h3>
+<p>Documents are submitted <strong>inline with form data</strong> using
+<code>multipart/form-data</code>. This approach:</p>
+<ul>
+<li><strong>Reduces API calls</strong>: One request per step, regardless
+of document count</li>
+<li><strong>Simplifies client code</strong>: No separate presigned URL
+dance</li>
+<li><strong>Atomic operations</strong>: Form data and files saved
+together or fail together</li>
+</ul>
+<h3 id="file-part-naming-convention">File Part Naming Convention</h3>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 39%" />
+<col style="width: 34%" />
+</colgroup>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>File Part Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/compliance/business/details</code></td>
+<td><code>business_address_proof</code></td>
+<td>Business address proof</td>
+</tr>
+<tr>
+<td><code>/compliance/owners</code></td>
+<td><code>owner_{n}_identity</code></td>
+<td>Owner’s ID document</td>
+</tr>
+<tr>
+<td><code>/compliance/owners</code></td>
+<td><code>owner_{n}_address</code></td>
+<td>Owner’s proof of address</td>
+</tr>
+<tr>
+<td><code>/compliance/business/shareholders</code></td>
+<td><code>owner_{n}_identity</code></td>
+<td>Shareholder’s ID document</td>
+</tr>
+<tr>
+<td><code>/compliance/business/shareholders</code></td>
+<td><code>owner_{n}_address</code></td>
+<td>Shareholder’s proof of address</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-does-n-mean">What does <code>{n}</code> mean?</h3>
+<p>The <code>{n}</code> is the <strong>0-based array index</strong>
+matching the position in the JSON <code>owners</code> or
+<code>shareholders</code> array.</p>
+<p><strong>Example:</strong> If you submit 3 shareholders in the
+JSON:</p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;shareholders&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;full_name&quot;</span><span class="fu">:</span> <span class="st">&quot;Alice&quot;</span> <span class="fu">}</span><span class="ot">,</span>   <span class="er">//</span> <span class="er">index</span> <span class="dv">0</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;full_name&quot;</span><span class="fu">:</span> <span class="st">&quot;Bob&quot;</span> <span class="fu">}</span><span class="ot">,</span>     <span class="er">//</span> <span class="er">index</span> <span class="dv">1</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;full_name&quot;</span><span class="fu">:</span> <span class="st">&quot;Charlie&quot;</span> <span class="fu">}</span>  <span class="er">//</span> <span class="er">index</span> <span class="dv">2</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p>The file parts should be named:</p>
+<pre><code>owner_0_identity  → Alice&#39;s ID
+owner_0_address   → Alice&#39;s proof of address
+owner_1_identity  → Bob&#39;s ID
+owner_1_address   → Bob&#39;s proof of address
+owner_2_identity  → Charlie&#39;s ID
+owner_2_address   → Charlie&#39;s proof of address</code></pre>
+<h3 id="supported-file-types">Supported File Types</h3>
+<table>
+<thead>
+<tr>
+<th>Content Type</th>
+<th>Extensions</th>
+<th>Max Size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>application/pdf</code></td>
+<td>.pdf</td>
+<td>1 MB</td>
+</tr>
+<tr>
+<td><code>image/jpeg</code></td>
+<td>.jpg, .jpeg</td>
+<td>1 MB</td>
+</tr>
+<tr>
+<td><code>image/png</code></td>
+<td>.png</td>
+<td>1 MB</td>
+</tr>
+</tbody>
+</table>
+<h3 id="javascript-example">JavaScript Example</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">async</span> <span class="kw">function</span> <span class="fu">saveOwnersWithDocuments</span>(owners<span class="op">,</span> ownerFiles<span class="op">,</span> token<span class="op">,</span> version) {</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> formData <span class="op">=</span> <span class="kw">new</span> <span class="bu">FormData</span>()<span class="op">;</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Add JSON data as a string part</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  formData<span class="op">.</span><span class="fu">append</span>(<span class="st">&#39;data&#39;</span><span class="op">,</span> <span class="bu">JSON</span><span class="op">.</span><span class="fu">stringify</span>({ owners }))<span class="op">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Add files for each owner</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  ownerFiles<span class="op">.</span><span class="fu">forEach</span>((files<span class="op">,</span> index) <span class="kw">=&gt;</span> {</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (files<span class="op">.</span><span class="at">identity</span>) {</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>      formData<span class="op">.</span><span class="fu">append</span>(<span class="vs">`owner_</span><span class="sc">${</span>index<span class="sc">}</span><span class="vs">_identity`</span><span class="op">,</span> files<span class="op">.</span><span class="at">identity</span>)<span class="op">;</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (files<span class="op">.</span><span class="at">address</span>) {</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>      formData<span class="op">.</span><span class="fu">append</span>(<span class="vs">`owner_</span><span class="sc">${</span>index<span class="sc">}</span><span class="vs">_address`</span><span class="op">,</span> files<span class="op">.</span><span class="at">address</span>)<span class="op">;</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> response <span class="op">=</span> <span class="cf">await</span> <span class="fu">fetch</span>(<span class="st">&#39;/compliance/owners&#39;</span><span class="op">,</span> {</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    <span class="dt">method</span><span class="op">:</span> <span class="st">&#39;PUT&#39;</span><span class="op">,</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    <span class="dt">headers</span><span class="op">:</span> {</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>      <span class="st">&#39;Authorization&#39;</span><span class="op">:</span> <span class="vs">`Bearer </span><span class="sc">${</span>token<span class="sc">}</span><span class="vs">`</span><span class="op">,</span></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>      <span class="st">&#39;Idempotency-Key&#39;</span><span class="op">:</span> crypto<span class="op">.</span><span class="fu">randomUUID</span>()<span class="op">,</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>      <span class="st">&#39;X-Expected-Version&#39;</span><span class="op">:</span> version</span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>      <span class="co">// Note: Don&#39;t set Content-Type - browser sets it with boundary</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    }<span class="op">,</span></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    <span class="dt">body</span><span class="op">:</span> formData</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> response<span class="op">.</span><span class="fu">json</span>()<span class="op">;</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<hr />
+<h2 id="error-handling">10. Error Handling</h2>
+<h3 id="http-status-codes">HTTP Status Codes</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>200</td>
+<td>Success</td>
+<td>Process response</td>
+</tr>
+<tr>
+<td>400</td>
+<td>Bad Request</td>
+<td>Fix request data</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Unauthorized</td>
+<td>Refresh token or re-login</td>
+</tr>
+<tr>
+<td>409</td>
+<td>Conflict</td>
+<td>Version mismatch - refresh and retry</td>
+</tr>
+<tr>
+<td>413</td>
+<td>Payload Too Large</td>
+<td>Reduce file size (max 1 MB)</td>
+</tr>
+<tr>
+<td>422</td>
+<td>Validation Error</td>
+<td>Fix field errors</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Server Error</td>
+<td>Retry with exponential backoff</td>
+</tr>
+</tbody>
+</table>
+<h3 id="error-response-format">Error Response Format</h3>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="dv">422</span><span class="fu">,</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;message&quot;</span><span class="fu">:</span> <span class="st">&quot;Compliance validation failed&quot;</span><span class="fu">,</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;errors&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;step&quot;</span><span class="fu">:</span> <span class="st">&quot;owners[0]&quot;</span><span class="fu">,</span> <span class="dt">&quot;field&quot;</span><span class="fu">:</span> <span class="st">&quot;full_name&quot;</span><span class="fu">,</span> <span class="dt">&quot;message&quot;</span><span class="fu">:</span> <span class="st">&quot;This field is required&quot;</span> <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;step&quot;</span><span class="fu">:</span> <span class="st">&quot;owners[0]&quot;</span><span class="fu">,</span> <span class="dt">&quot;field&quot;</span><span class="fu">:</span> <span class="st">&quot;id_document_type&quot;</span><span class="fu">,</span> <span class="dt">&quot;message&quot;</span><span class="fu">:</span> <span class="st">&quot;Invalid value. Allowed: nin, bvn, international_passport, drivers_license&quot;</span> <span class="fu">}</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="common-error-codes">Common Error Codes</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VALIDATION_FAILED</code></td>
+<td>Field validation errors</td>
+</tr>
+<tr>
+<td><code>VERSION_CONFLICT</code></td>
+<td>X-Expected-Version doesn’t match</td>
+</tr>
+<tr>
+<td><code>IDEMPOTENCY_CONFLICT</code></td>
+<td>Same key, different request body</td>
+</tr>
+<tr>
+<td><code>FILE_TOO_LARGE</code></td>
+<td>File exceeds 1 MB limit</td>
+</tr>
+<tr>
+<td><code>UNSUPPORTED_FILE_TYPE</code></td>
+<td>File type not allowed</td>
+</tr>
+<tr>
+<td><code>ALREADY_SUBMITTED</code></td>
+<td>Cannot modify submitted compliance</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="appendix-field-constraints">Appendix: Field Constraints</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Max Length</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>country</td>
+<td>3</td>
+<td>ISO code (e.g., “NG”)</td>
+</tr>
+<tr>
+<td>trading_name</td>
+<td>200</td>
+<td></td>
+</tr>
+<tr>
+<td>business_description</td>
+<td>500</td>
+<td></td>
+</tr>
+<tr>
+<td>email</td>
+<td>255</td>
+<td>Valid email</td>
+</tr>
+<tr>
+<td>phone</td>
+<td>20</td>
+<td>Include country code</td>
+</tr>
+<tr>
+<td>address</td>
+<td>500</td>
+<td></td>
+</tr>
+<tr>
+<td>state</td>
+<td>100</td>
+<td>Nigerian state (e.g., “Lagos”)</td>
+</tr>
+<tr>
+<td>lga</td>
+<td>100</td>
+<td>Local Government Area</td>
+</tr>
+<tr>
+<td>full_name</td>
+<td>200</td>
+<td></td>
+</tr>
+<tr>
+<td>date_of_birth</td>
+<td>10</td>
+<td>Format: DD-MM-YYYY</td>
+</tr>
+<tr>
+<td>registration_number</td>
+<td>50</td>
+<td>RC number</td>
+</tr>
+<tr>
+<td>tax_identification_number</td>
+<td>50</td>
+<td>TIN</td>
+</tr>
+<tr>
+<td>account_number</td>
+<td>10</td>
+<td>Exactly 10 digits</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="faq-frontend-integration-questions">11. FAQ (Frontend
+Integration Questions)</h2>
+<h3
+id="q1-do-i-need-to-re-upload-files-when-editing-ownersshareholders">Q1:
+Do I need to re-upload files when editing owners/shareholders?</h3>
+<p><strong>Yes, currently files must be re-uploaded when editing owners
+or shareholders.</strong></p>
+<p>The current implementation replaces all owner/shareholder records on
+each save. This means:</p>
+<ul>
+<li>When you call <code>PUT /compliance/owners</code> or
+<code>PUT /compliance/business/shareholders</code>, all existing records
+are deleted and replaced with the new submission</li>
+<li>Previously uploaded documents are not preserved</li>
+<li>You must re-submit all files, even for owners/shareholders that
+haven’t changed</li>
+</ul>
+<p><strong>Frontend recommendation:</strong> When building the edit
+flow, cache the file objects in state so they can be re-submitted.
+Alternatively, inform users that editing requires re-uploading all
+documents.</p>
+<blockquote>
+<p>⚠️ <strong>Known limitation</strong>: This behavior is planned for
+improvement in a future release to preserve documents for unchanged
+records.</p>
+</blockquote>
+<hr />
+<h3
+id="q2-what-happens-to-document-positions-when-shareholders-are-removed">Q2:
+What happens to document positions when shareholders are removed?</h3>
+<p><strong>Files are matched by array index, so removing a shareholder
+shifts all subsequent document associations.</strong></p>
+<p>Example scenario: 1. You submit 3 shareholders: Alice (index 0), Bob
+(index 1), Charlie (index 2) 2. You upload <code>owner_1_identity</code>
+for Bob 3. You edit and remove Bob from the middle 4. Now Charlie
+becomes index 1 5. If you don’t re-upload, Charlie gets Bob’s old
+document</p>
+<p><strong>Current behavior:</strong> This is a known limitation. Since
+files are matched by <code>owner_{index}_*</code> naming, the backend
+cannot distinguish between “same person, different position” and
+“different person, same position.”</p>
+<p><strong>Frontend recommendation:</strong> Always re-upload all
+documents when the shareholder list changes. Display a warning to users
+that removing or reordering shareholders requires re-uploading documents
+for all remaining shareholders.</p>
+<hr />
+<h3 id="q3-what-are-the-valid-values-for-id_document_type">Q3: What are
+the valid values for <code>id_document_type</code>?</h3>
+<p><strong>Valid values:</strong> - <code>nin</code> - National
+Identification Number - <code>bvn</code> - Bank Verification
+Number<br />
+- <code>international_passport</code> - International Passport -
+<code>drivers_license</code> - Driver’s License</p>
+<p><strong>Invalid values (do not use):</strong> -
+<del><code>national_id</code></del> - Removed (was duplicate of
+<code>nin</code>)</p>
+<p>The schema in both <code>gateway-merchant</code> and
+<code>tms-kyc</code> has been synchronized to accept these exact
+values.</p>
+<hr />
+<h3 id="q4-how-do-i-view-or-download-previously-uploaded-documents">Q4:
+How do I view or download previously uploaded documents?</h3>
+<p><strong>Use the document viewing endpoint:</strong></p>
+<pre class="http"><code>GET /compliance/documents/{document_id}
+Authorization: Bearer &lt;token&gt;</code></pre>
+<p><strong>Where to get <code>document_id</code>:</strong> The document
+IDs are returned in the compliance response for each
+owner/shareholder:</p>
+<div class="sourceCode" id="cb15"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;data&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;owners&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">{</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;full_name&quot;</span><span class="fu">:</span> <span class="st">&quot;John Doe&quot;</span><span class="fu">,</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;id_document_id&quot;</span><span class="fu">:</span> <span class="st">&quot;doc_abc123&quot;</span><span class="fu">,</span>           <span class="er">//</span> <span class="er">←</span> <span class="er">Use</span> <span class="er">this</span> <span class="er">ID</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>        <span class="dt">&quot;proof_of_address_document_id&quot;</span><span class="fu">:</span> <span class="st">&quot;doc_xyz789&quot;</span>  <span class="er">//</span> <span class="er">←</span> <span class="er">Or</span> <span class="er">this</span> <span class="er">one</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    <span class="ot">]</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Response:</strong> Returns the document file as a download
+(with appropriate Content-Type and Content-Disposition headers).</p>
+<hr />
+<h3 id="q5-how-do-i-detect-if-compliance-has-already-been-submitted">Q5:
+How do I detect if compliance has already been submitted?</h3>
+<p><strong>Check the <code>status</code> field in the compliance
+response:</strong></p>
+<pre class="http"><code>GET /compliance
+Authorization: Bearer &lt;token&gt;</code></pre>
+<p><strong>Response includes status:</strong></p>
+<div class="sourceCode" id="cb17"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;data&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;status&quot;</span><span class="fu">:</span> <span class="st">&quot;draft&quot;</span><span class="fu">,</span>      <span class="er">//</span> <span class="er">or</span> <span class="dt">&quot;submitted&quot;</span><span class="er">,</span> <span class="dt">&quot;approved&quot;</span><span class="er">,</span> <span class="dt">&quot;rejected&quot;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="dv">5</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Status values:</strong> | Status | Meaning | Can Edit? |
+|——–|———|———–| | <code>draft</code> | Not yet submitted | ✅ Yes | |
+<code>submitted</code> | Under review | ❌ No | | <code>approved</code>
+| Compliance approved | ❌ No | | <code>rejected</code> | Returned for
+corrections | ✅ Yes (must re-submit) |</p>
+<p><strong>If you try to edit a submitted compliance:</strong></p>
+<div class="sourceCode" id="cb18"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;code&quot;</span><span class="fu">:</span> <span class="dv">422</span><span class="fu">,</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;message&quot;</span><span class="fu">:</span> <span class="st">&quot;Compliance has already been submitted and cannot be modified&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Frontend recommendation:</strong> 1. Fetch compliance status
+on page load 2. If <code>status !== "draft"</code> and
+<code>status !== "rejected"</code>, disable all form fields 3. Show
+appropriate messaging based on status</p>
+<hr />
+<h3
+id="q6-what-reference-data-endpoints-exist-and-what-about-the-email-field">Q6:
+What reference-data endpoints exist, and what about the email
+field?</h3>
+<p><strong>Reference data endpoint:</strong></p>
+<pre class="http"><code>GET /compliance/reference-data/{kind}
+Authorization: Bearer &lt;token&gt;</code></pre>
+<p><strong>Available kinds:</strong> | Kind | Description | |——|————-| |
+<code>countries</code> | List of supported countries | |
+<code>industries</code> | Industry categories | |
+<code>categories</code> | Business categories (may depend on industry) |
+| <code>states</code> | Nigerian states | | <code>lgas</code> | Local
+Government Areas (may depend on state) | | <code>banks</code> |
+Supported banks with codes |</p>
+<p><strong>About the email field:</strong></p>
+<p>The <code>email</code> field at the contact level is <strong>only
+required for starter businesses</strong>.</p>
+<table>
+<thead>
+<tr>
+<th>Business Type</th>
+<th>Email Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Starter</td>
+<td>Required in <code>/compliance/contact</code></td>
+</tr>
+<tr>
+<td>Registered</td>
+<td>Not required (uses support_email and dispute_email)</td>
+</tr>
+</tbody>
+</table>
+<p>For registered businesses, the business contact information is
+captured in the <code>/compliance/business/details</code> endpoint,
+which includes <code>support_email</code> and <code>dispute_email</code>
+but not a primary <code>email</code> field.</p>
+<hr />
+<h2 id="completion-checks">12. Completion Checks</h2>
+<h3 id="how-the-api-determines-step-completion">How the API determines
+step completion</h3>
+<p>The API tracks completion status for each step. Here’s what each
+check validates:</p>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 38%" />
+<col style="width: 46%" />
+</colgroup>
+<thead>
+<tr>
+<th>Step</th>
+<th>Business Type</th>
+<th>Completion Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Profile</td>
+<td>Both</td>
+<td>All required profile fields present</td>
+</tr>
+<tr>
+<td>Contact</td>
+<td>Starter</td>
+<td>Email, phone, address, state, lga present</td>
+</tr>
+<tr>
+<td>Contact</td>
+<td>Registered</td>
+<td>Checked as part of business details</td>
+</tr>
+<tr>
+<td>Business Details</td>
+<td>Registered</td>
+<td>Profile + contact fields + business address document</td>
+</tr>
+<tr>
+<td>Registration</td>
+<td>Registered</td>
+<td>RC number and TIN present</td>
+</tr>
+<tr>
+<td>Owners</td>
+<td>Both</td>
+<td>At least one owner with <code>full_name</code> + required
+documents</td>
+</tr>
+<tr>
+<td>Bank Accounts</td>
+<td>Both</td>
+<td>At least one bank account with all required fields</td>
+</tr>
+<tr>
+<td>Agreement</td>
+<td>Both</td>
+<td><code>agreement_accepted: true</code> submitted</td>
+</tr>
+</tbody>
+</table>
+<h3 id="completion-response-format">Completion response format</h3>
+<p>Each step endpoint returns completion flags:</p>
+<div class="sourceCode" id="cb20"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;data&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;version&quot;</span><span class="fu">:</span> <span class="dv">4</span><span class="fu">,</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;profile_complete&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;contact_complete&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;registration_complete&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span>    <span class="er">//</span> <span class="er">Registered</span> <span class="er">only</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;owners_complete&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;bank_accounts_complete&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;agreement_complete&quot;</span><span class="fu">:</span> <span class="kw">false</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<hr />
+<p><strong>End of Document</strong></p>
 </body>
 </html>

@@ -18,6 +18,8 @@
 8. [Registered Business Flow](#8-registered-business-flow)
 9. [Document Upload](#9-document-upload)
 10. [Error Handling](#10-error-handling)
+11. [FAQ (Frontend Integration Questions)](#11-faq-frontend-integration-questions)
+12. [Completion Checks](#12-completion-checks)
 
 ---
 
@@ -700,6 +702,197 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
 | registration_number | 50 | RC number |
 | tax_identification_number | 50 | TIN |
 | account_number | 10 | Exactly 10 digits |
+
+---
+
+## 11. FAQ (Frontend Integration Questions)
+
+### Q1: Do I need to re-upload files when editing owners/shareholders?
+
+**Yes, currently files must be re-uploaded when editing owners or shareholders.**
+
+The current implementation replaces all owner/shareholder records on each save. This means:
+
+- When you call `PUT /compliance/owners` or `PUT /compliance/business/shareholders`, all existing records are deleted and replaced with the new submission
+- Previously uploaded documents are not preserved
+- You must re-submit all files, even for owners/shareholders that haven't changed
+
+**Frontend recommendation:** When building the edit flow, cache the file objects in state so they can be re-submitted. Alternatively, inform users that editing requires re-uploading all documents.
+
+> ⚠️ **Known limitation**: This behavior is planned for improvement in a future release to preserve documents for unchanged records.
+
+---
+
+### Q2: What happens to document positions when shareholders are removed?
+
+**Files are matched by array index, so removing a shareholder shifts all subsequent document associations.**
+
+Example scenario:
+1. You submit 3 shareholders: Alice (index 0), Bob (index 1), Charlie (index 2)
+2. You upload `owner_1_identity` for Bob
+3. You edit and remove Bob from the middle
+4. Now Charlie becomes index 1
+5. If you don't re-upload, Charlie gets Bob's old document
+
+**Current behavior:** This is a known limitation. Since files are matched by `owner_{index}_*` naming, the backend cannot distinguish between "same person, different position" and "different person, same position."
+
+**Frontend recommendation:** Always re-upload all documents when the shareholder list changes. Display a warning to users that removing or reordering shareholders requires re-uploading documents for all remaining shareholders.
+
+---
+
+### Q3: What are the valid values for `id_document_type`?
+
+**Valid values:**
+- `nin` - National Identification Number
+- `bvn` - Bank Verification Number  
+- `international_passport` - International Passport
+- `drivers_license` - Driver's License
+
+**Invalid values (do not use):**
+- ~~`national_id`~~ - Removed (was duplicate of `nin`)
+
+The schema in both `gateway-merchant` and `tms-kyc` has been synchronized to accept these exact values.
+
+---
+
+### Q4: How do I view or download previously uploaded documents?
+
+**Use the document viewing endpoint:**
+
+```http
+GET /compliance/documents/{document_id}
+Authorization: Bearer <token>
+```
+
+**Where to get `document_id`:**
+The document IDs are returned in the compliance response for each owner/shareholder:
+
+```json
+{
+  "data": {
+    "owners": [
+      {
+        "full_name": "John Doe",
+        "id_document_id": "doc_abc123",           // ← Use this ID
+        "proof_of_address_document_id": "doc_xyz789"  // ← Or this one
+      }
+    ]
+  }
+}
+```
+
+**Response:** Returns the document file as a download (with appropriate Content-Type and Content-Disposition headers).
+
+---
+
+### Q5: How do I detect if compliance has already been submitted?
+
+**Check the `status` field in the compliance response:**
+
+```http
+GET /compliance
+Authorization: Bearer <token>
+```
+
+**Response includes status:**
+```json
+{
+  "data": {
+    "status": "draft",      // or "submitted", "approved", "rejected"
+    "version": 5
+  }
+}
+```
+
+**Status values:**
+| Status | Meaning | Can Edit? |
+|--------|---------|-----------|
+| `draft` | Not yet submitted | ✅ Yes |
+| `submitted` | Under review | ❌ No |
+| `approved` | Compliance approved | ❌ No |
+| `rejected` | Returned for corrections | ✅ Yes (must re-submit) |
+
+**If you try to edit a submitted compliance:**
+```json
+{
+  "code": 422,
+  "message": "Compliance has already been submitted and cannot be modified"
+}
+```
+
+**Frontend recommendation:** 
+1. Fetch compliance status on page load
+2. If `status !== "draft"` and `status !== "rejected"`, disable all form fields
+3. Show appropriate messaging based on status
+
+---
+
+### Q6: What reference-data endpoints exist, and what about the email field?
+
+**Reference data endpoint:**
+
+```http
+GET /compliance/reference-data/{kind}
+Authorization: Bearer <token>
+```
+
+**Available kinds:**
+| Kind | Description |
+|------|-------------|
+| `countries` | List of supported countries |
+| `industries` | Industry categories |
+| `categories` | Business categories (may depend on industry) |
+| `states` | Nigerian states |
+| `lgas` | Local Government Areas (may depend on state) |
+| `banks` | Supported banks with codes |
+
+**About the email field:**
+
+The `email` field at the contact level is **only required for starter businesses**.
+
+| Business Type | Email Field |
+|---------------|-------------|
+| Starter | Required in `/compliance/contact` |
+| Registered | Not required (uses support_email and dispute_email) |
+
+For registered businesses, the business contact information is captured in the `/compliance/business/details` endpoint, which includes `support_email` and `dispute_email` but not a primary `email` field.
+
+---
+
+## 12. Completion Checks
+
+### How the API determines step completion
+
+The API tracks completion status for each step. Here's what each check validates:
+
+| Step | Business Type | Completion Check |
+|------|---------------|------------------|
+| Profile | Both | All required profile fields present |
+| Contact | Starter | Email, phone, address, state, lga present |
+| Contact | Registered | Checked as part of business details |
+| Business Details | Registered | Profile + contact fields + business address document |
+| Registration | Registered | RC number and TIN present |
+| Owners | Both | At least one owner with `full_name` + required documents |
+| Bank Accounts | Both | At least one bank account with all required fields |
+| Agreement | Both | `agreement_accepted: true` submitted |
+
+### Completion response format
+
+Each step endpoint returns completion flags:
+
+```json
+{
+  "data": {
+    "version": 4,
+    "profile_complete": true,
+    "contact_complete": true,
+    "registration_complete": true,    // Registered only
+    "owners_complete": true,
+    "bank_accounts_complete": true,
+    "agreement_complete": false
+  }
+}
+```
 
 ---
 
