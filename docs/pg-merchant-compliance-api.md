@@ -1,6 +1,6 @@
 # Payment Gateway Merchant Compliance API Documentation
 
-**Version:** 1.1  
+**Version:** 2.0  
 **Last Updated:** November 2026  
 **Service:** gateway-merchant  
 
@@ -16,7 +16,7 @@
 6. [API Endpoints Reference](#6-api-endpoints-reference)
 7. [Starter Business Flow](#7-starter-business-flow)
 8. [Registered Business Flow](#8-registered-business-flow)
-9. [Document Upload Flow](#9-document-upload-flow)
+9. [Document Upload](#9-document-upload)
 10. [Error Handling](#10-error-handling)
 
 ---
@@ -31,15 +31,19 @@ The Payment Gateway Merchant Compliance API enables merchants to complete their 
 ### Architecture
 
 ```
-┌─────────────────┐     REST/JSON      ┌───────────────────┐      gRPC       ┌─────────────┐
-│   Frontend      │ ◄───────────────► │  gateway-merchant │ ◄─────────────► │   tms-kyc   │
-│  (merchant-fe)  │                    │   (API Gateway)   │                 │  (Storage)  │
-└─────────────────┘                    └───────────────────┘                 └─────────────┘
-        │                                                                           │
-        │              Direct Upload (Presigned URL)                                │
-        └───────────────────────────────────────────────────────────────────────────┘
-                                      AWS S3
+┌─────────────────┐     REST/Multipart     ┌───────────────────┐      gRPC       ┌─────────────┐
+│   Frontend      │ ◄───────────────────► │  gateway-merchant │ ◄─────────────► │   tms-kyc   │
+│  (merchant-fe)  │                        │   (API Gateway)   │                 │  (Storage)  │
+└─────────────────┘                        └───────────────────┘                 └─────────────┘
+                                                    │
+                                                    │ Internal Upload
+                                                    ▼
+                                               AWS S3
 ```
+
+### Key Design: Multipart Form Upload
+
+Documents are submitted **inline with form data** at each step using `multipart/form-data`. This reduces the total API calls to a maximum of **2 calls per step** (one save + optional submit), regardless of how many documents are attached.
 
 ### Base URL
 
@@ -58,7 +62,6 @@ All endpoints (except `/compliance/schema`) require Bearer token authentication.
 
 ```http
 Authorization: Bearer <access_token>
-Content-Type: application/json
 ```
 
 ### Obtaining a Token
@@ -95,8 +98,6 @@ Idempotency ensures that if a request fails (network timeout, server error) and 
 - Return the same response as the first successful attempt
 - NOT create duplicate records or perform the action twice
 
-This is critical for financial applications where duplicate operations could cause serious problems.
-
 ### How to Use
 
 All mutating endpoints (POST, PUT, PATCH, DELETE) require an `Idempotency-Key` header:
@@ -109,67 +110,16 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 
 | Rule | Description |
 |------|-------------|
-| **Format** | UUID v4 (e.g., `550e8400-e29b-41d4-a716-446655440000`) |
+| **Format** | UUID v4 or alphanumeric string (max 128 chars) |
 | **Uniqueness** | Each distinct operation needs a unique key |
 | **Scope** | Keys are scoped per merchant |
 | **TTL** | Keys expire 24 hours after first use |
-| **Retry** | Same key + same request body = returns cached response |
-| **Conflict** | Same key + different request body = HTTP 409 error |
-
-### When to Generate vs. Reuse Keys
-
-```
-User clicks "Save" first time    →  Generate NEW key
-Request fails (network error)    →  REUSE same key for retry
-Request succeeds                 →  DISCARD key
-User modifies data, clicks Save  →  Generate NEW key (different intent)
-```
-
-### JavaScript Example
-
-```javascript
-import { v4 as uuidv4 } from 'uuid';
-
-// Store key until operation succeeds
-let currentKey = null;
-
-async function saveProfile(data) {
-  // Generate key only on first attempt
-  if (!currentKey) {
-    currentKey = uuidv4();
-  }
-  
-  try {
-    const response = await fetch('/compliance/profile', {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Idempotency-Key': currentKey,
-        'X-Expected-Version': version,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-    
-    if (response.ok) {
-      currentKey = null;  // Success! Clear key for next operation
-      return await response.json();
-    }
-    // On failure, key is retained for retry
-  } catch (error) {
-    // Network error - same key will be used on retry
-    throw error;
-  }
-}
-```
+| **Retry** | Same key + same request = returns cached response |
+| **Conflict** | Same key + different request = HTTP 409 error |
 
 ---
 
 ## 4. Optimistic Concurrency Control
-
-### What is It?
-
-Prevents conflicts when multiple browser tabs or devices edit the same compliance record simultaneously.
 
 ### How It Works
 
@@ -184,19 +134,6 @@ Prevents conflicts when multiple browser tabs or devices edit the same complianc
 X-Expected-Version: 5
 ```
 
-### Handling Conflicts
-
-```javascript
-const response = await saveProfile(data, currentVersion);
-
-if (response.status === 409) {
-  // Another session modified the record
-  // Fetch latest data and show user the conflict
-  const latest = await getCompliance();
-  alert("This record was updated elsewhere. Please review and try again.");
-}
-```
-
 ---
 
 ## 5. Business Types
@@ -208,7 +145,7 @@ For sole proprietors and unregistered small businesses.
 **Steps:**
 1. Profile Details
 2. Contact Information  
-3. Owner Details (single owner with ID + proof of address)
+3. Owner Details + Documents (ID + proof of address)
 4. Bank Account
 5. Service Agreement
 
@@ -221,9 +158,9 @@ For sole proprietors and unregistered small businesses.
 For CAC-registered companies (LLC, PLC, Business Name).
 
 **Steps:**
-1. Business Details
+1. Business Details + Business Address Proof
 2. Registration Details (RC number, TIN)
-3. Shareholders (1-10 people, each with ID + proof of address)
+3. Shareholders + Documents (1-10 people, each with ID + proof of address)
 4. Bank Account
 5. Service Agreement
 
@@ -241,27 +178,27 @@ For CAC-registered companies (LLC, PLC, Business Name).
 |--------|----------|-------------|
 | GET | `/compliance/schema?business_type=X` | Get form schema (no auth required) |
 
-### Compliance Endpoints
+### Compliance Endpoints (JSON)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/compliance/start` | Start new compliance |
 | GET | `/compliance` | Get current compliance state |
-| PUT | `/compliance/profile` | Save profile/business details |
-| PUT | `/compliance/contact` | Save contact information |
+| PUT | `/compliance/profile` | Save profile (no documents) |
+| PUT | `/compliance/contact` | Save contact (no documents) |
 | PUT | `/compliance/registration` | Save registration (registered only) |
-| PUT | `/compliance/owners` | Save owners/shareholders |
+| PUT | `/compliance/owners` | Save owners (no documents) |
 | PUT | `/compliance/bank-accounts` | Save bank accounts |
 | POST | `/compliance/submit` | Submit for review |
 
-### Document Endpoints
+### Compliance Endpoints with File Upload (Multipart)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/compliance/documents/uploads` | Get presigned upload URL |
-| POST | `/compliance/documents/{id}/complete` | Confirm upload complete |
-| GET | `/compliance/documents/{id}` | Get document info/download URL |
-| DELETE | `/compliance/documents/{id}` | Delete document |
+| Method | Endpoint | Content-Type | Description |
+|--------|----------|--------------|-------------|
+| PUT | `/compliance/profile/with-file` | `multipart/form-data` | Save profile + CAC certificate |
+| PUT | `/compliance/contact/with-file` | `multipart/form-data` | Save contact + address proof |
+| PUT | `/compliance/owners/with-files` | `multipart/form-data` | Save owners + documents |
+| PUT | `/compliance/shareholders/with-files` | `multipart/form-data` | Save shareholders + documents |
 
 ---
 
@@ -290,9 +227,12 @@ Headers:
 
 Response:
 {
-  "compliance_id": 100,
-  "status": "draft",
-  "version": 1
+  "success": true,
+  "data": {
+    "compliance_id": 100,
+    "status": "draft",
+    "version": 1
+  }
 }
 
 
@@ -303,6 +243,7 @@ Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid-2>
   X-Expected-Version: 1
+  Content-Type: application/json
 
 Body:
 {
@@ -315,7 +256,7 @@ Body:
   "business_description": "Fashion retail business"
 }
 
-Response: { "version": 2, "profile_complete": true }
+Response: { "version": 2, ... }
 
 
 STEP 4: SAVE CONTACT
@@ -325,6 +266,7 @@ Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid-3>
   X-Expected-Version: 2
+  Content-Type: application/json
 
 Body:
 {
@@ -341,143 +283,56 @@ Body:
   ]
 }
 
-Response: { "version": 3, "contact_complete": true }
+Response: { "version": 3, ... }
 
 
-STEP 5: SAVE OWNER (without documents first)
+STEP 5: SAVE OWNER WITH DOCUMENTS (Single Multipart Request)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/owners
+PUT /compliance/owners/with-files
 Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid-4>
   X-Expected-Version: 3
+  Content-Type: multipart/form-data
 
-Body:
-{
-  "owners": [{
-    "full_name": "John Doe",
-    "date_of_birth": "1985-03-15",
-    "nationality": "Nigerian",
-    "role": "owner",
-    "id_document_type": "international_passport",
-    "address": "456 Ikoyi, Lagos",
-    "lga": "eti-osa",
-    "same_as_business_address": false
-  }]
-}
+Form Parts:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Part: "data" (application/json)                                             │
+│ {                                                                           │
+│   "owners": [{                                                              │
+│     "full_name": "John Doe",                                                │
+│     "date_of_birth": "15-03-1985",                                          │
+│     "nationality": "Nigerian",                                              │
+│     "id_document_type": "international_passport",                           │
+│     "address": "456 Ikoyi, Lagos",                                          │
+│     "same_as_business_address": false,                                      │
+│     "state": "Lagos",                                                       │
+│     "lga": "eti-osa"                                                        │
+│   }]                                                                        │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "owner_0_identity" (file)                                             │
+│ → passport.pdf                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "owner_0_address" (file)                                              │
+│ → utility-bill.pdf                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-Response:
-{
-  "version": 4,
-  "owners_complete": false,    ← Documents still missing!
-  "owners": [
-    { "id": 42, "full_name": "John Doe", ... }
-  ]
-}
+File part naming convention:
+  - owner_{index}_identity  → ID document for owner at index
+  - owner_{index}_address   → Proof of address for owner at index
 
-IMPORTANT: Note the owner "id": 42 - you'll need this for document linking
-
-
-STEP 6: UPLOAD OWNER ID DOCUMENT
-──────────────────────────────────────────────────────────────────────────────
-
-6a. Request presigned URL
-POST /compliance/documents/uploads
-Headers:
-  Authorization: Bearer <token>
-  Idempotency-Key: <uuid-5>
-
-Body:
-{
-  "purpose": "identity",           ← For starter owner ID
-  "file_name": "passport.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 524288
-}
-
-NOTE: For starter business, "identity" and "owner_address" purposes 
-      do NOT require owner_id because there's only one owner.
-
-Response:
-{
-  "document_id": "doc_id_001",
-  "upload_url": "https://s3.amazonaws.com/...",
-  "method": "PUT",
-  "headers": { "Content-Type": "application/pdf" }
-}
+Response: { "version": 4, ... }
 
 
-6b. Upload file directly to S3
-PUT https://s3.amazonaws.com/...
-Content-Type: application/pdf
-Body: <binary file data>
-
-Response: 200 OK
-
-
-6c. Confirm upload complete → AUTO-LINKS to owner!
-POST /compliance/documents/doc_id_001/complete
-Headers:
-  Authorization: Bearer <token>
-  Idempotency-Key: <uuid-6>
-
-Response: { "document_id": "doc_id_001", "status": "uploaded" }
-
-The backend AUTOMATICALLY sets:
-  owner.id_document_id = "doc_id_001"
-
-
-STEP 7: UPLOAD OWNER PROOF OF ADDRESS
-──────────────────────────────────────────────────────────────────────────────
-(Same 3-step pattern as Step 6)
-
-7a. Request presigned URL
-POST /compliance/documents/uploads
-Body:
-{
-  "purpose": "owner_address",      ← For starter owner address proof
-  "file_name": "utility-bill.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 234567
-}
-
-Response: { "document_id": "doc_addr_001", "upload_url": "...", ... }
-
-7b. Upload to S3
-PUT <upload_url> with file data
-
-7c. Confirm complete → AUTO-LINKS to owner!
-POST /compliance/documents/doc_addr_001/complete
-
-The backend AUTOMATICALLY sets:
-  owner.proof_of_address_document_id = "doc_addr_001"
-
-
-STEP 8: VERIFY (Optional)
-──────────────────────────────────────────────────────────────────────────────
-GET /compliance
-
-Response shows owners_complete: true and documents auto-linked:
-{
-  "owners": [
-    { 
-      "id": 42, 
-      "full_name": "John Doe",
-      "id_document_id": "doc_id_001",              ← Auto-linked!
-      "proof_of_address_document_id": "doc_addr_001"  ← Auto-linked!
-    }
-  ],
-  "owners_complete": true
-}
-
-
-STEP 9: SAVE BANK ACCOUNT
+STEP 6: SAVE BANK ACCOUNT
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/bank-accounts
 Headers:
   Authorization: Bearer <token>
-  Idempotency-Key: <uuid-7>
+  Idempotency-Key: <uuid-5>
   X-Expected-Version: 4
+  Content-Type: application/json
 
 Body:
 {
@@ -488,50 +343,35 @@ Body:
   }]
 }
 
-Response: { "version": 5, "bank_accounts_complete": true }
+Response: { "version": 5, ... }
 
 
-STEP 10: SUBMIT FOR REVIEW
+STEP 7: SUBMIT FOR REVIEW
 ──────────────────────────────────────────────────────────────────────────────
 POST /compliance/submit
 Headers:
   Authorization: Bearer <token>
-  Idempotency-Key: <uuid-8>
+  Idempotency-Key: <uuid-6>
   X-Expected-Version: 5
+  Content-Type: application/json
 
 Body:
 {
   "agreement_accepted": true
 }
 
-Response: { "version": 7, "status": "submitted" }
+Response: { "version": 6, "status": "submitted" }
 
 
 ════════════════════════════════════════════════════════════════════════════════
                          STARTER FLOW COMPLETE!
+                         Total API calls: 7 (including schema)
 ════════════════════════════════════════════════════════════════════════════════
 ```
-
-### Starter Business Document Purposes
-
-| Purpose | Description | owner_id Required? | Auto-Links? |
-|---------|-------------|-------------------|-------------|
-| `identity` | Owner's ID document | NO | YES |
-| `owner_address` | Owner's proof of address | NO | YES |
-
-For starter business, there's only ONE owner, so the system automatically links documents to that owner on upload completion. No second call to `/compliance/owners` is needed.
 
 ---
 
 ## 8. Registered Business Flow
-
-### Key Difference: Multiple Shareholders with Auto-Linking
-
-For registered businesses with multiple shareholders, documents use **auto-linking** via `owner_id`:
-
-1. Save shareholders first → get their IDs
-2. Upload documents with `owner_id` → backend auto-links them
-3. No need to re-save shareholders with document IDs!
 
 ### Complete Step-by-Step
 
@@ -554,75 +394,44 @@ Headers:
 Response: { "compliance_id": 200, "version": 1 }
 
 
-STEP 3: SAVE BUSINESS DETAILS (Profile)
+STEP 3: SAVE BUSINESS DETAILS WITH ADDRESS PROOF (Single Multipart Request)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/profile
+PUT /compliance/contact/with-file
 Headers:
+  Authorization: Bearer <token>
   Idempotency-Key: <uuid>
   X-Expected-Version: 1
+  Content-Type: multipart/form-data
 
-Body:
-{
-  "country": "NG",
-  "industry": "technology",
-  "category": "fintech",
-  "trading_name": "TechCorp Limited",
-  "sales_volume": "1000000-5000000",
-  "business_type": "registered",
-  "business_description": "Financial technology solutions"
-}
+Form Parts:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Part: "data" (application/json)                                             │
+│ {                                                                           │
+│   "phone": "+2349012345678",                                                │
+│   "address": "Plot 123 Tech Hub, Lekki",                                    │
+│   "support_email": "support@techcorp.ng",                                   │
+│   "dispute_email": "disputes@techcorp.ng",                                  │
+│   "state": "Lagos",                                                         │
+│   "lga": "eti-osa",                                                         │
+│   "online_links": [                                                         │
+│     { "platform": "website", "url": "https://techcorp.ng" }                 │
+│   ]                                                                         │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "address_proof" (file)                                                │
+│ → office-lease.pdf                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-Response: { "version": 2, "profile_complete": true }
-
-
-STEP 4: SAVE CONTACT WITH BUSINESS ADDRESS DOCUMENT
-──────────────────────────────────────────────────────────────────────────────
-
-4a. Upload business address document first
-POST /compliance/documents/uploads
-Body:
-{
-  "purpose": "business_address",
-  "file_name": "office-lease.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 456789
-}
-
-Response: { "document_id": "doc_biz_addr", ... }
-
-4b. Upload to S3, then complete
-POST /compliance/documents/doc_biz_addr/complete
-
-4c. Save contact with document ID
-PUT /compliance/contact
-Headers:
-  Idempotency-Key: <uuid>
-  X-Expected-Version: 2
-
-Body:
-{
-  "email": "info@techcorp.ng",
-  "support_email": "support@techcorp.ng",
-  "dispute_email": "disputes@techcorp.ng",
-  "phone": "+2349012345678",
-  "address": "Plot 123 Tech Hub, Lekki",
-  "state": "Lagos",
-  "lga": "eti-osa",
-  "business_address_document_id": "doc_biz_addr",
-  "online_links": [
-    { "platform": "website", "url": "https://techcorp.ng" }
-  ]
-}
-
-Response: { "version": 3, "contact_complete": true }
+Response: { "version": 2, ... }
 
 
-STEP 5: SAVE REGISTRATION DETAILS
+STEP 4: SAVE REGISTRATION DETAILS
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/registration
 Headers:
   Idempotency-Key: <uuid>
-  X-Expected-Version: 3
+  X-Expected-Version: 2
+  Content-Type: application/json
 
 Body:
 {
@@ -630,134 +439,71 @@ Body:
   "tax_identification_number": "12345678-0001"
 }
 
-Response: { "version": 4, "registration_complete": true }
+Response: { "version": 3, ... }
 
 
-STEP 6: SAVE SHAREHOLDERS (without documents)
+STEP 5: SAVE SHAREHOLDERS WITH DOCUMENTS (Single Multipart Request)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/owners
+PUT /compliance/shareholders/with-files
 Headers:
+  Authorization: Bearer <token>
   Idempotency-Key: <uuid>
-  X-Expected-Version: 4
+  X-Expected-Version: 3
+  Content-Type: multipart/form-data
 
-Body:
-{
-  "owners": [
-    {
-      "full_name": "Adaora Okafor",
-      "date_of_birth": "1980-05-20",
-      "nationality": "Nigerian",
-      "role": "director",
-      "id_document_type": "international_passport",
-      "address": "12 Executive Estate, Ikoyi",
-      "lga": "eti-osa",
-      "same_as_business_address": false
-    },
-    {
-      "full_name": "Chidi Eze",
-      "date_of_birth": "1975-11-08",
-      "nationality": "Nigerian",
-      "role": "shareholder",
-      "id_document_type": "national_id",
-      "address": "45 Business District, VI",
-      "lga": "eti-osa",
-      "same_as_business_address": false
-    }
-  ]
-}
+Form Parts:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Part: "data" (application/json)                                             │
+│ {                                                                           │
+│   "shareholders": [                                                         │
+│     {                                                                       │
+│       "full_name": "Adaora Okafor",                                         │
+│       "date_of_birth": "20-05-1980",                                        │
+│       "nationality": "Nigerian",                                            │
+│       "role": "director",                                                   │
+│       "id_document_type": "international_passport",                         │
+│       "address": "12 Executive Estate, Ikoyi",                              │
+│       "same_as_business_address": false,                                    │
+│       "state": "Lagos",                                                     │
+│       "lga": "eti-osa"                                                      │
+│     },                                                                      │
+│     {                                                                       │
+│       "full_name": "Chidi Eze",                                             │
+│       "date_of_birth": "08-11-1975",                                        │
+│       "nationality": "Nigerian",                                            │
+│       "role": "shareholder",                                                │
+│       "id_document_type": "national_id",                                    │
+│       "address": "45 Business District, VI",                                │
+│       "same_as_business_address": false,                                    │
+│       "state": "Lagos",                                                     │
+│       "lga": "eti-osa"                                                      │
+│     }                                                                       │
+│   ]                                                                         │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "shareholder_0_identity" (file) → adaora-passport.pdf                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "shareholder_0_address" (file) → adaora-utility.pdf                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "shareholder_1_identity" (file) → chidi-national-id.pdf               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Part: "shareholder_1_address" (file) → chidi-utility.pdf                    │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-Response:
-{
-  "version": 5,
-  "owners_complete": false,
-  "owners": [
-    { "id": 50, "full_name": "Adaora Okafor", ... },
-    { "id": 51, "full_name": "Chidi Eze", ... }
-  ]
-}
+File part naming convention:
+  - shareholder_{index}_identity  → ID document for shareholder at index
+  - shareholder_{index}_address   → Proof of address for shareholder at index
 
-IMPORTANT: Extract owner IDs → 50 and 51
-
-
-STEP 7: UPLOAD DOCUMENTS FOR SHAREHOLDER 1 (Adaora, ID: 50)
-──────────────────────────────────────────────────────────────────────────────
-
-7a. Upload ID document WITH owner_id
-POST /compliance/documents/uploads
-Headers:
-  Idempotency-Key: <uuid>
-
-Body:
-{
-  "purpose": "shareholder_identity",
-  "owner_id": 50,                        ← REQUIRED for shareholders!
-  "file_name": "adaora-passport.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 512000
-}
-
-Response: { "document_id": "doc_sh1_id", ... }
-
-7b. Upload to S3
-PUT <upload_url> with file
-
-7c. Complete upload → AUTO-LINKS to owner 50!
-POST /compliance/documents/doc_sh1_id/complete
-
-The backend AUTOMATICALLY sets:
-  owner(50).id_document_id = "doc_sh1_id"
+Response: { "version": 4, ... }
 
 
-7d. Upload proof of address WITH owner_id
-POST /compliance/documents/uploads
-Body:
-{
-  "purpose": "shareholder_address",
-  "owner_id": 50,                        ← Same owner
-  "file_name": "adaora-utility.pdf",
-  "content_type": "application/pdf",
-  "size_bytes": 234000
-}
-
-7e. Upload to S3, then complete
-POST /compliance/documents/doc_sh1_addr/complete
-
-The backend AUTOMATICALLY sets:
-  owner(50).proof_of_address_document_id = "doc_sh1_addr"
-
-
-STEP 8: UPLOAD DOCUMENTS FOR SHAREHOLDER 2 (Chidi, ID: 51)
-──────────────────────────────────────────────────────────────────────────────
-(Same pattern as Step 7, but with owner_id: 51)
-
-POST /compliance/documents/uploads
-{ "purpose": "shareholder_identity", "owner_id": 51, ... }
-→ Complete → auto-links to owner 51
-
-POST /compliance/documents/uploads
-{ "purpose": "shareholder_address", "owner_id": 51, ... }
-→ Complete → auto-links to owner 51
-
-
-STEP 9: VERIFY (Optional)
-──────────────────────────────────────────────────────────────────────────────
-GET /compliance
-
-Response shows owners_complete: true and all documents linked:
-{
-  "owners": [
-    { "id": 50, "id_document_id": "doc_sh1_id", "proof_of_address_document_id": "doc_sh1_addr" },
-    { "id": 51, "id_document_id": "doc_sh2_id", "proof_of_address_document_id": "doc_sh2_addr" }
-  ]
-}
-
-
-STEP 10: SAVE BANK ACCOUNT
+STEP 6: SAVE BANK ACCOUNT
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/bank-accounts
 Headers:
   Idempotency-Key: <uuid>
-  X-Expected-Version: 5
+  X-Expected-Version: 4
+  Content-Type: application/json
 
 Body:
 {
@@ -768,81 +514,53 @@ Body:
   }]
 }
 
-Response: { "version": 6, "bank_accounts_complete": true }
+Response: { "version": 5, ... }
 
 
-STEP 11: SUBMIT FOR REVIEW
+STEP 7: SUBMIT FOR REVIEW
 ──────────────────────────────────────────────────────────────────────────────
 POST /compliance/submit
 Headers:
   Idempotency-Key: <uuid>
-  X-Expected-Version: 6
+  X-Expected-Version: 5
+  Content-Type: application/json
 
 Body:
 {
   "agreement_accepted": true
 }
 
-Response: { "version": 7, "status": "submitted" }
+Response: { "version": 6, "status": "submitted" }
 
 
 ════════════════════════════════════════════════════════════════════════════════
                       REGISTERED FLOW COMPLETE!
+                      Total API calls: 7 (including schema)
 ════════════════════════════════════════════════════════════════════════════════
 ```
 
-### Registered Business Document Purposes
-
-| Purpose | Description | owner_id Required? |
-|---------|-------------|-------------------|
-| `business_address` | Business proof of address | NO |
-| `shareholder_identity` | Shareholder's ID document | **YES** |
-| `shareholder_address` | Shareholder's proof of address | **YES** |
-
 ---
 
-## 9. Document Upload Flow
+## 9. Document Upload
 
-### Three-Step Process
+### Multipart Upload Design
 
-Every document upload follows these 3 steps:
+Documents are submitted **inline with form data** using `multipart/form-data`. This approach:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 1: Request Presigned URL                                              │
-│  POST /compliance/documents/uploads                                         │
-│  Body: { purpose, file_name, content_type, size_bytes, owner_id? }          │
-│  Response: { document_id, upload_url, headers, method }                     │
-└────────────────────────────────────┬────────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 2: Upload File to S3 (Direct)                                         │
-│  PUT {upload_url}                                                           │
-│  Headers: from step 1 response                                              │
-│  Body: <binary file data>                                                   │
-│                                                                             │
-│  NOTE: This goes DIRECTLY to S3, not through the API server!                │
-└────────────────────────────────────┬────────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  STEP 3: Confirm Completion                                                 │
-│  POST /compliance/documents/{document_id}/complete                          │
-│                                                                             │
-│  For shareholder docs: This step AUTO-LINKS the document to the owner!      │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+- **Reduces API calls**: One request per step, regardless of document count
+- **Simplifies client code**: No separate presigned URL dance
+- **Atomic operations**: Form data and files saved together or fail together
 
-### Document Purpose Reference
+### File Part Naming Convention
 
-| Purpose | Business Type | Description | owner_id |
-|---------|--------------|-------------|----------|
-| `identity` | Starter | Owner ID document | Not needed |
-| `owner_address` | Starter | Owner proof of address | Not needed |
-| `business_address` | Both | Business address proof | Not needed |
-| `shareholder_identity` | Registered | Shareholder ID | **Required** |
-| `shareholder_address` | Registered | Shareholder address | **Required** |
+| Endpoint | File Part Name | Description |
+|----------|---------------|-------------|
+| `/compliance/profile/with-file` | `cac_certificate` | CAC registration certificate |
+| `/compliance/contact/with-file` | `address_proof` | Business address proof |
+| `/compliance/owners/with-files` | `owner_{n}_identity` | Owner's ID document (0-indexed) |
+| `/compliance/owners/with-files` | `owner_{n}_address` | Owner's proof of address (0-indexed) |
+| `/compliance/shareholders/with-files` | `shareholder_{n}_identity` | Shareholder's ID document (0-indexed) |
+| `/compliance/shareholders/with-files` | `shareholder_{n}_address` | Shareholder's proof of address (0-indexed) |
 
 ### Supported File Types
 
@@ -851,6 +569,42 @@ Every document upload follows these 3 steps:
 | `application/pdf` | .pdf | 10 MB |
 | `image/jpeg` | .jpg, .jpeg | 10 MB |
 | `image/png` | .png | 10 MB |
+
+### JavaScript Example
+
+```javascript
+async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
+  const formData = new FormData();
+  
+  // Add JSON data as a part
+  formData.append('data', new Blob([JSON.stringify({ owners })], {
+    type: 'application/json'
+  }));
+  
+  // Add files for each owner
+  ownerFiles.forEach((files, index) => {
+    if (files.identity) {
+      formData.append(`owner_${index}_identity`, files.identity);
+    }
+    if (files.address) {
+      formData.append(`owner_${index}_address`, files.address);
+    }
+  });
+  
+  const response = await fetch('/compliance/owners/with-files', {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Idempotency-Key': crypto.randomUUID(),
+      'X-Expected-Version': version
+      // Note: Don't set Content-Type - browser sets it with boundary
+    },
+    body: formData
+  });
+  
+  return response.json();
+}
+```
 
 ---
 
@@ -864,6 +618,7 @@ Every document upload follows these 3 steps:
 | 400 | Bad Request | Fix request data |
 | 401 | Unauthorized | Refresh token or re-login |
 | 409 | Conflict | Version mismatch - refresh and retry |
+| 413 | Payload Too Large | Reduce file size |
 | 422 | Validation Error | Fix field errors |
 | 500 | Server Error | Retry with exponential backoff |
 
@@ -875,7 +630,7 @@ Every document upload follows these 3 steps:
   "message": "Validation failed",
   "error_code": "VALIDATION_FAILED",
   "errors": [
-    { "step": "owners", "field": "id_document_id", "message": "ID document is required" }
+    { "step": "owners", "field": "full_name", "message": "Full name is required" }
   ]
 }
 ```
@@ -887,8 +642,8 @@ Every document upload follows these 3 steps:
 | `VALIDATION_FAILED` | Field validation errors |
 | `VERSION_CONFLICT` | X-Expected-Version doesn't match |
 | `IDEMPOTENCY_CONFLICT` | Same key, different request body |
-| `DOCUMENT_NOT_FOUND` | Document ID doesn't exist |
-| `OWNER_NOT_FOUND` | Owner ID doesn't exist |
+| `FILE_TOO_LARGE` | File exceeds 10 MB limit |
+| `UNSUPPORTED_FILE_TYPE` | File type not allowed |
 | `ALREADY_SUBMITTED` | Cannot modify submitted compliance |
 
 ---
@@ -899,15 +654,31 @@ Every document upload follows these 3 steps:
 |-------|-----------|-------|
 | country | 3 | ISO code (e.g., "NG") |
 | trading_name | 200 | |
-| business_description | 1000 | |
+| business_description | 500 | |
 | email | 255 | Valid email |
 | phone | 20 | Include country code |
 | address | 500 | |
 | state | 100 | Nigerian state (e.g., "Lagos") |
 | lga | 100 | Local Government Area |
 | full_name | 200 | |
+| date_of_birth | 10 | Format: DD-MM-YYYY |
 | registration_number | 50 | RC number |
 | account_number | 10 | Exactly 10 digits |
+
+---
+
+## Migration from v1.x
+
+If you were using the previous presigned URL approach:
+
+| v1.x (Deprecated) | v2.0 (Current) |
+|-------------------|----------------|
+| `POST /compliance/documents/uploads` | Not needed |
+| `PUT <presigned_url>` (to S3) | Not needed |
+| `POST /compliance/documents/{id}/complete` | Not needed |
+| `PUT /compliance/owners` with `id_document_id` | `PUT /compliance/owners/with-files` with file parts |
+
+The new multipart approach is simpler and requires fewer API calls.
 
 ---
 
