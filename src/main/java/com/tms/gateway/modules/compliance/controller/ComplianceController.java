@@ -212,6 +212,23 @@ public class ComplianceController {
         return ok(service.saveRegisteredBusinessDetails(service.mutation(user, key, version), request),
                 "Business details saved");
     }
+
+    /**
+     * Business details with business address proof (registered business).
+     */
+    @Operation(summary = "Save business details with address proof", description = "Save registered business details (profile + contact) with optional business address proof document. "
+            + "Use Content-Type: multipart/form-data. The 'data' part contains the JSON business details, "
+            + "and 'business_address_proof' part contains the PDF/image file (max 5MB).")
+    @PutMapping(value = "/business/details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessDetailsWithDocs(
+            @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
+            @RequestHeader("X-Expected-Version") long version,
+            @RequestPart("data") @Valid RegisteredBusinessDetailsRequest request,
+            @Parameter(description = "Business address proof file (PDF, JPEG, or PNG, max 5MB)") @RequestPart(value = "business_address_proof", required = false) MultipartFile businessAddressProof) {
+        validateFile(businessAddressProof);
+        return ok(service.saveRegisteredBusinessDetailsWithFile(service.mutation(user, key, version), request,
+                businessAddressProof), "Business details saved");
+    }
     @PutMapping("/business/registration")
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessRegistration(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,

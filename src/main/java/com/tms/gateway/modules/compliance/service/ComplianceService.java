@@ -114,6 +114,11 @@ public class ComplianceService {
     }
 
     public ComplianceResponse saveRegisteredBusinessDetails(MutationContext c, RegisteredBusinessDetailsRequest r) {
+        return saveRegisteredBusinessDetailsWithFile(c, r, null);
+    }
+
+    public ComplianceResponse saveRegisteredBusinessDetailsWithFile(MutationContext c,
+            RegisteredBusinessDetailsRequest r, MultipartFile businessAddressProof) {
         ComplianceDraftValidator.registeredBusinessDetails(r);
         SaveProfileRequest profile = new SaveProfileRequest(r.country(), r.industry(), r.category(), r.tradingName(),
                 r.salesVolume(), r.businessType(), r.businessDescription());
@@ -126,7 +131,9 @@ public class ComplianceService {
         boolean hasContactFields = r.phone() != null || r.address() != null || r.supportEmail() != null
                 || r.disputeEmail() != null || r.state() != null || r.lga() != null || r.sameAsSupportEmail() != null
                 || r.onlineLinks() != null;
-        if (!hasProfileFields && !hasContactFields)
+        boolean hasFile = businessAddressProof != null && !businessAddressProof.isEmpty();
+
+        if (!hasProfileFields && !hasContactFields && !hasFile)
             throw new ComplianceValidationException(List.of(new ComplianceResponse.CorrectionData("business_details",
                     "business_details", "At least one field must be supplied")));
 
@@ -136,11 +143,12 @@ public class ComplianceService {
             response = checkedRequired(current, grpcClient.saveProfile(current, profile));
             current = withExpectedVersion(c, response.version());
         }
-        if (hasContactFields) {
+        if (hasContactFields || hasFile) {
             try {
                 // The existing KYC methods are separate writes, so contact uses the version
                 // returned by profile.
-                response = checkedRequired(current, grpcClient.saveContact(current, contact));
+                response = checkedRequired(current,
+                        grpcClient.saveContactWithFile(current, contact, businessAddressProof));
             } catch (AppException e) {
                 if (hasProfileFields)
                     throw new CompliancePartialSaveException(e, response.version());
