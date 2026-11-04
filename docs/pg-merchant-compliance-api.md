@@ -150,7 +150,7 @@ For sole proprietors and unregistered small businesses.
 5. Service Agreement
 
 **Documents Required:**
-- Owner ID document (National ID, NIN, Passport, or Driver's License)
+- Owner ID document (NIN, BVN, Passport, or Driver's License)
 - Owner proof of address (Utility bill ≤ 3 months old)
 
 ### Registered Business
@@ -474,7 +474,7 @@ Form Parts:
 │       "date_of_birth": "08-11-1975",                                        │
 │       "nationality": "Nigerian",                                            │
 │       "role": "shareholder",                                                │
-│       "id_document_type": "national_id",                                    │
+│       "id_document_type": "nin",                                            │
 │       "address": "45 Business District, VI",                                │
 │       "same_as_business_address": false,                                    │
 │       "state": "Lagos",                                                     │
@@ -678,6 +678,26 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
 ---
 
 ## Appendix: Field Constraints
+
+### ID Document Types
+
+| Value | Description |
+|-------|-------------|
+| `nin` | National Identification Number |
+| `bvn` | Bank Verification Number |
+| `international_passport` | International Passport |
+| `drivers_license` | Driver's License |
+
+### Shareholder Roles (Registered Business)
+
+| Value | Description |
+|-------|-------------|
+| `director` | Company Director |
+| `shareholder` | Shareholder |
+| `beneficial_owner` | Beneficial Owner |
+| `signatory` | Authorized Signatory |
+
+### Field Length Constraints
 
 | Field | Max Length | Notes |
 |-------|-----------|-------|
