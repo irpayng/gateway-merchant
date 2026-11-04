@@ -200,10 +200,6 @@ public class ComplianceGrpcClient {
             supplied.add("same_as_support_email");
             data.setSameAsSupportEmail(r.sameAsSupportEmail());
         }
-        if (r.businessAddressDocumentId() != null) {
-            supplied.add("business_address_document_id");
-            data.setBusinessAddressDocumentId(r.businessAddressDocumentId());
-        }
         if (r.onlineLinks() != null) {
             supplied.add("online_links");
             data.addAllOnlineLinks(r.onlineLinks().stream()
@@ -279,14 +275,6 @@ public class ComplianceGrpcClient {
             if (r.sameAsBusinessAddress() != null) {
                 data.setSameAsBusinessAddress(r.sameAsBusinessAddress());
                 supplied.addFields("same_as_business_address");
-            }
-            if (r.idDocumentId() != null) {
-                data.setIdDocumentId(r.idDocumentId());
-                supplied.addFields("id_document_id");
-            }
-            if (r.proofOfAddressDocumentId() != null) {
-                data.setProofOfAddressDocumentId(r.proofOfAddressDocumentId());
-                supplied.addFields("proof_of_address_document_id");
             }
             request.addOwners(data).addOwnerFields(supplied);
         }
@@ -373,10 +361,6 @@ public class ComplianceGrpcClient {
             supplied.add("same_as_support_email");
             data.setSameAsSupportEmail(r.sameAsSupportEmail());
         }
-        if (r.businessAddressDocumentId() != null) {
-            supplied.add("business_address_document_id");
-            data.setBusinessAddressDocumentId(r.businessAddressDocumentId());
-        }
         if (r.onlineLinks() != null) {
             supplied.add("online_links");
             data.addAllOnlineLinks(r.onlineLinks().stream()
@@ -438,14 +422,6 @@ public class ComplianceGrpcClient {
             if (r.sameAsBusinessAddress() != null) {
                 data.setSameAsBusinessAddress(r.sameAsBusinessAddress());
                 supplied.addFields("same_as_business_address");
-            }
-            if (r.idDocumentId() != null) {
-                data.setIdDocumentId(r.idDocumentId());
-                supplied.addFields("id_document_id");
-            }
-            if (r.proofOfAddressDocumentId() != null) {
-                data.setProofOfAddressDocumentId(r.proofOfAddressDocumentId());
-                supplied.addFields("proof_of_address_document_id");
             }
             request.addOwners(data).addOwnerFields(supplied);
 

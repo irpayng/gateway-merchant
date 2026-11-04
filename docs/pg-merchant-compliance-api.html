@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway Merchant Compliance API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #fff;
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            font-size: 28px;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #e67e22;
+            padding-bottom: 10px;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            font-size: 22px;
+            margin-top: 40px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 8px;
+        }
+        
+        h3 {
+            color: #34495e;
+            font-size: 18px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+        
+        h4 {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            color: #c0392b;
+        }
+        
+        pre {
+            background: #2d3436;
+            color: #dfe6e9;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        .important {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 12px 15px;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        .flow-step {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .flow-step h4 {
+            color: #e67e22;
+            margin-top: 0;
+            margin-bottom: 10px;
+            text-transform: none;
+            font-size: 16px;
+        }
+        
+        .endpoint {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 13px;
+            margin-right: 5px;
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .method.get { background: #27ae60; color: white; }
+        .method.post { background: #f39c12; color: white; }
+        .method.put { background: #3498db; color: white; }
+        .method.delete { background: #e74c3c; color: white; }
+        
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+        }
+        
+        .toc ol {
+            margin: 0;
+            padding-left: 25px;
+        }
+        
+        .toc li {
+            margin: 5px 0;
+        }
+        
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        ul, ol {
+            margin: 10px 0 15px 25px;
+        }
+        
+        li {
+            margin: 5px 0;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        @media print {
+            body {
+                padding: 20px;
+                font-size: 12px;
+            }
+            
+            pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Payment Gateway Merchant Compliance API</h1>
+    <p class="subtitle">
+        <strong>Version:</strong> 1.0 &nbsp;|&nbsp; 
+        <strong>Last Updated:</strong> October 2026 &nbsp;|&nbsp; 
+        <strong>Service:</strong> gateway-merchant
+    </p>
+    
+    <div class="toc">
+        <h3>Table of Contents</h3>
+        <ol>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#authentication">Authentication</a></li>
+            <li><a href="#idempotency">Idempotency (Preventing Duplicates)</a></li>
+            <li><a href="#versioning">Optimistic Concurrency Control</a></li>
+            <li><a href="#business-types">Business Types</a></li>
+            <li><a href="#endpoints">API Endpoints Reference</a></li>
+            <li><a href="#starter-flow">Starter Business Flow</a></li>
+            <li><a href="#registered-flow">Registered Business Flow</a></li>
+            <li><a href="#document-upload">Document Upload Flow</a></li>
+            <li><a href="#errors">Error Handling</a></li>
+        </ol>
+    </div>
+
+    <!-- Section 1: Overview -->
+    <h2 id="overview">1. Overview</h2>
+    <p>The Payment Gateway Merchant Compliance API enables merchants to complete their KYC (Know Your Customer) requirements for payment gateway access. The API supports two business types:</p>
+    <ul>
+        <li><strong>Starter Business:</strong> For unregistered businesses/sole proprietors (single owner)</li>
+        <li><strong>Registered Business:</strong> For CAC-registered companies (multiple shareholders)</li>
+    </ul>
+    
+    <h3>Architecture</h3>
+    <pre><code>┌─────────────────┐     REST/JSON      ┌───────────────────┐      gRPC       ┌─────────────┐
+│   Frontend      │ ◄───────────────► │  gateway-merchant │ ◄─────────────► │   tms-kyc   │
+│  (merchant-fe)  │                    │   (API Gateway)   │                 │  (Storage)  │
+└─────────────────┘                    └───────────────────┘                 └─────────────┘
+        │                                                                           │
+        │              Direct Upload (Presigned URL)                                │
+        └───────────────────────────────────────────────────────────────────────────┘
+                                      AWS S3</code></pre>
+    
+    <h3>Base URLs</h3>
+    <table>
+        <tr><th>Environment</th><th>URL</th></tr>
+        <tr><td>Production</td><td><code>https://api.merchant.irpay.ng</code></td></tr>
+        <tr><td>Staging</td><td><code>https://api.merchant.staging.irpay.ng</code></td></tr>
+    </table>
+
+    <!-- Section 2: Authentication -->
+    <h2 id="authentication">2. Authentication</h2>
+    <p>All endpoints (except <code>/compliance/schema</code>) require Bearer token authentication.</p>
+    
+    <h3>Required Headers</h3>
+    <pre><code>Authorization: Bearer &lt;access_token&gt;
+Content-Type: application/json</code></pre>
+    
+    <h3>Obtaining a Token</h3>
+    <pre><code>POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "merchant@example.com",
+  "password": "secure_password"
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 3600
+  }
+}</code></pre>
+
+    <!-- Section 3: Idempotency -->
+    <h2 id="idempotency">3. Idempotency (Preventing Duplicates)</h2>
+    
+    <h3>What is Idempotency?</h3>
+    <p>Idempotency ensures that if a request fails (network timeout, server error) and you retry it with the <strong>same idempotency key</strong>, the server will:</p>
+    <ul>
+        <li>Return the same response as the first successful attempt</li>
+        <li>NOT create duplicate records or perform the action twice</li>
+    </ul>
+    
+    <div class="important">
+        <strong>Critical:</strong> This is essential for financial applications where duplicate operations could cause serious problems.
+    </div>
+    
+    <h3>How to Use</h3>
+    <p>All mutating endpoints (POST, PUT, PATCH, DELETE) require an <code>Idempotency-Key</code> header:</p>
+    <pre><code>Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000</code></pre>
+    
+    <h3>Rules for Idempotency Keys</h3>
+    <table>
+        <tr><th>Rule</th><th>Description</th></tr>
+        <tr><td><strong>Format</strong></td><td>UUID v4 (e.g., <code>550e8400-e29b-41d4-a716-446655440000</code>)</td></tr>
+        <tr><td><strong>Uniqueness</strong></td><td>Each distinct operation needs a unique key</td></tr>
+        <tr><td><strong>TTL</strong></td><td>Keys expire 24 hours after first use</td></tr>
+        <tr><td><strong>Retry</strong></td><td>Same key + same request = returns cached response</td></tr>
+        <tr><td><strong>Conflict</strong></td><td>Same key + different request = HTTP 409 error</td></tr>
+    </table>
+    
+    <h3>When to Generate vs. Reuse Keys</h3>
+    <table>
+        <tr><th>Scenario</th><th>Action</th></tr>
+        <tr><td>User clicks "Save" first time</td><td><strong>Generate NEW key</strong></td></tr>
+        <tr><td>Request fails (network error)</td><td><strong>REUSE same key</strong> for retry</td></tr>
+        <tr><td>Request succeeds</td><td><strong>DISCARD key</strong></td></tr>
+        <tr><td>User modifies data and clicks Save again</td><td><strong>Generate NEW key</strong></td></tr>
+    </table>
+    
+    <h3>JavaScript Example</h3>
+    <pre><code>import { v4 as uuidv4 } from 'uuid';
+
+let currentKey = null;  // Store key until operation succeeds
+
+async function saveProfile(data) {
+  // Generate key only on first attempt
+  if (!currentKey) {
+    currentKey = uuidv4();
+  }
+  
+  const response = await fetch('/compliance/profile', {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Idempotency-Key': currentKey,
+      'X-Expected-Version': version,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+  
+  if (response.ok) {
+    currentKey = null;  // Success! Clear key for next operation
+  }
+  // On failure, key is retained for retry
+  
+  return response.json();
+}</code></pre>
+
+    <!-- Section 4: Versioning -->
+    <h2 id="versioning">4. Optimistic Concurrency Control</h2>
+    
+    <h3>What is It?</h3>
+    <p>Prevents conflicts when multiple browser tabs or devices edit the same compliance record simultaneously.</p>
+    
+    <h3>How It Works</h3>
+    <ol>
+        <li><strong>GET</strong> compliance → response includes <code>version: 5</code></li>
+        <li><strong>PUT</strong> with header <code>X-Expected-Version: 5</code></li>
+        <li>If current version is still 5 → update succeeds, version becomes 6</li>
+        <li>If current version changed → HTTP 409 Conflict (refresh and retry)</li>
+    </ol>
+    
+    <h3>Required Header</h3>
+    <pre><code>X-Expected-Version: 5</code></pre>
+
+    <!-- Section 5: Business Types -->
+    <h2 id="business-types">5. Business Types</h2>
+    
+    <h3>Starter Business</h3>
+    <p>For sole proprietors and unregistered small businesses.</p>
+    <p><strong>Steps:</strong></p>
+    <ol>
+        <li>Profile Details</li>
+        <li>Contact Information</li>
+        <li>Owner Details (single owner with ID + proof of address)</li>
+        <li>Bank Account</li>
+        <li>Service Agreement</li>
+    </ol>
+    <p><strong>Documents Required:</strong></p>
+    <ul>
+        <li>Owner ID document (National ID, NIN, Passport, or Driver's License)</li>
+        <li>Owner proof of address (Utility bill ≤ 3 months old)</li>
+    </ul>
+    
+    <h3>Registered Business</h3>
+    <p>For CAC-registered companies (LLC, PLC, Business Name).</p>
+    <p><strong>Steps:</strong></p>
+    <ol>
+        <li>Business Details</li>
+        <li>Registration Details (RC number, TIN)</li>
+        <li>Shareholders (1-10 people, each with ID + proof of address)</li>
+        <li>Bank Account</li>
+        <li>Service Agreement</li>
+    </ol>
+    <p><strong>Documents Required:</strong></p>
+    <ul>
+        <li>Business proof of address</li>
+        <li>Per shareholder: ID document + proof of address</li>
+    </ul>
+
+    <!-- Section 6: Endpoints -->
+    <h2 id="endpoints">6. API Endpoints Reference</h2>
+    
+    <h3>Public Endpoint</h3>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/compliance/schema?business_type=X</code></td><td>Get form schema (no auth required)</td></tr>
+    </table>
+    
+    <h3>Compliance Endpoints</h3>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/compliance/start</code></td><td>Start new compliance</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/compliance</code></td><td>Get current compliance state</td></tr>
+        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/profile</code></td><td>Save profile/business details</td></tr>
+        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/contact</code></td><td>Save contact information</td></tr>
+        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/registration</code></td><td>Save registration (registered only)</td></tr>
+        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/owners</code></td><td>Save owners/shareholders</td></tr>
+        <tr><td><span class="method put">PUT</span></td><td><code>/compliance/bank-accounts</code></td><td>Save bank accounts</td></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/compliance/submit</code></td><td>Submit for review</td></tr>
+    </table>
+    
+    <h3>Document Endpoints</h3>
+    <table>
+        <tr><th>Method</th><th>Endpoint</th><th>Description</th></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/compliance/documents/uploads</code></td><td>Get presigned upload URL</td></tr>
+        <tr><td><span class="method post">POST</span></td><td><code>/compliance/documents/{id}/complete</code></td><td>Confirm upload complete</td></tr>
+        <tr><td><span class="method get">GET</span></td><td><code>/compliance/documents/{id}</code></td><td>Get document info</td></tr>
+        <tr><td><span class="method delete">DELETE</span></td><td><code>/compliance/documents/{id}</code></td><td>Delete document</td></tr>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- Section 7: Starter Flow -->
+    <h2 id="starter-flow">7. Starter Business Flow</h2>
+    
+    <div class="flow-step">
+        <h4>Step 1: Get Schema</h4>
+        <pre><code>GET /compliance/schema?business_type=starter
+
+Response: Form schema with fields for each step</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 2: Start Compliance</h4>
+        <pre><code>POST /compliance/start
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-1&gt;
+
+Response:
+{
+  "compliance_id": 100,
+  "status": "draft",
+  "version": 1
+}</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 3: Save Profile</h4>
+        <pre><code>PUT /compliance/profile
+Headers:
+  Authorization: Bearer &lt;token&gt;
+  Idempotency-Key: &lt;uuid-2&gt;
+  X-Expected-Version: 1
+
+Body:
+{
+  "country": "NG",
+  "industry": "retail",
+  "category": "fashion",
+  "trading_name": "ACME Store",
+  "sales_volume": "100000-500000",
+  "business_type": "starter",
+  "business_description": "Fashion retail business"
+}
+
+Response: { "version": 2, "profile_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 4: Save Contact</h4>
+        <pre><code>PUT /compliance/contact
+Headers:
+  Idempotency-Key: &lt;uuid-3&gt;
+  X-Expected-Version: 2
+
+Body:
+{
+  "email": "contact@acme.com",
+  "support_email": "support@acme.com",
+  "dispute_email": "support@acme.com",
+  "same_as_support_email": true,
+  "phone": "+2348012345678",
+  "address": "123 Victoria Island, Lagos",
+  "lga": "eti-osa",
+  "online_links": [
+    { "platform": "website", "url": "https://acme.com" }
+  ]
+}
+
+Response: { "version": 3, "contact_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 5: Save Owner (Without Documents First)</h4>
+        <pre><code>PUT /compliance/owners
+Headers:
+  Idempotency-Key: &lt;uuid-4&gt;
+  X-Expected-Version: 3
+
+Body:
+{
+  "owners": [{
+    "full_name": "John Doe",
+    "date_of_birth": "1985-03-15",
+    "nationality": "Nigerian",
+    "role": "owner",
+    "id_document_type": "international_passport",
+    "address": "456 Ikoyi, Lagos",
+    "lga": "eti-osa",
+    "same_as_business_address": false
+  }]
+}
+
+Response:
+{
+  "version": 4,
+  "owners_complete": false,    ← Documents still missing!
+  "owners": [
+    { "id": 42, "full_name": "John Doe", ... }
+  ]
+}</code></pre>
+        <div class="note">
+            <strong>Important:</strong> Note the owner <code>"id": 42</code> in the response. You'll need this when updating with document IDs.
+        </div>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 6: Upload Owner ID Document</h4>
+        <p><strong>6a. Request presigned URL:</strong></p>
+        <pre><code>POST /compliance/documents/uploads
+Headers:
+  Idempotency-Key: &lt;uuid-5&gt;
+
+Body:
+{
+  "purpose": "identity",
+  "file_name": "passport.pdf",
+  "content_type": "application/pdf",
+  "size_bytes": 524288
+}
+
+Response:
+{
+  "document_id": "doc_id_001",
+  "upload_url": "https://s3.amazonaws.com/...",
+  "method": "PUT",
+  "headers": { "Content-Type": "application/pdf" }
+}</code></pre>
+        <div class="note">
+            <strong>Note:</strong> For starter business, <code>"identity"</code> and <code>"owner_address"</code> purposes do NOT require <code>owner_id</code> because there's only one owner.
+        </div>
+        
+        <p><strong>6b. Upload file directly to S3:</strong></p>
+        <pre><code>PUT https://s3.amazonaws.com/...
+Content-Type: application/pdf
+Body: &lt;binary file data&gt;
+
+Response: 200 OK</code></pre>
+        
+        <p><strong>6c. Confirm upload complete:</strong></p>
+        <pre><code>POST /compliance/documents/doc_id_001/complete
+Headers:
+  Idempotency-Key: &lt;uuid-6&gt;
+
+Response: { "document_id": "doc_id_001", "status": "uploaded" }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 7: Upload Owner Proof of Address</h4>
+        <p>Same 3-step pattern as Step 6:</p>
+        <pre><code>// 7a. Request URL
+POST /compliance/documents/uploads
+{ "purpose": "owner_address", "file_name": "utility-bill.pdf", ... }
+→ { "document_id": "doc_addr_001", "upload_url": "..." }
+
+// 7b. Upload to S3
+PUT &lt;upload_url&gt; with file
+
+// 7c. Confirm complete
+POST /compliance/documents/doc_addr_001/complete</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 8: Update Owner with Document IDs</h4>
+        <pre><code>PUT /compliance/owners
+Headers:
+  Idempotency-Key: &lt;uuid-7&gt;
+  X-Expected-Version: 4
+
+Body:
+{
+  "owners": [{
+    "id": 42,
+    "full_name": "John Doe",
+    "date_of_birth": "1985-03-15",
+    "nationality": "Nigerian",
+    "role": "owner",
+    "id_document_type": "international_passport",
+    "id_document_id": "doc_id_001",
+    "proof_of_address_document_id": "doc_addr_001",
+    "address": "456 Ikoyi, Lagos",
+    "lga": "eti-osa",
+    "same_as_business_address": false
+  }]
+}
+
+Response: { "version": 5, "owners_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 9: Save Bank Account</h4>
+        <pre><code>PUT /compliance/bank-accounts
+Headers:
+  Idempotency-Key: &lt;uuid-8&gt;
+  X-Expected-Version: 5
+
+Body:
+{
+  "bank_accounts": [{
+    "bank_code": "044",
+    "account_number": "0123456789",
+    "account_name": "John Doe"
+  }]
+}
+
+Response: { "version": 6, "bank_accounts_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 10: Submit for Review</h4>
+        <pre><code>POST /compliance/submit
+Headers:
+  Idempotency-Key: &lt;uuid-9&gt;
+  X-Expected-Version: 6
+
+Body:
+{
+  "agreement_accepted": true
+}
+
+Response: { "version": 7, "status": "submitted" }</code></pre>
+    </div>
+    
+    <div class="success">
+        <strong>Starter Business Flow Complete!</strong>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 8: Registered Flow -->
+    <h2 id="registered-flow">8. Registered Business Flow</h2>
+    
+    <div class="important">
+        <strong>Key Difference:</strong> For registered businesses with multiple shareholders, documents use <strong>auto-linking</strong> via <code>owner_id</code>:
+        <ol>
+            <li>Save shareholders first → get their IDs</li>
+            <li>Upload documents WITH <code>owner_id</code> → backend auto-links them</li>
+            <li>No need to re-save shareholders with document IDs!</li>
+        </ol>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Steps 1-2: Get Schema & Start Compliance</h4>
+        <pre><code>GET /compliance/schema?business_type=registered
+
+POST /compliance/start
+→ { "compliance_id": 200, "version": 1 }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 3: Save Business Details</h4>
+        <pre><code>PUT /compliance/profile
+Headers:
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 1
+
+Body:
+{
+  "country": "NG",
+  "industry": "technology",
+  "category": "fintech",
+  "trading_name": "TechCorp Limited",
+  "sales_volume": "1000000-5000000",
+  "business_type": "registered",
+  "business_description": "Financial technology solutions"
+}
+
+Response: { "version": 2, "profile_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 4: Save Contact with Business Address Document</h4>
+        <p><strong>4a. Upload business address document:</strong></p>
+        <pre><code>POST /compliance/documents/uploads
+{ "purpose": "business_address", "file_name": "office-lease.pdf", ... }
+→ { "document_id": "doc_biz_addr" }
+
+PUT &lt;s3_url&gt; (upload file)
+POST /compliance/documents/doc_biz_addr/complete</code></pre>
+        
+        <p><strong>4b. Save contact with document ID:</strong></p>
+        <pre><code>PUT /compliance/contact
+Headers:
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 2
+
+Body:
+{
+  "email": "info@techcorp.ng",
+  "support_email": "support@techcorp.ng",
+  "dispute_email": "disputes@techcorp.ng",
+  "phone": "+2349012345678",
+  "address": "Plot 123 Tech Hub, Lekki",
+  "lga": "eti-osa",
+  "business_address_document_id": "doc_biz_addr",
+  "online_links": [
+    { "platform": "website", "url": "https://techcorp.ng" }
+  ]
+}
+
+Response: { "version": 3, "contact_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 5: Save Registration Details</h4>
+        <pre><code>PUT /compliance/registration
+Headers:
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 3
+
+Body:
+{
+  "registration_number": "RC1234567",
+  "tax_identification_number": "12345678-0001"
+}
+
+Response: { "version": 4, "registration_complete": true }</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 6: Save Shareholders (Without Documents)</h4>
+        <pre><code>PUT /compliance/owners
+Headers:
+  Idempotency-Key: &lt;uuid&gt;
+  X-Expected-Version: 4
+
+Body:
+{
+  "owners": [
+    {
+      "full_name": "Adaora Okafor",
+      "date_of_birth": "1980-05-20",
+      "nationality": "Nigerian",
+      "role": "director",
+      "id_document_type": "international_passport",
+      "address": "12 Executive Estate, Ikoyi",
+      "lga": "eti-osa"
+    },
+    {
+      "full_name": "Chidi Eze",
+      "date_of_birth": "1975-11-08",
+      "nationality": "Nigerian",
+      "role": "shareholder",
+      "id_document_type": "national_id",
+      "address": "45 Business District, VI",
+      "lga": "eti-osa"
+    }
+  ]
+}
+
+Response:
+{
+  "version": 5,
+  "owners_complete": false,
+  "owners": [
+    { "id": 50, "full_name": "Adaora Okafor", ... },
+    { "id": 51, "full_name": "Chidi Eze", ... }
+  ]
+}</code></pre>
+        <div class="important">
+            <strong>Important:</strong> Extract owner IDs from response → <code>50</code> and <code>51</code>
+        </div>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 7: Upload Documents for Shareholder 1 (Adaora, ID: 50)</h4>
+        <p><strong>Upload ID document WITH owner_id:</strong></p>
+        <pre><code>POST /compliance/documents/uploads
+Headers:
+  Idempotency-Key: &lt;uuid&gt;
+
+Body:
+{
+  "purpose": "shareholder_identity",
+  "owner_id": 50,                        ← REQUIRED for shareholders!
+  "file_name": "adaora-passport.pdf",
+  "content_type": "application/pdf",
+  "size_bytes": 512000
+}
+
+Response: { "document_id": "doc_sh1_id", ... }</code></pre>
+        
+        <p>Upload to S3, then complete:</p>
+        <pre><code>POST /compliance/documents/doc_sh1_id/complete</code></pre>
+        
+        <div class="success">
+            <strong>Auto-Link!</strong> The backend AUTOMATICALLY sets:<br>
+            <code>owner(50).id_document_id = "doc_sh1_id"</code>
+        </div>
+        
+        <p><strong>Upload proof of address WITH owner_id:</strong></p>
+        <pre><code>POST /compliance/documents/uploads
+{
+  "purpose": "shareholder_address",
+  "owner_id": 50,
+  "file_name": "adaora-utility.pdf",
+  ...
+}
+
+// Upload to S3, then complete
+POST /compliance/documents/doc_sh1_addr/complete</code></pre>
+        
+        <div class="success">
+            <strong>Auto-Link!</strong> Backend sets:<br>
+            <code>owner(50).proof_of_address_document_id = "doc_sh1_addr"</code>
+        </div>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 8: Upload Documents for Shareholder 2 (Chidi, ID: 51)</h4>
+        <p>Same pattern as Step 7, but with <code>owner_id: 51</code></p>
+        <pre><code>POST /compliance/documents/uploads
+{ "purpose": "shareholder_identity", "owner_id": 51, ... }
+→ Complete → auto-links to owner 51
+
+POST /compliance/documents/uploads
+{ "purpose": "shareholder_address", "owner_id": 51, ... }
+→ Complete → auto-links to owner 51</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 9: Verify (Optional)</h4>
+        <pre><code>GET /compliance
+
+Response shows owners_complete: true and all documents linked:
+{
+  "owners": [
+    { "id": 50, "id_document_id": "doc_sh1_id", "proof_of_address_document_id": "doc_sh1_addr" },
+    { "id": 51, "id_document_id": "doc_sh2_id", "proof_of_address_document_id": "doc_sh2_addr" }
+  ]
+}</code></pre>
+    </div>
+    
+    <div class="flow-step">
+        <h4>Step 10-11: Save Bank Account & Submit</h4>
+        <pre><code>PUT /compliance/bank-accounts
+{ "bank_accounts": [{ "bank_code": "058", "account_number": "1234567890", "account_name": "TECHCORP LIMITED" }] }
+→ { "version": 6 }
+
+POST /compliance/submit
+{ "agreement_accepted": true }
+→ { "version": 7, "status": "submitted" }</code></pre>
+    </div>
+    
+    <div class="success">
+        <strong>Registered Business Flow Complete!</strong>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- Section 9: Document Upload -->
+    <h2 id="document-upload">9. Document Upload Flow</h2>
+    
+    <h3>Three-Step Process</h3>
+    <p>Every document upload follows these 3 steps:</p>
+    
+    <table>
+        <tr><th>Step</th><th>Endpoint</th><th>Description</th></tr>
+        <tr>
+            <td><strong>1</strong></td>
+            <td><code>POST /compliance/documents/uploads</code></td>
+            <td>Request presigned URL from backend</td>
+        </tr>
+        <tr>
+            <td><strong>2</strong></td>
+            <td><code>PUT {upload_url}</code></td>
+            <td>Upload file directly to S3 (not through API!)</td>
+        </tr>
+        <tr>
+            <td><strong>3</strong></td>
+            <td><code>POST /compliance/documents/{id}/complete</code></td>
+            <td>Confirm completion (triggers auto-link for shareholders)</td>
+        </tr>
+    </table>
+    
+    <h3>Document Purpose Reference</h3>
+    <table>
+        <tr><th>Purpose</th><th>Business Type</th><th>Description</th><th>owner_id Required?</th></tr>
+        <tr><td><code>identity</code></td><td>Starter</td><td>Owner ID document</td><td><strong>NO</strong></td></tr>
+        <tr><td><code>owner_address</code></td><td>Starter</td><td>Owner proof of address</td><td><strong>NO</strong></td></tr>
+        <tr><td><code>business_address</code></td><td>Both</td><td>Business address proof</td><td><strong>NO</strong></td></tr>
+        <tr><td><code>shareholder_identity</code></td><td>Registered</td><td>Shareholder ID</td><td><strong>YES</strong></td></tr>
+        <tr><td><code>shareholder_address</code></td><td>Registered</td><td>Shareholder address</td><td><strong>YES</strong></td></tr>
+    </table>
+    
+    <h3>Supported File Types</h3>
+    <table>
+        <tr><th>Content Type</th><th>Extensions</th><th>Max Size</th></tr>
+        <tr><td><code>application/pdf</code></td><td>.pdf</td><td>10 MB</td></tr>
+        <tr><td><code>image/jpeg</code></td><td>.jpg, .jpeg</td><td>10 MB</td></tr>
+        <tr><td><code>image/png</code></td><td>.png</td><td>10 MB</td></tr>
+    </table>
+
+    <!-- Section 10: Errors -->
+    <h2 id="errors">10. Error Handling</h2>
+    
+    <h3>HTTP Status Codes</h3>
+    <table>
+        <tr><th>Code</th><th>Meaning</th><th>Action</th></tr>
+        <tr><td>200</td><td>Success</td><td>Process response</td></tr>
+        <tr><td>400</td><td>Bad Request</td><td>Fix request data</td></tr>
+        <tr><td>401</td><td>Unauthorized</td><td>Refresh token or re-login</td></tr>
+        <tr><td>409</td><td>Conflict</td><td>Version mismatch - refresh and retry</td></tr>
+        <tr><td>422</td><td>Validation Error</td><td>Fix field errors</td></tr>
+        <tr><td>500</td><td>Server Error</td><td>Retry with backoff</td></tr>
+    </table>
+    
+    <h3>Error Response Format</h3>
+    <pre><code>{
+  "success": false,
+  "message": "Validation failed",
+  "error_code": "VALIDATION_FAILED",
+  "errors": [
+    { "step": "owners", "field": "id_document_id", "message": "ID document is required" }
+  ]
+}</code></pre>
+    
+    <h3>Common Error Codes</h3>
+    <table>
+        <tr><th>Code</th><th>Description</th></tr>
+        <tr><td><code>VALIDATION_FAILED</code></td><td>Field validation errors</td></tr>
+        <tr><td><code>VERSION_CONFLICT</code></td><td>X-Expected-Version doesn't match</td></tr>
+        <tr><td><code>IDEMPOTENCY_CONFLICT</code></td><td>Same key, different request body</td></tr>
+        <tr><td><code>DOCUMENT_NOT_FOUND</code></td><td>Document ID doesn't exist</td></tr>
+        <tr><td><code>OWNER_NOT_FOUND</code></td><td>Owner ID doesn't exist</td></tr>
+        <tr><td><code>ALREADY_SUBMITTED</code></td><td>Cannot modify submitted compliance</td></tr>
+    </table>
+
+    <hr style="margin-top: 40px;">
+    <p style="text-align: center; color: #7f8c8d; font-size: 12px;">
+        Payment Gateway Merchant Compliance API Documentation v1.0<br>
+        © 2026 IRPay. All rights reserved.
+    </p>
+</body>
+</html>

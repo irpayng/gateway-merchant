@@ -11,7 +11,8 @@ import java.util.List;
 public record StepSchema(@JsonProperty("key") String key, @JsonProperty("label") String label,
         @JsonProperty("description") String description, @JsonProperty("fields") List<FieldSchema> fields,
         @JsonProperty("multiple") Boolean multiple, @JsonProperty("min_items") Integer minItems,
-        @JsonProperty("max_items") Integer maxItems, @JsonProperty("add_label") String addLabel) {
+        @JsonProperty("max_items") Integer maxItems, @JsonProperty("add_label") String addLabel,
+        @JsonProperty("documents_hint") String documentsHint) {
 
     public static Builder builder(String key, String label) {
         return new Builder(key, label);
@@ -26,6 +27,7 @@ public record StepSchema(@JsonProperty("key") String key, @JsonProperty("label")
         private Integer minItems;
         private Integer maxItems;
         private String addLabel;
+        private String documentsHint;
 
         private Builder(String key, String label) {
             this.key = key;
@@ -55,8 +57,14 @@ public record StepSchema(@JsonProperty("key") String key, @JsonProperty("label")
             return this;
         }
 
+        public Builder documentsHint(String hint) {
+            this.documentsHint = hint;
+            return this;
+        }
+
         public StepSchema build() {
-            return new StepSchema(key, label, description, fields, multiple, minItems, maxItems, addLabel);
+            return new StepSchema(key, label, description, fields, multiple, minItems, maxItems, addLabel,
+                    documentsHint);
         }
     }
 }

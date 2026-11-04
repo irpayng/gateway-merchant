@@ -8,7 +8,5 @@ public record SaveOwnerRequest(@JsonProperty("id") Long id, @JsonProperty("role"
         @JsonProperty("date_of_birth") String dateOfBirth, @JsonProperty("address") String address,
         @JsonProperty("id_document_type") String idDocumentType, @JsonProperty("full_name") String fullName,
         @JsonProperty("nationality") String nationality, @JsonProperty("state") String state,
-        @JsonProperty("lga") String lga, @JsonProperty("same_as_business_address") Boolean sameAsBusinessAddress,
-        @JsonProperty("id_document_id") String idDocumentId,
-        @JsonProperty("proof_of_address_document_id") String proofOfAddressDocumentId) {
+        @JsonProperty("lga") String lga, @JsonProperty("same_as_business_address") Boolean sameAsBusinessAddress) {
 }

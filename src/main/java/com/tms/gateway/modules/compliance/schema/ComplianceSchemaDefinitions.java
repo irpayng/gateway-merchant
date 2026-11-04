@@ -80,17 +80,13 @@ public final class ComplianceSchemaDefinitions {
                 builder("nationality", "Nationality", TEXT).required().placeholder("Enter nationality").build(),
                 builder("id_document_type", "Identification Document", SELECT).required().options(idDocumentOptions())
                         .build(),
-                builder("id_document_id", "Upload ID Document", FILE).required().hint(
-                        "Please upload a valid means of identification (National ID Card, NIN, International Passport, Driver's License)")
-                        .build(),
                 builder("address", "Home address", TEXT).required().placeholder("Enter your home address").build(),
                 builder("same_as_business_address", "Same as business address", CHECKBOX).build(),
                 builder("state", "State", SELECT).required().optionsRef("states").build(),
                 builder("lga", "LGA", SELECT).required().optionsRef("lgas").hint("Choose from the selected state")
-                        .build(),
-                builder("proof_of_address_document_id", "Upload Proof of Address", FILE).required().hint(
-                        "Please upload a valid utility bill not older than 3 months (Electricity, Water or Waste Bill)")
                         .build())
+                .documentsHint(
+                        "Upload ID document and proof of address as multipart files: owner_0_identity, owner_0_address")
                 .build();
     }
 
@@ -129,11 +125,8 @@ public final class ComplianceSchemaDefinitions {
                         builder("state", "State", SELECT).required().optionsRef("states").build(),
                         builder("lga", "Local Government Area", SELECT).required().optionsRef("lgas")
                                 .hint("Choose from the selected state").build(),
-                        builder("business_address_document_id", "Upload Proof of Business Address", FILE).required()
-                                .hint("Please upload a valid utility bill not older than 3 months (Electricity, Water or Waste Bill)")
-                                .build(),
                         onlineLinksField())
-                .build();
+                .documentsHint("Upload proof of business address as multipart file: business_address_proof").build();
     }
 
     private static StepSchema registrationStep() {
@@ -156,18 +149,14 @@ public final class ComplianceSchemaDefinitions {
                         builder("role", "Role at the business", SELECT).required().options(shareholderRoleOptions())
                                 .build(),
                         builder("id_document_type", "ID Type", SELECT).required().options(idDocumentOptions()).build(),
-                        builder("id_document_id", "Upload ID Document", FILE).required().hint(
-                                "Please upload a valid means of identification (National ID Card, NIN, International Passport, Driver's License)")
-                                .build(),
                         builder("address", "Home address", TEXT).required().placeholder("Enter your home address")
                                 .build(),
                         builder("same_as_business_address", "Same as business address", CHECKBOX).build(),
                         builder("state", "State", SELECT).required().optionsRef("states").build(),
                         builder("lga", "LGA", SELECT).required().optionsRef("lgas")
-                                .hint("Choose from the selected state").build(),
-                        builder("proof_of_address_document_id", "Upload Proof of Address", FILE).required().hint(
-                                "Please upload a valid utility bill not older than 3 months (Electricity, Water or Waste Bill)")
-                                .build())
+                                .hint("Choose from the selected state").build())
+                .documentsHint(
+                        "Upload ID and address proof as multipart files: shareholder_{n}_identity, shareholder_{n}_address")
                 .build();
     }
 
