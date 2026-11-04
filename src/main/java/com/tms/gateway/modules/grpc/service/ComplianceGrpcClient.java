@@ -1,5 +1,7 @@
 package com.tms.gateway.modules.grpc.service;
+import com.google.protobuf.ByteString;
 import com.tms.gateway.core.exception.AppException;
+import com.tms.gateway.modules.compliance.controller.ComplianceController.OwnerFiles;
 import com.tms.gateway.modules.compliance.dto.*;
 import com.tms.gateway.modules.compliance.dto.ComplianceResponse.CorrectionData;
 import com.tms.gateway.modules.compliance.service.ComplianceValidationException;
@@ -9,6 +11,7 @@ import io.grpc.*;
 import io.grpc.stub.MetadataUtils;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -17,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 /**
  * All mutations are merchant-scoped, versioned and idempotent at the source of
  * truth.
@@ -288,6 +292,190 @@ public class ComplianceGrpcClient {
         }
         return result(invoke("saveOwners", () -> timed().saveMerchantOwnersDraft(request.build())));
     }
+
+    // ── Methods with file uploads ───────────────────────────────
+
+    public ComplianceData saveProfileWithFile(MutationContext context,
+            com.tms.gateway.modules.compliance.dto.SaveProfileRequest r, MultipartFile cacCertificate) {
+        var data = com.tms.gateway.modules.grpc.compliance.SaveProfileRequest.newBuilder();
+        var supplied = new ArrayList<String>();
+        data.setUserId(context.getActorUserId());
+        if (r.country() != null) {
+            supplied.add("country");
+            data.setCountry(r.country());
+        }
+        if (r.industry() != null) {
+            supplied.add("industry");
+            data.setIndustry(r.industry());
+        }
+        if (r.category() != null) {
+            supplied.add("category");
+            data.setCategory(r.category());
+        }
+        if (r.tradingName() != null) {
+            supplied.add("trading_name");
+            data.setTradingName(r.tradingName());
+        }
+        if (r.salesVolume() != null) {
+            supplied.add("sales_volume");
+            data.setSalesVolume(r.salesVolume());
+        }
+        if (r.businessType() != null) {
+            supplied.add("business_type");
+            data.setBusinessType(r.businessType());
+        }
+        if (r.businessDescription() != null) {
+            supplied.add("business_description");
+            data.setBusinessDescription(r.businessDescription());
+        }
+        var builder = MerchantProfileDraftRequest.newBuilder().setContext(context).setData(data)
+                .addAllSuppliedFields(supplied);
+        if (cacCertificate != null && !cacCertificate.isEmpty()) {
+            builder.setCacCertificate(toFileData(cacCertificate));
+        }
+        return result(invoke("saveProfileWithFile", () -> timed().saveMerchantProfileDraft(builder.build())));
+    }
+
+    public ComplianceData saveContactWithFile(MutationContext context,
+            com.tms.gateway.modules.compliance.dto.SaveContactRequest r, MultipartFile addressProof) {
+        var data = com.tms.gateway.modules.grpc.compliance.SaveContactRequest.newBuilder();
+        var supplied = new ArrayList<String>();
+        data.setUserId(context.getActorUserId());
+        if (r.email() != null) {
+            supplied.add("email");
+            data.setEmail(r.email());
+        }
+        if (r.phone() != null) {
+            supplied.add("phone");
+            data.setPhone(r.phone());
+        }
+        if (r.address() != null) {
+            supplied.add("address");
+            data.setAddress(r.address());
+        }
+        if (r.supportEmail() != null) {
+            supplied.add("support_email");
+            data.setSupportEmail(r.supportEmail());
+        }
+        if (r.disputeEmail() != null) {
+            supplied.add("dispute_email");
+            data.setDisputeEmail(r.disputeEmail());
+        }
+        if (r.state() != null) {
+            supplied.add("state");
+            data.setState(r.state());
+        }
+        if (r.lga() != null) {
+            supplied.add("lga");
+            data.setLga(r.lga());
+        }
+        if (r.sameAsSupportEmail() != null) {
+            supplied.add("same_as_support_email");
+            data.setSameAsSupportEmail(r.sameAsSupportEmail());
+        }
+        if (r.businessAddressDocumentId() != null) {
+            supplied.add("business_address_document_id");
+            data.setBusinessAddressDocumentId(r.businessAddressDocumentId());
+        }
+        if (r.onlineLinks() != null) {
+            supplied.add("online_links");
+            data.addAllOnlineLinks(r.onlineLinks().stream()
+                    .map(l -> OnlineLinkData.newBuilder().setPlatform(l.platform() == null ? "" : l.platform())
+                            .setUrl(l.url() == null ? "" : l.url()).build())
+                    .toList());
+        }
+        var builder = MerchantContactDraftRequest.newBuilder().setContext(context).setData(data)
+                .addAllSuppliedFields(supplied);
+        if (addressProof != null && !addressProof.isEmpty()) {
+            builder.setBusinessAddressProof(toFileData(addressProof));
+        }
+        return result(invoke("saveContactWithFile", () -> timed().saveMerchantContactDraft(builder.build())));
+    }
+
+    public ComplianceData saveOwnersWithFiles(MutationContext context,
+            List<com.tms.gateway.modules.compliance.dto.SaveOwnerRequest> items, Map<Integer, OwnerFiles> ownerFiles) {
+        var request = MerchantOwnersDraftRequest.newBuilder().setContext(context);
+        for (int i = 0; i < items.size(); i++) {
+            var r = items.get(i);
+            var data = OwnerData.newBuilder();
+            var supplied = FieldPresence.newBuilder();
+            if (r.id() != null) {
+                data.setId(r.id());
+                supplied.addFields("id");
+            }
+            if (r.role() != null) {
+                data.setRole(r.role());
+                supplied.addFields("role");
+            }
+            if (r.dateOfBirth() != null) {
+                data.setDateOfBirth(r.dateOfBirth());
+                supplied.addFields("date_of_birth");
+            }
+            if (r.address() != null) {
+                data.setAddress(r.address());
+                supplied.addFields("address");
+            }
+            if (r.idDocumentType() != null) {
+                data.setIdDocumentType(r.idDocumentType());
+                supplied.addFields("id_document_type");
+            }
+            if (r.fullName() != null) {
+                data.setFullName(r.fullName());
+                supplied.addFields("full_name");
+            }
+            if (r.nationality() != null) {
+                data.setNationality(r.nationality());
+                supplied.addFields("nationality");
+            }
+            if (r.state() != null) {
+                data.setState(r.state());
+                supplied.addFields("state");
+            }
+            if (r.lga() != null) {
+                data.setLga(r.lga());
+                supplied.addFields("lga");
+            }
+            if (r.sameAsBusinessAddress() != null) {
+                data.setSameAsBusinessAddress(r.sameAsBusinessAddress());
+                supplied.addFields("same_as_business_address");
+            }
+            if (r.idDocumentId() != null) {
+                data.setIdDocumentId(r.idDocumentId());
+                supplied.addFields("id_document_id");
+            }
+            if (r.proofOfAddressDocumentId() != null) {
+                data.setProofOfAddressDocumentId(r.proofOfAddressDocumentId());
+                supplied.addFields("proof_of_address_document_id");
+            }
+            request.addOwners(data).addOwnerFields(supplied);
+
+            // Build owner files for this index
+            OwnerFileData.Builder fileBuilder = OwnerFileData.newBuilder();
+            OwnerFiles files = ownerFiles.get(i);
+            if (files != null) {
+                if (files.identity() != null && !files.identity().isEmpty()) {
+                    fileBuilder.setIdentityDocument(toFileData(files.identity()));
+                }
+                if (files.address() != null && !files.address().isEmpty()) {
+                    fileBuilder.setAddressProof(toFileData(files.address()));
+                }
+            }
+            request.addOwnerFiles(fileBuilder);
+        }
+        return result(invoke("saveOwnersWithFiles", () -> timed().saveMerchantOwnersDraft(request.build())));
+    }
+
+    private FileData toFileData(MultipartFile file) {
+        try {
+            return FileData.newBuilder().setContent(ByteString.copyFrom(file.getBytes()))
+                    .setFileName(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file")
+                    .setContentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream")
+                    .build();
+        } catch (IOException e) {
+            throw new AppException("Failed to read uploaded file", HttpStatus.BAD_REQUEST);
+        }
+    }
+
     public ComplianceData saveBankAccounts(MutationContext context,
             List<com.tms.gateway.modules.compliance.dto.SaveBankAccountRequest> items) {
         var request = MerchantBankAccountsDraftRequest.newBuilder().setContext(context);

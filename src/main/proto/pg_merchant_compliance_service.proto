@@ -238,10 +238,39 @@ message MutationContext {
   string idempotency_key = 3;
   int64 expected_version = 4;
 }
+
+// File data for multipart uploads sent via gRPC
+message FileData {
+  bytes content = 1;
+  string file_name = 2;
+  string content_type = 3;
+}
+
+// File data for owner documents (identity and address proof)
+message OwnerFileData {
+  FileData identity_document = 1;
+  FileData address_proof = 2;
+}
+
 message MerchantComplianceRequest { MutationContext context = 1; }
-message MerchantProfileDraftRequest { MutationContext context = 1; SaveProfileRequest data = 2; repeated string supplied_fields = 3; }
-message MerchantContactDraftRequest { MutationContext context = 1; SaveContactRequest data = 2; repeated string supplied_fields = 3; }
-message MerchantOwnersDraftRequest { MutationContext context = 1; repeated OwnerData owners = 2; repeated FieldPresence owner_fields = 3; }
+message MerchantProfileDraftRequest {
+  MutationContext context = 1;
+  SaveProfileRequest data = 2;
+  repeated string supplied_fields = 3;
+  FileData cac_certificate = 4;  // For registered business CAC document
+}
+message MerchantContactDraftRequest {
+  MutationContext context = 1;
+  SaveContactRequest data = 2;
+  repeated string supplied_fields = 3;
+  FileData business_address_proof = 4;  // Proof of business address
+}
+message MerchantOwnersDraftRequest {
+  MutationContext context = 1;
+  repeated OwnerData owners = 2;
+  repeated FieldPresence owner_fields = 3;
+  repeated OwnerFileData owner_files = 4;  // Files indexed by owner position
+}
 message FieldPresence { repeated string fields = 1; }
 message MerchantBankAccountsDraftRequest { MutationContext context = 1; repeated BankAccountData bank_accounts = 2; repeated FieldPresence account_fields = 3; }
 message MerchantRegistrationDraftRequest { MutationContext context = 1; RegistrationData data = 2; repeated string supplied_fields = 3; }

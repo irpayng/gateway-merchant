@@ -1,6 +1,7 @@
 package com.tms.gateway.modules.compliance.service;
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.compliance.controller.ComplianceController.OwnerFiles;
 import com.tms.gateway.modules.compliance.dto.*;
 import com.tms.gateway.modules.grpc.compliance.ComplianceData;
 import com.tms.gateway.modules.grpc.compliance.MutationContext;
@@ -8,9 +9,11 @@ import com.tms.gateway.modules.grpc.service.ComplianceGrpcClient;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 /**
  * Authoritative reads avoid stale drafts and approval decisions while Kafka
  * catches up.
@@ -76,6 +79,41 @@ public class ComplianceService {
     public ComplianceResponse saveRegistration(MutationContext c, SaveRegistrationRequest r) {
         return checked(c, grpcClient.saveRegistration(c, r));
     }
+
+    // ── Methods with file uploads ───────────────────────────────
+
+    public ComplianceResponse saveProfileWithFile(MutationContext c, SaveProfileRequest r,
+            MultipartFile cacCertificate) {
+        ComplianceDraftValidator.profile(r);
+        return checked(c, grpcClient.saveProfileWithFile(c, r, cacCertificate));
+    }
+
+    public ComplianceResponse saveContactWithFile(MutationContext c, SaveContactRequest r, MultipartFile addressProof) {
+        ComplianceDraftValidator.contact(r);
+        return checked(c, grpcClient.saveContactWithFile(c, r, addressProof));
+    }
+
+    public ComplianceResponse saveOwnersWithFiles(MutationContext c, SaveOwnersRequest r,
+            Map<Integer, OwnerFiles> ownerFiles) {
+        ComplianceDraftValidator.owners(r);
+        return checked(c, grpcClient.saveOwnersWithFiles(c, r.owners(), ownerFiles));
+    }
+
+    public ComplianceResponse saveShareholdersWithFiles(MutationContext c, SaveRegisteredShareholdersRequest r,
+            Map<Integer, OwnerFiles> ownerFiles) {
+        ComplianceDraftValidator.registeredShareholders(r);
+        List<SaveOwnerRequest> owners = r.shareholders().stream().map(shareholder -> {
+            String dateOfBirth = shareholder.dateOfBirth();
+            if (dateOfBirth != null && !dateOfBirth.isEmpty())
+                dateOfBirth = LocalDate.parse(dateOfBirth, DateTimeFormatter.ofPattern("dd-MM-uuuu")).toString();
+            return new SaveOwnerRequest(null, shareholder.role(), dateOfBirth, shareholder.address(),
+                    shareholder.idDocumentType(), shareholder.fullName(), shareholder.nationality(),
+                    shareholder.state(), shareholder.lga(), shareholder.sameAsBusinessAddress(),
+                    shareholder.idDocumentId(), shareholder.proofOfAddressDocumentId());
+        }).toList();
+        return checked(c, grpcClient.saveOwnersWithFiles(c, owners, ownerFiles));
+    }
+
     public ComplianceResponse saveRegisteredBusinessDetails(MutationContext c, RegisteredBusinessDetailsRequest r) {
         ComplianceDraftValidator.registeredBusinessDetails(r);
         SaveProfileRequest profile = new SaveProfileRequest(r.country(), r.industry(), r.category(), r.tradingName(),
