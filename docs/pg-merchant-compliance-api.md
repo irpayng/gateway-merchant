@@ -195,10 +195,12 @@ For CAC-registered companies (LLC, PLC, Business Name).
 
 | Method | Endpoint | Content-Type | Description |
 |--------|----------|--------------|-------------|
-| PUT | `/compliance/profile/with-file` | `multipart/form-data` | Save profile + CAC certificate |
-| PUT | `/compliance/contact/with-file` | `multipart/form-data` | Save contact + address proof |
-| PUT | `/compliance/owners/with-files` | `multipart/form-data` | Save owners + documents |
-| PUT | `/compliance/shareholders/with-files` | `multipart/form-data` | Save shareholders + documents |
+| PUT | `/compliance/profile` | `multipart/form-data` | Save profile + CAC certificate |
+| PUT | `/compliance/contact` | `multipart/form-data` | Save contact + address proof |
+| PUT | `/compliance/owners` | `multipart/form-data` | Save owners + documents |
+| PUT | `/compliance/business/shareholders` | `multipart/form-data` | Save shareholders + documents |
+
+> **Note:** These are the same paths as the JSON endpoints, differentiated by `Content-Type` header.
 
 ---
 
@@ -555,12 +557,39 @@ Documents are submitted **inline with form data** using `multipart/form-data`. T
 
 | Endpoint | File Part Name | Description |
 |----------|---------------|-------------|
-| `/compliance/profile/with-file` | `cac_certificate` | CAC registration certificate |
-| `/compliance/contact/with-file` | `address_proof` | Business address proof |
-| `/compliance/owners/with-files` | `owner_{n}_identity` | Owner's ID document (0-indexed) |
-| `/compliance/owners/with-files` | `owner_{n}_address` | Owner's proof of address (0-indexed) |
-| `/compliance/shareholders/with-files` | `shareholder_{n}_identity` | Shareholder's ID document (0-indexed) |
-| `/compliance/shareholders/with-files` | `shareholder_{n}_address` | Shareholder's proof of address (0-indexed) |
+| `/compliance/profile` (multipart) | `cac_certificate` | CAC registration certificate |
+| `/compliance/contact` (multipart) | `business_address_proof` | Business address proof |
+| `/compliance/owners` (multipart) | `owner_{n}_identity` | Owner's ID document |
+| `/compliance/owners` (multipart) | `owner_{n}_address` | Owner's proof of address |
+| `/compliance/business/shareholders` (multipart) | `owner_{n}_identity` | Shareholder's ID document |
+| `/compliance/business/shareholders` (multipart) | `owner_{n}_address` | Shareholder's proof of address |
+
+### What does `{n}` mean?
+
+The `{n}` is the **0-based array index** matching the position in the JSON `owners` or `shareholders` array.
+
+**Example:** If you submit 3 shareholders in the JSON:
+```json
+{
+  "shareholders": [
+    { "full_name": "Alice" },   // index 0
+    { "full_name": "Bob" },     // index 1
+    { "full_name": "Charlie" }  // index 2
+  ]
+}
+```
+
+The file parts should be named:
+```
+owner_0_identity  → Alice's ID
+owner_0_address   → Alice's proof of address
+owner_1_identity  → Bob's ID
+owner_1_address   → Bob's proof of address
+owner_2_identity  → Charlie's ID
+owner_2_address   → Charlie's proof of address
+```
+
+The index in the file part name **must match** the index in the JSON array.
 
 ### Supported File Types
 

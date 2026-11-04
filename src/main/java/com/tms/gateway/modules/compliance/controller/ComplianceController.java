@@ -6,6 +6,8 @@ import com.tms.gateway.modules.compliance.dto.*;
 import com.tms.gateway.modules.compliance.schema.ComplianceSchema;
 import com.tms.gateway.modules.compliance.schema.ComplianceSchemaDefinitions;
 import com.tms.gateway.modules.compliance.service.ComplianceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.HashMap;
@@ -94,11 +96,14 @@ public class ComplianceController {
     /**
      * Profile with CAC certificate (for registered business).
      */
+    @Operation(summary = "Save profile with CAC certificate", description = "Save business profile details with optional CAC certificate document. "
+            + "Use Content-Type: multipart/form-data. The 'data' part contains the JSON profile, "
+            + "and 'cac_certificate' part contains the PDF/image file.")
     @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveProfileWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
             @RequestHeader("X-Expected-Version") long version, @RequestPart("data") @Valid SaveProfileRequest request,
-            @RequestPart(value = "cac_certificate", required = false) MultipartFile cacCertificate) {
+            @Parameter(description = "CAC certificate file (PDF, JPEG, or PNG, max 5MB)") @RequestPart(value = "cac_certificate", required = false) MultipartFile cacCertificate) {
         validateFile(cacCertificate);
         return ok(service.saveProfileWithFile(service.mutation(user, key, version), request, cacCertificate),
                 "Draft saved");
@@ -107,11 +112,14 @@ public class ComplianceController {
     /**
      * Contact with business address proof.
      */
+    @Operation(summary = "Save contact with address proof", description = "Save contact information with optional business address proof document. "
+            + "Use Content-Type: multipart/form-data. The 'data' part contains the JSON contact info, "
+            + "and 'business_address_proof' part contains the PDF/image file.")
     @PutMapping(value = "/contact", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveContactWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
             @RequestHeader("X-Expected-Version") long version, @RequestPart("data") @Valid SaveContactRequest request,
-            @RequestPart(value = "business_address_proof", required = false) MultipartFile addressProof) {
+            @Parameter(description = "Business address proof file (PDF, JPEG, or PNG, max 5MB)") @RequestPart(value = "business_address_proof", required = false) MultipartFile addressProof) {
         validateFile(addressProof);
         return ok(service.saveContactWithFile(service.mutation(user, key, version), request, addressProof),
                 "Draft saved");
@@ -120,6 +128,11 @@ public class ComplianceController {
     /**
      * Owners with identity and address documents.
      */
+    @Operation(summary = "Save owners with documents", description = "Save owner details with identity and address documents. "
+            + "Use Content-Type: multipart/form-data. The 'data' part contains the JSON with owners array. "
+            + "File parts use naming convention: owner_{n}_identity and owner_{n}_address where {n} is the "
+            + "0-based index matching the owner's position in the JSON array. "
+            + "Example: owner_0_identity, owner_0_address for the first owner.")
     @PutMapping(value = "/owners", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveOwnersWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
@@ -133,6 +146,12 @@ public class ComplianceController {
     /**
      * Shareholders with identity and address documents (registered business).
      */
+    @Operation(summary = "Save shareholders with documents", description = "Save shareholder details with identity and address documents for registered businesses. "
+            + "Use Content-Type: multipart/form-data. The 'data' part contains the JSON with shareholders array. "
+            + "File parts use naming convention: owner_{n}_identity and owner_{n}_address where {n} is the "
+            + "0-based index matching the shareholder's position in the JSON array. "
+            + "Example: owner_0_identity, owner_0_address for the first shareholder, "
+            + "owner_1_identity, owner_1_address for the second, etc.")
     @PutMapping(value = "/business/shareholders", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveShareholdersWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
