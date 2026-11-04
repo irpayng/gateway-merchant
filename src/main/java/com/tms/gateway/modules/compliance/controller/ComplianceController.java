@@ -143,8 +143,14 @@ public class ComplianceController {
     @PutMapping(value = "/owners", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveOwnersWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
-            @RequestHeader("X-Expected-Version") long version, @RequestPart("data") @Valid SaveOwnersRequest request,
+            @RequestHeader("X-Expected-Version") long version,
+            @Parameter(description = "JSON owners data", schema = @Schema(implementation = SaveOwnersRequest.class)) @RequestPart("data") String dataJson,
+            @Parameter(description = "Identity document for owner 0 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_0_identity", required = false) MultipartFile owner0Identity,
+            @Parameter(description = "Address proof for owner 0 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_0_address", required = false) MultipartFile owner0Address,
+            @Parameter(description = "Identity document for owner 1 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_1_identity", required = false) MultipartFile owner1Identity,
+            @Parameter(description = "Address proof for owner 1 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_1_address", required = false) MultipartFile owner1Address,
             HttpServletRequest httpRequest) {
+        SaveOwnersRequest request = parseAndValidate(dataJson, SaveOwnersRequest.class);
         Map<Integer, OwnerFiles> ownerFilesMap = extractOwnerFiles(httpRequest);
         return ok(service.saveOwnersWithFiles(service.mutation(user, key, version), request, ownerFilesMap),
                 "Draft saved");
@@ -163,7 +169,17 @@ public class ComplianceController {
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveShareholdersWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
             @RequestHeader("X-Expected-Version") long version,
-            @RequestPart("data") @Valid SaveRegisteredShareholdersRequest request, HttpServletRequest httpRequest) {
+            @Parameter(description = "JSON shareholders data", schema = @Schema(implementation = SaveRegisteredShareholdersRequest.class)) @RequestPart("data") String dataJson,
+            @Parameter(description = "Identity document for shareholder 0 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_0_identity", required = false) MultipartFile owner0Identity,
+            @Parameter(description = "Address proof for shareholder 0 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_0_address", required = false) MultipartFile owner0Address,
+            @Parameter(description = "Identity document for shareholder 1 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_1_identity", required = false) MultipartFile owner1Identity,
+            @Parameter(description = "Address proof for shareholder 1 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_1_address", required = false) MultipartFile owner1Address,
+            @Parameter(description = "Identity document for shareholder 2 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_2_identity", required = false) MultipartFile owner2Identity,
+            @Parameter(description = "Address proof for shareholder 2 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_2_address", required = false) MultipartFile owner2Address,
+            @Parameter(description = "Identity document for shareholder 3 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_3_identity", required = false) MultipartFile owner3Identity,
+            @Parameter(description = "Address proof for shareholder 3 (PDF, JPEG, or PNG)") @RequestPart(value = "owner_3_address", required = false) MultipartFile owner3Address,
+            HttpServletRequest httpRequest) {
+        SaveRegisteredShareholdersRequest request = parseAndValidate(dataJson, SaveRegisteredShareholdersRequest.class);
         Map<Integer, OwnerFiles> ownerFilesMap = extractOwnerFiles(httpRequest);
         return ok(service.saveShareholdersWithFiles(service.mutation(user, key, version), request, ownerFilesMap),
                 "Shareholders saved");
