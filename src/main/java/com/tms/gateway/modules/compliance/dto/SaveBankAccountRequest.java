@@ -6,5 +6,5 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public record SaveBankAccountRequest(@JsonProperty("id") Long id, @JsonProperty("bank_code") String bankCode,
         @JsonProperty("bank_name") String bankName, @JsonProperty("account_number") String accountNumber,
-        @JsonProperty("account_name") String accountName, @JsonProperty("is_primary") Boolean isPrimary) {
+        @JsonProperty("account_name") String accountName) {
 }
