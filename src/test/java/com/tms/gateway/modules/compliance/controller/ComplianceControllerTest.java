@@ -187,7 +187,7 @@ class ComplianceControllerTest {
                             "date_of_birth": "15-04-1980",
                             "nationality": "Nigerian",
                             "role": "director",
-                            "id_document_type": "national_id",
+                            "id_document_type": "nin",
                             "id_document_id": "doc-id",
                             "address": "2 Home Street",
                             "same_as_business_address": false,

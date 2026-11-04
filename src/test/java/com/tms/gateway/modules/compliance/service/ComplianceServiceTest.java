@@ -142,8 +142,8 @@ class ComplianceServiceTest {
     @Test
     void registeredShareholdersUseExistingOwnersDraftRpc() {
         var context = service.mutation(user(1, "m1"), "shareholders", 3);
-        var shareholder = new RegisteredShareholderRequest("Jane Doe", "15-04-1980", "Nigerian", "director",
-                "national_id", "2 Home Street", false, "Lagos", "ikeja");
+        var shareholder = new RegisteredShareholderRequest("Jane Doe", "15-04-1980", "Nigerian", "director", "nin",
+                "2 Home Street", false, "Lagos", "ikeja");
         when(client.saveOwners(eq(context), any()))
                 .thenReturn(ComplianceData.newBuilder().setMerchantId("m1").setVersion(4).setStatus("draft").build());
 

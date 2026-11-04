@@ -1,6 +1,6 @@
 # Payment Gateway Merchant Compliance API Documentation
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Last Updated:** November 2026  
 **Service:** gateway-merchant  
 
@@ -12,7 +12,7 @@
 2. [Authentication](#2-authentication)
 3. [Idempotency](#3-idempotency)
 4. [Optimistic Concurrency Control](#4-optimistic-concurrency-control)
-5. [Business Types](#5-business-types)
+5. [Business Types & Endpoint Flows](#5-business-types--endpoint-flows)
 6. [API Endpoints Reference](#6-api-endpoints-reference)
 7. [Starter Business Flow](#7-starter-business-flow)
 8. [Registered Business Flow](#8-registered-business-flow)
@@ -23,7 +23,7 @@
 
 ## 1. Overview
 
-The Payment Gateway Merchant Compliance API enables merchants to complete their KYC (Know Your Customer) compliance requirements for payment gateway access. The API supports two business types with different requirements:
+The Payment Gateway Merchant Compliance API enables merchants to complete their KYC (Know Your Customer) compliance requirements for payment gateway access. The API supports two business types with different requirements and **different endpoint flows**:
 
 - **Starter Business**: For unregistered businesses/sole proprietors (single owner)
 - **Registered Business**: For CAC-registered companies (multiple shareholders)
@@ -48,8 +48,8 @@ Documents are submitted **inline with form data** at each step using `multipart/
 ### Base URL
 
 ```
-Production: https://api.merchant.irpay.ng
-Staging:    https://api.merchant.staging.irpay.ng
+Production: https://gm.irpay.dev
+Staging:    https://staging-gm.irpay.dev
 ```
 
 ---
@@ -136,37 +136,51 @@ X-Expected-Version: 5
 
 ---
 
-## 5. Business Types
+## 5. Business Types & Endpoint Flows
 
-### Starter Business
+### ⚠️ Important: Different Endpoints for Different Business Types
 
-For sole proprietors and unregistered small businesses.
+Starter and Registered businesses use **different endpoints** for some steps. Using the wrong endpoint will result in validation errors.
 
-**Steps:**
-1. Profile Details
-2. Contact Information  
-3. Owner Details + Documents (ID + proof of address)
-4. Bank Account
-5. Service Agreement
+### Endpoint Flow Summary
 
-**Documents Required:**
+#### Starter Business
+
+| Step | Endpoint | Documents |
+|------|----------|-----------|
+| Profile | `PUT /compliance/profile` | None |
+| Contact | `PUT /compliance/contact` | None |
+| Owners | `PUT /compliance/owners` | `id_document_id` (ID), `proof_of_address_document_id` (address proof) |
+| Bank Accounts | `PUT /compliance/bank-accounts` | None |
+| Agreement | `POST /compliance/submit` | None |
+
+#### Registered Business
+
+| Step | Endpoint | Documents |
+|------|----------|-----------|
+| Business Details | `PUT /compliance/business/details` | `business_address_document_id` (address proof) |
+| Registration | `PUT /compliance/business/registration` | None |
+| Shareholders | `PUT /compliance/business/shareholders` | Per shareholder: `id_document_id`, `proof_of_address_document_id` |
+| Bank Accounts | `PUT /compliance/bank-accounts` | None |
+| Agreement | `POST /compliance/submit` | None |
+
+### Document Requirements
+
+**Starter Business:**
 - Owner ID document (NIN, BVN, Passport, or Driver's License)
 - Owner proof of address (Utility bill ≤ 3 months old)
 
-### Registered Business
-
-For CAC-registered companies (LLC, PLC, Business Name).
-
-**Steps:**
-1. Business Details + Business Address Proof
-2. Registration Details (RC number, TIN)
-3. Shareholders + Documents (1-10 people, each with ID + proof of address)
-4. Bank Account
-5. Service Agreement
-
-**Documents Required:**
+**Registered Business:**
 - Business proof of address
 - Per shareholder: ID document + proof of address
+
+### Valid ID Document Types
+
+The following values are accepted for `id_document_type`:
+- `nin` - National Identification Number
+- `bvn` - Bank Verification Number
+- `international_passport` - International Passport
+- `drivers_license` - Driver's License
 
 ---
 
@@ -178,29 +192,30 @@ For CAC-registered companies (LLC, PLC, Business Name).
 |--------|----------|-------------|
 | GET | `/compliance/schema?business_type=X` | Get form schema (no auth required) |
 
-### Compliance Endpoints (JSON)
+### Common Compliance Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/compliance/start` | Start new compliance |
 | GET | `/compliance` | Get current compliance state |
-| PUT | `/compliance/profile` | Save profile (no documents) |
-| PUT | `/compliance/contact` | Save contact (no documents) |
-| PUT | `/compliance/registration` | Save registration (registered only) |
-| PUT | `/compliance/owners` | Save owners (no documents) |
 | PUT | `/compliance/bank-accounts` | Save bank accounts |
 | POST | `/compliance/submit` | Submit for review |
 
-### Compliance Endpoints with File Upload (Multipart)
+### Starter Business Endpoints
 
 | Method | Endpoint | Content-Type | Description |
 |--------|----------|--------------|-------------|
-| PUT | `/compliance/profile` | `multipart/form-data` | Save profile + CAC certificate |
-| PUT | `/compliance/contact` | `multipart/form-data` | Save contact + address proof |
+| PUT | `/compliance/profile` | `application/json` | Save profile |
+| PUT | `/compliance/contact` | `application/json` | Save contact |
 | PUT | `/compliance/owners` | `multipart/form-data` | Save owners + documents |
-| PUT | `/compliance/business/shareholders` | `multipart/form-data` | Save shareholders + documents |
 
-> **Note:** These are the same paths as the JSON endpoints, differentiated by `Content-Type` header.
+### Registered Business Endpoints
+
+| Method | Endpoint | Content-Type | Description |
+|--------|----------|--------------|-------------|
+| PUT | `/compliance/business/details` | `multipart/form-data` | Save business details + address proof |
+| PUT | `/compliance/business/registration` | `application/json` | Save RC number & TIN |
+| PUT | `/compliance/business/shareholders` | `multipart/form-data` | Save shareholders + documents |
 
 ---
 
@@ -213,14 +228,7 @@ For CAC-registered companies (LLC, PLC, Business Name).
                          STARTER BUSINESS FLOW
 ════════════════════════════════════════════════════════════════════════════════
 
-STEP 1: GET SCHEMA
-──────────────────────────────────────────────────────────────────────────────
-GET /compliance/schema?business_type=starter
-
-Response: Form schema with fields for each step
-
-
-STEP 2: START COMPLIANCE
+STEP 1: START COMPLIANCE
 ──────────────────────────────────────────────────────────────────────────────
 POST /compliance/start
 Headers:
@@ -229,7 +237,7 @@ Headers:
 
 Response:
 {
-  "success": true,
+  "code": 200,
   "data": {
     "compliance_id": 100,
     "status": "draft",
@@ -238,7 +246,7 @@ Response:
 }
 
 
-STEP 3: SAVE PROFILE
+STEP 2: SAVE PROFILE
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/profile
 Headers:
@@ -253,15 +261,15 @@ Body:
   "industry": "retail",
   "category": "fashion",
   "trading_name": "ACME Store",
-  "sales_volume": "100000-500000",
+  "sales_volume": "100000",
   "business_type": "starter",
   "business_description": "Fashion retail business"
 }
 
-Response: { "version": 2, ... }
+Response: { "data": { "version": 2, "profile_complete": true } }
 
 
-STEP 4: SAVE CONTACT
+STEP 3: SAVE CONTACT
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/contact
 Headers:
@@ -276,21 +284,21 @@ Body:
   "support_email": "support@acme.com",
   "dispute_email": "support@acme.com",
   "same_as_support_email": true,
-  "phone": "+2348012345678",
+  "phone": "08012345678",
   "address": "123 Victoria Island, Lagos",
   "state": "Lagos",
-  "lga": "eti-osa",
+  "lga": "Eti-Osa",
   "online_links": [
     { "platform": "website", "url": "https://acme.com" }
   ]
 }
 
-Response: { "version": 3, ... }
+Response: { "data": { "version": 3, "contact_complete": true } }
 
 
-STEP 5: SAVE OWNER WITH DOCUMENTS (Single Multipart Request)
+STEP 4: SAVE OWNERS WITH DOCUMENTS (Multipart)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/owners/with-files
+PUT /compliance/owners
 Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid-4>
@@ -299,35 +307,33 @@ Headers:
 
 Form Parts:
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ Part: "data" (application/json)                                             │
+│ Part: "data" (JSON string)                                                  │
 │ {                                                                           │
 │   "owners": [{                                                              │
 │     "full_name": "John Doe",                                                │
 │     "date_of_birth": "15-03-1985",                                          │
-│     "nationality": "Nigerian",                                              │
-│     "id_document_type": "international_passport",                           │
+│     "nationality": "NG",                                                    │
+│     "id_document_type": "nin",                                              │
 │     "address": "456 Ikoyi, Lagos",                                          │
 │     "same_as_business_address": false,                                      │
 │     "state": "Lagos",                                                       │
-│     "lga": "eti-osa"                                                        │
+│     "lga": "Eti-Osa"                                                        │
 │   }]                                                                        │
 │ }                                                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "owner_0_identity" (file)                                             │
-│ → passport.pdf                                                              │
+│ Part: "owner_0_identity" (file) → passport.pdf                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "owner_0_address" (file)                                              │
-│ → utility-bill.pdf                                                          │
+│ Part: "owner_0_address" (file) → utility-bill.pdf                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 File part naming convention:
   - owner_{index}_identity  → ID document for owner at index
   - owner_{index}_address   → Proof of address for owner at index
 
-Response: { "version": 4, ... }
+Response: { "data": { "version": 4, "owners_complete": true } }
 
 
-STEP 6: SAVE BANK ACCOUNT
+STEP 5: SAVE BANK ACCOUNT
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/bank-accounts
 Headers:
@@ -345,10 +351,10 @@ Body:
   }]
 }
 
-Response: { "version": 5, ... }
+Response: { "data": { "version": 5, "bank_accounts_complete": true } }
 
 
-STEP 7: SUBMIT FOR REVIEW
+STEP 6: SUBMIT FOR REVIEW
 ──────────────────────────────────────────────────────────────────────────────
 POST /compliance/submit
 Headers:
@@ -362,12 +368,12 @@ Body:
   "agreement_accepted": true
 }
 
-Response: { "version": 6, "status": "submitted" }
+Response: { "data": { "version": 6, "status": "submitted", "agreement_complete": true } }
 
 
 ════════════════════════════════════════════════════════════════════════════════
                          STARTER FLOW COMPLETE!
-                         Total API calls: 7 (including schema)
+                         Total API calls: 6
 ════════════════════════════════════════════════════════════════════════════════
 ```
 
@@ -382,23 +388,19 @@ Response: { "version": 6, "status": "submitted" }
                        REGISTERED BUSINESS FLOW
 ════════════════════════════════════════════════════════════════════════════════
 
-STEP 1: GET SCHEMA
-──────────────────────────────────────────────────────────────────────────────
-GET /compliance/schema?business_type=registered
-
-
-STEP 2: START COMPLIANCE
+STEP 1: START COMPLIANCE
 ──────────────────────────────────────────────────────────────────────────────
 POST /compliance/start
 Headers:
+  Authorization: Bearer <token>
   Idempotency-Key: <uuid>
 
-Response: { "compliance_id": 200, "version": 1 }
+Response: { "data": { "compliance_id": 200, "version": 1 } }
 
 
-STEP 3: SAVE BUSINESS DETAILS WITH ADDRESS PROOF (Single Multipart Request)
+STEP 2: SAVE BUSINESS DETAILS WITH ADDRESS PROOF (Multipart)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/contact/with-file
+PUT /compliance/business/details      ← NOTE: Different endpoint!
 Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid>
@@ -407,30 +409,37 @@ Headers:
 
 Form Parts:
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ Part: "data" (application/json)                                             │
+│ Part: "data" (JSON string)                                                  │
 │ {                                                                           │
-│   "phone": "+2349012345678",                                                │
+│   "country": "NG",                                                          │
+│   "industry": "technology",                                                 │
+│   "category": "fintech",                                                    │
+│   "trading_name": "TechCorp Limited",                                       │
+│   "sales_volume": "5000000",                                                │
+│   "business_type": "registered",                                            │
+│   "business_description": "Financial technology solutions",                 │
+│   "phone": "09012345678",                                                   │
 │   "address": "Plot 123 Tech Hub, Lekki",                                    │
 │   "support_email": "support@techcorp.ng",                                   │
 │   "dispute_email": "disputes@techcorp.ng",                                  │
 │   "state": "Lagos",                                                         │
-│   "lga": "eti-osa",                                                         │
+│   "lga": "Eti-Osa",                                                         │
 │   "online_links": [                                                         │
 │     { "platform": "website", "url": "https://techcorp.ng" }                 │
 │   ]                                                                         │
 │ }                                                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "address_proof" (file)                                                │
-│ → office-lease.pdf                                                          │
+│ Part: "business_address_proof" (file) → office-lease.pdf                    │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Response: { "version": 2, ... }
+Response: { "data": { "version": 2, "profile_complete": true, "contact_complete": true } }
 
 
-STEP 4: SAVE REGISTRATION DETAILS
+STEP 3: SAVE REGISTRATION DETAILS
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/registration
+PUT /compliance/business/registration      ← NOTE: Different endpoint!
 Headers:
+  Authorization: Bearer <token>
   Idempotency-Key: <uuid>
   X-Expected-Version: 2
   Content-Type: application/json
@@ -441,12 +450,12 @@ Body:
   "tax_identification_number": "12345678-0001"
 }
 
-Response: { "version": 3, ... }
+Response: { "data": { "version": 3, "registration_complete": true } }
 
 
-STEP 5: SAVE SHAREHOLDERS WITH DOCUMENTS (Single Multipart Request)
+STEP 4: SAVE SHAREHOLDERS WITH DOCUMENTS (Multipart)
 ──────────────────────────────────────────────────────────────────────────────
-PUT /compliance/shareholders/with-files
+PUT /compliance/business/shareholders      ← NOTE: Different endpoint!
 Headers:
   Authorization: Bearer <token>
   Idempotency-Key: <uuid>
@@ -455,54 +464,55 @@ Headers:
 
 Form Parts:
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ Part: "data" (application/json)                                             │
+│ Part: "data" (JSON string)                                                  │
 │ {                                                                           │
 │   "shareholders": [                                                         │
 │     {                                                                       │
 │       "full_name": "Adaora Okafor",                                         │
 │       "date_of_birth": "20-05-1980",                                        │
-│       "nationality": "Nigerian",                                            │
+│       "nationality": "NG",                                                  │
 │       "role": "director",                                                   │
 │       "id_document_type": "international_passport",                         │
 │       "address": "12 Executive Estate, Ikoyi",                              │
 │       "same_as_business_address": false,                                    │
 │       "state": "Lagos",                                                     │
-│       "lga": "eti-osa"                                                      │
+│       "lga": "Eti-Osa"                                                      │
 │     },                                                                      │
 │     {                                                                       │
 │       "full_name": "Chidi Eze",                                             │
 │       "date_of_birth": "08-11-1975",                                        │
-│       "nationality": "Nigerian",                                            │
+│       "nationality": "NG",                                                  │
 │       "role": "shareholder",                                                │
 │       "id_document_type": "nin",                                            │
 │       "address": "45 Business District, VI",                                │
 │       "same_as_business_address": false,                                    │
 │       "state": "Lagos",                                                     │
-│       "lga": "eti-osa"                                                      │
+│       "lga": "Eti-Osa"                                                      │
 │     }                                                                       │
 │   ]                                                                         │
 │ }                                                                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "shareholder_0_identity" (file) → adaora-passport.pdf                 │
+│ Part: "owner_0_identity" (file) → adaora-passport.pdf                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "shareholder_0_address" (file) → adaora-utility.pdf                   │
+│ Part: "owner_0_address" (file) → adaora-utility.pdf                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "shareholder_1_identity" (file) → chidi-national-id.pdf               │
+│ Part: "owner_1_identity" (file) → chidi-nin.pdf                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ Part: "shareholder_1_address" (file) → chidi-utility.pdf                    │
+│ Part: "owner_1_address" (file) → chidi-utility.pdf                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 File part naming convention:
-  - shareholder_{index}_identity  → ID document for shareholder at index
-  - shareholder_{index}_address   → Proof of address for shareholder at index
+  - owner_{index}_identity  → ID document for shareholder at index
+  - owner_{index}_address   → Proof of address for shareholder at index
 
-Response: { "version": 4, ... }
+Response: { "data": { "version": 4, "owners_complete": true } }
 
 
-STEP 6: SAVE BANK ACCOUNT
+STEP 5: SAVE BANK ACCOUNT
 ──────────────────────────────────────────────────────────────────────────────
 PUT /compliance/bank-accounts
 Headers:
+  Authorization: Bearer <token>
   Idempotency-Key: <uuid>
   X-Expected-Version: 4
   Content-Type: application/json
@@ -516,13 +526,14 @@ Body:
   }]
 }
 
-Response: { "version": 5, ... }
+Response: { "data": { "version": 5, "bank_accounts_complete": true } }
 
 
-STEP 7: SUBMIT FOR REVIEW
+STEP 6: SUBMIT FOR REVIEW
 ──────────────────────────────────────────────────────────────────────────────
 POST /compliance/submit
 Headers:
+  Authorization: Bearer <token>
   Idempotency-Key: <uuid>
   X-Expected-Version: 5
   Content-Type: application/json
@@ -532,12 +543,12 @@ Body:
   "agreement_accepted": true
 }
 
-Response: { "version": 6, "status": "submitted" }
+Response: { "data": { "version": 6, "status": "submitted", "agreement_complete": true } }
 
 
 ════════════════════════════════════════════════════════════════════════════════
                       REGISTERED FLOW COMPLETE!
-                      Total API calls: 7 (including schema)
+                      Total API calls: 6
 ════════════════════════════════════════════════════════════════════════════════
 ```
 
@@ -557,12 +568,11 @@ Documents are submitted **inline with form data** using `multipart/form-data`. T
 
 | Endpoint | File Part Name | Description |
 |----------|---------------|-------------|
-| `/compliance/profile` (multipart) | `cac_certificate` | CAC registration certificate |
-| `/compliance/contact` (multipart) | `business_address_proof` | Business address proof |
-| `/compliance/owners` (multipart) | `owner_{n}_identity` | Owner's ID document |
-| `/compliance/owners` (multipart) | `owner_{n}_address` | Owner's proof of address |
-| `/compliance/business/shareholders` (multipart) | `owner_{n}_identity` | Shareholder's ID document |
-| `/compliance/business/shareholders` (multipart) | `owner_{n}_address` | Shareholder's proof of address |
+| `/compliance/business/details` | `business_address_proof` | Business address proof |
+| `/compliance/owners` | `owner_{n}_identity` | Owner's ID document |
+| `/compliance/owners` | `owner_{n}_address` | Owner's proof of address |
+| `/compliance/business/shareholders` | `owner_{n}_identity` | Shareholder's ID document |
+| `/compliance/business/shareholders` | `owner_{n}_address` | Shareholder's proof of address |
 
 ### What does `{n}` mean?
 
@@ -589,15 +599,13 @@ owner_2_identity  → Charlie's ID
 owner_2_address   → Charlie's proof of address
 ```
 
-The index in the file part name **must match** the index in the JSON array.
-
 ### Supported File Types
 
 | Content Type | Extensions | Max Size |
 |-------------|------------|----------|
-| `application/pdf` | .pdf | 10 MB |
-| `image/jpeg` | .jpg, .jpeg | 10 MB |
-| `image/png` | .png | 10 MB |
+| `application/pdf` | .pdf | 1 MB |
+| `image/jpeg` | .jpg, .jpeg | 1 MB |
+| `image/png` | .png | 1 MB |
 
 ### JavaScript Example
 
@@ -605,10 +613,8 @@ The index in the file part name **must match** the index in the JSON array.
 async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
   const formData = new FormData();
   
-  // Add JSON data as a part
-  formData.append('data', new Blob([JSON.stringify({ owners })], {
-    type: 'application/json'
-  }));
+  // Add JSON data as a string part
+  formData.append('data', JSON.stringify({ owners }));
   
   // Add files for each owner
   ownerFiles.forEach((files, index) => {
@@ -620,7 +626,7 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
     }
   });
   
-  const response = await fetch('/compliance/owners/with-files', {
+  const response = await fetch('/compliance/owners', {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -647,7 +653,7 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
 | 400 | Bad Request | Fix request data |
 | 401 | Unauthorized | Refresh token or re-login |
 | 409 | Conflict | Version mismatch - refresh and retry |
-| 413 | Payload Too Large | Reduce file size |
+| 413 | Payload Too Large | Reduce file size (max 1 MB) |
 | 422 | Validation Error | Fix field errors |
 | 500 | Server Error | Retry with exponential backoff |
 
@@ -655,11 +661,11 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
 
 ```json
 {
-  "success": false,
-  "message": "Validation failed",
-  "error_code": "VALIDATION_FAILED",
+  "code": 422,
+  "message": "Compliance validation failed",
   "errors": [
-    { "step": "owners", "field": "full_name", "message": "Full name is required" }
+    { "step": "owners[0]", "field": "full_name", "message": "This field is required" },
+    { "step": "owners[0]", "field": "id_document_type", "message": "Invalid value. Allowed: nin, bvn, international_passport, drivers_license" }
   ]
 }
 ```
@@ -671,33 +677,13 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
 | `VALIDATION_FAILED` | Field validation errors |
 | `VERSION_CONFLICT` | X-Expected-Version doesn't match |
 | `IDEMPOTENCY_CONFLICT` | Same key, different request body |
-| `FILE_TOO_LARGE` | File exceeds 10 MB limit |
+| `FILE_TOO_LARGE` | File exceeds 1 MB limit |
 | `UNSUPPORTED_FILE_TYPE` | File type not allowed |
 | `ALREADY_SUBMITTED` | Cannot modify submitted compliance |
 
 ---
 
 ## Appendix: Field Constraints
-
-### ID Document Types
-
-| Value | Description |
-|-------|-------------|
-| `nin` | National Identification Number |
-| `bvn` | Bank Verification Number |
-| `international_passport` | International Passport |
-| `drivers_license` | Driver's License |
-
-### Shareholder Roles (Registered Business)
-
-| Value | Description |
-|-------|-------------|
-| `director` | Company Director |
-| `shareholder` | Shareholder |
-| `beneficial_owner` | Beneficial Owner |
-| `signatory` | Authorized Signatory |
-
-### Field Length Constraints
 
 | Field | Max Length | Notes |
 |-------|-----------|-------|
@@ -712,22 +698,8 @@ async function saveOwnersWithDocuments(owners, ownerFiles, token, version) {
 | full_name | 200 | |
 | date_of_birth | 10 | Format: DD-MM-YYYY |
 | registration_number | 50 | RC number |
+| tax_identification_number | 50 | TIN |
 | account_number | 10 | Exactly 10 digits |
-
----
-
-## Migration from v1.x
-
-If you were using the previous presigned URL approach:
-
-| v1.x (Deprecated) | v2.0 (Current) |
-|-------------------|----------------|
-| `POST /compliance/documents/uploads` | Not needed |
-| `PUT <presigned_url>` (to S3) | Not needed |
-| `POST /compliance/documents/{id}/complete` | Not needed |
-| `PUT /compliance/owners` with `id_document_id` | `PUT /compliance/owners/with-files` with file parts |
-
-The new multipart approach is simpler and requires fewer API calls.
 
 ---
 

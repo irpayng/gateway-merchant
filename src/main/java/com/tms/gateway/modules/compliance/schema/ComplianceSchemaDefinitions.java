@@ -187,7 +187,7 @@ public final class ComplianceSchemaDefinitions {
     }
 
     private static List<FieldSchema.OptionValue> idDocumentOptions() {
-        return List.of(of("national_id", "National ID Card"), of("nin", "NIN"),
+        return List.of(of("nin", "NIN (National Identification Number)"), of("bvn", "BVN (Bank Verification Number)"),
                 of("international_passport", "International Passport"), of("drivers_license", "Driver's License"));
     }
 
