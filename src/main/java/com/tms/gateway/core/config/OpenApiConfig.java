@@ -39,7 +39,8 @@ public class OpenApiConfig {
                 Map.entry("/compliance/documents/uploads", "Create a private document upload session"),
                 Map.entry("/compliance/documents/{id}/complete", "Confirm upload and begin inspection"),
                 Map.entry("/auth/login", "Log in and obtain a Bearer token"),
-                Map.entry("/auth/me", "Read the current user and merchant compliance status"));
+                Map.entry("/auth/me", "Read the current user and merchant compliance status"),
+                Map.entry("/customers", "Access merchant customer records"));
         return api -> api.getPaths().forEach((path, item) -> item.readOperationsMap().forEach((method, operation) -> {
             String tag = path.startsWith("/auth")
                     ? "Authentication"
@@ -55,7 +56,9 @@ public class OpenApiConfig {
                                                             ? "Payouts"
                                                             : path.startsWith("/transactions")
                                                                     ? "Transactions"
-                                                                    : "Health";
+                                                                    : path.startsWith("/customers")
+                                                                            ? "Customers"
+                                                                            : "Health";
             operation.setTags(List.of(tag));
             if (summaries.containsKey(path)) {
                 operation.setSummary(summaries.get(path));

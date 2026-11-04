@@ -22,6 +22,7 @@ class OpenApiConfigTest {
                 .addPathItem("/dashboard", new PathItem().get(new Operation()))
                 .addPathItem("/payouts/banks", new PathItem().get(new Operation()))
                 .addPathItem("/transactions", new PathItem().get(new Operation()))
+                .addPathItem("/customers", new PathItem().get(new Operation()))
                 .addPathItem("/health", new PathItem().get(new Operation())));
 
         config.gatewayOperations().customise(api);
@@ -29,6 +30,7 @@ class OpenApiConfigTest {
         var dashboard = api.getPaths().get("/dashboard").getGet();
         var payouts = api.getPaths().get("/payouts/banks").getGet();
         var transactions = api.getPaths().get("/transactions").getGet();
+        var customers = api.getPaths().get("/customers").getGet();
         var health = api.getPaths().get("/health").getGet();
         assertEquals("bearer", api.getComponents().getSecuritySchemes().get("bearerAuth").getScheme());
         assertTrue(api.getSecurity().getFirst().containsKey("bearerAuth"));
@@ -38,6 +40,7 @@ class OpenApiConfigTest {
         assertEquals(List.of("Dashboard"), dashboard.getTags());
         assertEquals(List.of("Payouts"), payouts.getTags());
         assertEquals(List.of("Transactions"), transactions.getTags());
+        assertEquals(List.of("Customers"), customers.getTags());
         assertEquals(List.of("Health"), health.getTags());
         assertTrue(save.getParameters().getFirst().getDescription().contains("same key"));
         assertTrue(save.getParameters().get(1).getDescription().contains("Latest application version"));

@@ -1,6 +1,7 @@
 package com.tms.gateway.modules.transaction.repository;
 
 import com.tms.gateway.modules.transaction.entity.PgMerchantTransactionEntity;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +17,46 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface PgMerchantTransactionRepository extends JpaRepository<PgMerchantTransactionEntity, Long> {
+
+    @Query(value = """
+            SELECT LOWER(BTRIM(t.customer_email)) AS "normalizedEmail",
+                   MIN(t.created_at) AS "earliestTransactionAt",
+                   COALESCE(SUM(CASE WHEN LOWER(t.status_code) IN ('completed', 'successful')
+                                     THEN t.amount ELSE 0 END), 0) AS "successfulSpend",
+                   COUNT(CASE WHEN LOWER(t.status_code) IN ('completed', 'successful') THEN 1 END) AS "successfulCount",
+                   COUNT(*) AS "totalCount",
+                   MAX(NULLIF(BTRIM(t.customer_name), '')) AS "transactionName"
+            FROM pg_merchant_transactions t
+            WHERE t.user_id IN (:userIds)
+              AND t.customer_email IS NOT NULL
+              AND BTRIM(t.customer_email) <> ''
+            GROUP BY LOWER(BTRIM(t.customer_email))
+            """, nativeQuery = true)
+    List<CustomerTransactionAggregate> aggregateCustomers(@Param("userIds") List<Long> userIds);
+
+    @Query(value = """
+            SELECT t.* FROM pg_merchant_transactions t
+            WHERE t.user_id IN (:userIds)
+              AND t.customer_email IS NOT NULL
+              AND LOWER(BTRIM(t.customer_email)) = :normalizedEmail
+            ORDER BY t.created_at DESC, t.reference DESC
+            """, countQuery = """
+            SELECT COUNT(*) FROM pg_merchant_transactions t
+            WHERE t.user_id IN (:userIds)
+              AND t.customer_email IS NOT NULL
+              AND LOWER(BTRIM(t.customer_email)) = :normalizedEmail
+            """, nativeQuery = true)
+    Page<PgMerchantTransactionEntity> findCustomerTransactions(@Param("userIds") List<Long> userIds,
+            @Param("normalizedEmail") String normalizedEmail, Pageable pageable);
+
+    interface CustomerTransactionAggregate {
+        String getNormalizedEmail();
+        Instant getEarliestTransactionAt();
+        BigDecimal getSuccessfulSpend();
+        long getSuccessfulCount();
+        long getTotalCount();
+        String getTransactionName();
+    }
 
     Optional<PgMerchantTransactionEntity> findByReference(String reference);
 
