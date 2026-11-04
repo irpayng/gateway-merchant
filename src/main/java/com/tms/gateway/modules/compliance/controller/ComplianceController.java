@@ -1,4 +1,5 @@
 package com.tms.gateway.modules.compliance.controller;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
@@ -8,14 +9,18 @@ import com.tms.gateway.modules.compliance.schema.ComplianceSchemaDefinitions;
 import com.tms.gateway.modules.compliance.service.ComplianceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -31,6 +36,8 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 @RequiredArgsConstructor
 public class ComplianceController {
     private final ComplianceService service;
+    private final ObjectMapper objectMapper;
+    private final Validator validator;
 
     /**
      * Returns the compliance schema for a given business type. The schema defines
@@ -218,16 +225,34 @@ public class ComplianceController {
      */
     @Operation(summary = "Save business details with address proof", description = "Save registered business details (profile + contact) with optional business address proof document. "
             + "Use Content-Type: multipart/form-data. The 'data' part contains the JSON business details, "
-            + "and 'business_address_proof' part contains the PDF/image file (max 5MB).")
+            + "and 'business_address_proof' part contains the PDF/image file (max 10MB).")
     @PutMapping(value = "/business/details", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessDetailsWithDocs(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @RequestHeader("Idempotency-Key") String key,
             @RequestHeader("X-Expected-Version") long version,
-            @RequestPart("data") @Valid RegisteredBusinessDetailsRequest request,
-            @Parameter(description = "Business address proof file (PDF, JPEG, or PNG, max 5MB)") @RequestPart(value = "business_address_proof", required = false) MultipartFile businessAddressProof) {
+            @Parameter(description = "JSON business details", schema = @Schema(implementation = RegisteredBusinessDetailsRequest.class)) @RequestPart("data") String dataJson,
+            @Parameter(description = "Business address proof file (PDF, JPEG, or PNG, max 10MB)") @RequestPart(value = "business_address_proof", required = false) MultipartFile businessAddressProof) {
+        RegisteredBusinessDetailsRequest request = parseAndValidate(dataJson, RegisteredBusinessDetailsRequest.class);
         validateFile(businessAddressProof);
         return ok(service.saveRegisteredBusinessDetailsWithFile(service.mutation(user, key, version), request,
                 businessAddressProof), "Business details saved");
+    }
+
+    private <T> T parseAndValidate(String json, Class<T> clazz) {
+        try {
+            T request = objectMapper.readValue(json, clazz);
+            Set<ConstraintViolation<T>> violations = validator.validate(request);
+            if (!violations.isEmpty()) {
+                String errors = violations.stream().map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                        .collect(Collectors.joining(", "));
+                throw new AppException("Validation failed: " + errors, HttpStatus.UNPROCESSABLE_ENTITY);
+            }
+            return request;
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AppException("Invalid JSON in 'data' field: " + e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
     }
     @PutMapping("/business/registration")
     public ResponseEntity<ApiResponse<ComplianceResponse>> saveRegisteredBusinessRegistration(

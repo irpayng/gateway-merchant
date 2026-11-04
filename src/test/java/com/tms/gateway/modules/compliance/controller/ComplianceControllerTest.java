@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.exception.GlobalExceptionHandler;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
@@ -12,6 +13,7 @@ import com.tms.gateway.modules.compliance.service.ComplianceMapper;
 import com.tms.gateway.modules.compliance.service.ComplianceService;
 import com.tms.gateway.modules.grpc.compliance.ComplianceData;
 import com.tms.gateway.modules.grpc.service.ComplianceGrpcClient;
+import jakarta.validation.Validation;
 import java.time.Instant;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,7 +32,10 @@ class ComplianceControllerTest {
     @BeforeEach
     void setup() {
         var service = new ComplianceService(client, new ComplianceMapper());
-        mvc = MockMvcBuilders.standaloneSetup(new ComplianceController(service))
+        var objectMapper = new ObjectMapper();
+        objectMapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
+        var validator = Validation.buildDefaultValidatorFactory().getValidator();
+        mvc = MockMvcBuilders.standaloneSetup(new ComplianceController(service, objectMapper, validator))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
         var user = GatewayMerchantUserDetails.builder().id(4L).merchantId("m1").emailVerifiedAt(Instant.now()).build();
