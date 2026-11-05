@@ -65,9 +65,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         var userDetails = GatewayMerchantUserDetails.builder().id(user.getId())
                                 .merchantId(user.getMerchantId()).email(user.getEmail())
                                 .phoneNumber(user.getPhoneNumber()).businessName(user.getBusinessName())
-                                .firstName(user.getFirstName()).lastName(user.getLastName())
-                                .emailVerifiedAt(user.getEmailVerifiedAt()).blockedAt(user.getBlockedAt())
-                                .suspendedAt(user.getSuspendedAt()).build();
+                                .businessType(user.getBusinessType()).firstName(user.getFirstName())
+                                .lastName(user.getLastName()).emailVerifiedAt(user.getEmailVerifiedAt())
+                                .blockedAt(user.getBlockedAt()).suspendedAt(user.getSuspendedAt()).build();
 
                         // Only authenticate if user is enabled (not blocked, not suspended, email
                         // verified)

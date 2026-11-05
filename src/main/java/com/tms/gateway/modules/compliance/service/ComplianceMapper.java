@@ -9,9 +9,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ComplianceMapper {
 
-    public ComplianceResponse toResponse(ComplianceData d) {
-        // Determine business type from profile data
-        String businessType = d.hasProfile() ? d.getProfile().getBusinessType() : null;
+    /**
+     * Convert gRPC ComplianceData to the appropriate response structure based on
+     * business type. Uses the business type from the user's profile if available,
+     * otherwise falls back to the provided fallback business type (from user
+     * registration).
+     */
+    public ComplianceResponse toResponse(ComplianceData d, String fallbackBusinessType) {
+        // Determine business type: first from compliance profile, then from user
+        // registration
+        String businessType = d.hasProfile() && !d.getProfile().getBusinessType().isBlank()
+                ? d.getProfile().getBusinessType()
+                : fallbackBusinessType;
         boolean isRegistered = "registered".equalsIgnoreCase(businessType);
 
         // Map owners list

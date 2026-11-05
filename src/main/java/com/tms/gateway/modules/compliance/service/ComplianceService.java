@@ -1,4 +1,5 @@
 package com.tms.gateway.modules.compliance.service;
+
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.compliance.controller.ComplianceController.OwnerFiles;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 /**
  * Authoritative reads avoid stale drafts and approval decisions while Kafka
  * catches up.
@@ -21,8 +23,16 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 @RequiredArgsConstructor
 public class ComplianceService {
+
     private final ComplianceGrpcClient grpcClient;
     private final ComplianceMapper mapper;
+
+    /**
+     * Thread-local to pass business type from controller to mapper without changing
+     * all method signatures.
+     */
+    private static final ThreadLocal<String> BUSINESS_TYPE_CONTEXT = new ThreadLocal<>();
+
     public MutationContext context(GatewayMerchantUserDetails user, String key, Long version) {
         if (user == null) {
             throw new AppException("Authentication required", HttpStatus.UNAUTHORIZED);
@@ -40,42 +50,59 @@ public class ComplianceService {
             throw new AppException("Invalid Idempotency-Key");
         if (version != null && version < 0)
             throw new AppException("Expected version must be nonnegative");
+
+        // Store the user's business type for the mapper to use
+        BUSINESS_TYPE_CONTEXT.set(user.getBusinessType());
+
         return MutationContext.newBuilder().setActorUserId(user.getUserId()).setMerchantId(user.getMerchantId())
                 .setIdempotencyKey(key == null ? "" : key).setExpectedVersion(version == null ? 0 : version).build();
     }
+
     public MutationContext mutation(GatewayMerchantUserDetails user, String key, long version) {
         if (key == null || key.isBlank())
             throw new AppException("Idempotency-Key is required");
         return context(user, key, version);
     }
+
     private ComplianceResponse checked(MutationContext c, ComplianceData d) {
-        if (d == null)
-            return null;
-        if (!c.getMerchantId().equals(d.getMerchantId()))
-            throw new AppException("KYC returned a different merchant", HttpStatus.BAD_GATEWAY);
-        return mapper.toResponse(d);
+        try {
+            if (d == null)
+                return null;
+            if (!c.getMerchantId().equals(d.getMerchantId()))
+                throw new AppException("KYC returned a different merchant", HttpStatus.BAD_GATEWAY);
+            return mapper.toResponse(d, BUSINESS_TYPE_CONTEXT.get());
+        } finally {
+            BUSINESS_TYPE_CONTEXT.remove();
+        }
     }
+
     public ComplianceResponse startCompliance(MutationContext c) {
         return checked(c, grpcClient.startCompliance(c));
     }
+
     public ComplianceResponse getCompliance(MutationContext c) {
         return checked(c, grpcClient.getCompliance(c));
     }
+
     public ComplianceResponse saveProfile(MutationContext c, SaveProfileRequest r) {
         ComplianceDraftValidator.profile(r);
         return checked(c, grpcClient.saveProfile(c, r));
     }
+
     public ComplianceResponse saveContact(MutationContext c, SaveContactRequest r) {
         ComplianceDraftValidator.contact(r);
         return checked(c, grpcClient.saveContact(c, r));
     }
+
     public ComplianceResponse saveOwners(MutationContext c, SaveOwnersRequest r) {
         ComplianceDraftValidator.owners(r);
         return checked(c, grpcClient.saveOwners(c, r.owners()));
     }
+
     public ComplianceResponse saveBankAccounts(MutationContext c, SaveBankAccountsRequest r) {
         return checked(c, grpcClient.saveBankAccounts(c, r.bankAccounts()));
     }
+
     public ComplianceResponse saveRegistration(MutationContext c, SaveRegistrationRequest r) {
         return checked(c, grpcClient.saveRegistration(c, r));
     }
@@ -139,33 +166,40 @@ public class ComplianceService {
 
         ComplianceResponse response = null;
         MutationContext current = c;
-        if (hasProfileFields) {
-            response = checkedRequired(current, grpcClient.saveProfile(current, profile));
-            current = withExpectedVersion(c, response.version());
-        }
-        if (hasContactFields || hasFile) {
-            try {
-                // The existing KYC methods are separate writes, so contact uses the version
-                // returned by profile.
-                response = checkedRequired(current,
-                        grpcClient.saveContactWithFile(current, contact, businessAddressProof));
-            } catch (AppException e) {
-                if (hasProfileFields)
-                    throw new CompliancePartialSaveException(e, response.version());
-                throw e;
-            } catch (ComplianceValidationException e) {
-                if (hasProfileFields)
-                    throw new CompliancePartialSaveException(e, response.version());
-                throw e;
+        String savedBusinessType = BUSINESS_TYPE_CONTEXT.get();
+        try {
+            if (hasProfileFields) {
+                response = checkedRequired(current, grpcClient.saveProfile(current, profile));
+                current = withExpectedVersion(c, response.version());
+                // Restore business type context for next call
+                BUSINESS_TYPE_CONTEXT.set(savedBusinessType);
             }
+            if (hasContactFields || hasFile) {
+                try {
+                    response = checkedRequired(current,
+                            grpcClient.saveContactWithFile(current, contact, businessAddressProof));
+                } catch (AppException e) {
+                    if (hasProfileFields)
+                        throw new CompliancePartialSaveException(e, response.version());
+                    throw e;
+                } catch (ComplianceValidationException e) {
+                    if (hasProfileFields)
+                        throw new CompliancePartialSaveException(e, response.version());
+                    throw e;
+                }
+            }
+        } finally {
+            BUSINESS_TYPE_CONTEXT.remove();
         }
         return response;
     }
+
     public ComplianceResponse saveRegisteredBusinessRegistration(MutationContext c,
             RegisteredBusinessRegistrationRequest r) {
         var request = new SaveRegistrationRequest(null, r.registrationNumber(), r.taxIdentificationNumber());
         return checked(c, grpcClient.saveRegistration(c, request));
     }
+
     public ComplianceResponse saveRegisteredBusinessShareholders(MutationContext c,
             SaveRegisteredShareholdersRequest r) {
         ComplianceDraftValidator.registeredShareholders(r);
@@ -179,22 +213,24 @@ public class ComplianceService {
         }).toList();
         return checkedRequired(c, grpcClient.saveOwners(c, owners));
     }
+
     private ComplianceResponse checkedRequired(MutationContext context, ComplianceData data) {
-        ComplianceResponse response = checked(context, data);
-        if (response == null)
+        if (data == null)
             throw new AppException("KYC returned no compliance data", HttpStatus.BAD_GATEWAY);
-        return response;
+        if (!context.getMerchantId().equals(data.getMerchantId()))
+            throw new AppException("KYC returned a different merchant", HttpStatus.BAD_GATEWAY);
+        return mapper.toResponse(data, BUSINESS_TYPE_CONTEXT.get());
     }
+
     private MutationContext withExpectedVersion(MutationContext context, long version) {
         return MutationContext.newBuilder().setActorUserId(context.getActorUserId())
                 .setMerchantId(context.getMerchantId()).setIdempotencyKey(context.getIdempotencyKey())
                 .setExpectedVersion(version).build();
     }
+
     public ComplianceResponse submitCompliance(MutationContext c, SubmitComplianceRequest r, String ip, String agent) {
         if (!Boolean.TRUE.equals(r.agreementAccepted()))
             throw new AppException("Agreement must be accepted", HttpStatus.UNPROCESSABLE_ENTITY);
-        // Source of truth validates the complete application, documents and state
-        // inside its submission transaction.
         return checked(c, grpcClient.submitCompliance(c, true, ip, agent));
     }
 }
