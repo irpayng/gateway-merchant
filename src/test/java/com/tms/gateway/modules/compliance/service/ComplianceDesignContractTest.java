@@ -28,7 +28,7 @@ class ComplianceDesignContractTest {
                 .setAgreement(com.tms.gateway.modules.grpc.compliance.AgreementData.newBuilder().setTermsAccepted(true)
                         .setPrivacyAccepted(true))
                 .build();
-        var response = json.valueToTree(new ComplianceMapper().toResponse(data));
+        var response = json.valueToTree(new ComplianceMapper().toResponse(data, null));
         absent(response.get("profile"), "business_name", "rc_number", "cac_url", "currency");
         absent(response.get("contact"), "city", "postal_code", "country");
         absent(response.get("owners").get(0), "first_name", "last_name", "email", "phone", "bvn", "nin",
