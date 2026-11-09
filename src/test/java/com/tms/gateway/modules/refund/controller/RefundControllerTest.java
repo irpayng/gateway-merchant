@@ -50,9 +50,8 @@ class RefundControllerTest {
                 .thenReturn(new RefundPageResponse(List.of(), 1, 10, 0, 0, false, true));
 
         mvc.perform(get("/refunds").param("search", "john").param("status", "processed")
-                .param("start_date", from.toString()).param("end_date", to.toString())
-                .param("page", "1").param("size", "10"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1))
+                .param("start_date", from.toString()).param("end_date", to.toString()).param("page", "1")
+                .param("size", "10")).andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.size").value(10));
 
         verify(service).list(42L, "john", "processed", from, to, 1, 10);

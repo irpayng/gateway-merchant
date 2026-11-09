@@ -46,8 +46,7 @@ class TransactionGrpcClientRefundTest {
 
     @Test
     void getRefundMapsNotFound() {
-        GetRefundRequest request = GetRefundRequest.newBuilder().setMerchantUserId(42L).setRefundId("refund-1")
-                .build();
+        GetRefundRequest request = GetRefundRequest.newBuilder().setMerchantUserId(42L).setRefundId("refund-1").build();
         when(stub.getRefund(any())).thenThrow(Status.NOT_FOUND.asRuntimeException());
 
         AppException exception = assertThrows(AppException.class, () -> client.getRefund(request));
@@ -57,8 +56,7 @@ class TransactionGrpcClientRefundTest {
 
     @Test
     void getRefundForwardsRequest() {
-        GetRefundRequest request = GetRefundRequest.newBuilder().setMerchantUserId(42L).setRefundId("refund-1")
-                .build();
+        GetRefundRequest request = GetRefundRequest.newBuilder().setMerchantUserId(42L).setRefundId("refund-1").build();
         Refund response = Refund.newBuilder().setRefundId("refund-1").build();
         when(stub.getRefund(any())).thenReturn(response);
 

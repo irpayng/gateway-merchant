@@ -1,27 +1,23 @@
 package com.tms.gateway.modules.transaction.service;
 
+import com.tms.gateway.core.dto.PagedResponse;
 import com.tms.gateway.modules.transaction.dto.TransactionDetailDto;
 import com.tms.gateway.modules.transaction.dto.TransactionFiltersDto;
 import com.tms.gateway.modules.transaction.dto.TransactionFiltersDto.FilterOption;
 import com.tms.gateway.modules.transaction.dto.TransactionListItemDto;
-import com.tms.gateway.modules.transaction.dto.TransactionPageResponse;
-import com.tms.gateway.modules.transaction.dto.TransactionPageResponse.PageLink;
-import com.tms.gateway.modules.transaction.dto.TransactionPageResponse.PaginationLinks;
-import com.tms.gateway.modules.transaction.dto.TransactionPageResponse.PaginationMeta;
 import com.tms.gateway.modules.transaction.dto.TransactionSummaryDto;
 import com.tms.gateway.modules.transaction.entity.PgMerchantTransactionEntity;
 import com.tms.gateway.modules.transaction.repository.PgMerchantTransactionRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class TransactionService {
 
     private final PgMerchantTransactionRepository transactionRepository;
+
+    private static final String BASE_PATH = "/transactions";
 
     // Status code mappings
     private static final Map<String, String> STATUS_DISPLAY_MAP = Map.of("pending", "Pending", "completed",
@@ -101,8 +99,6 @@ public class TransactionService {
                 failedValue, pendingCount, pendingValue);
     }
 
-    private static final String BASE_PATH = "/transactions";
-
     /**
      * Get paginated list of transactions with optional filters.
      * 
@@ -110,7 +106,7 @@ public class TransactionService {
      *            1-indexed page number (first page is 1)
      */
     @Transactional(readOnly = true)
-    public TransactionPageResponse list(Long userId, String status, String paymentMethod, Instant startDate,
+    public Map<String, Object> list(Long userId, String status, String paymentMethod, Instant startDate,
             Instant endDate, String search, int page, int size) {
         // Normalize filters
         String normalizedStatus = normalizeStatus(status);
@@ -132,50 +128,14 @@ public class TransactionService {
         log.debug("Transaction list result: totalElements={}, totalPages={}, contentSize={}", result.getTotalElements(),
                 result.getTotalPages(), result.getContent().size());
 
-        List<TransactionListItemDto> data = result.getContent().stream().map(this::toListItem)
-                .collect(Collectors.toList());
+        // Map entities to DTOs
+        List<TransactionListItemDto> data = result.getContent().stream().map(this::toListItem).toList();
 
-        // Build Laravel-style response (1-indexed)
-        int currentPage = zeroIndexedPage + 1;
-        int lastPage = Math.max(1, result.getTotalPages());
-        long total = result.getTotalElements();
+        // Create a Page of DTOs for PagedResponse
+        Page<TransactionListItemDto> dtoPage = PageableExecutionUtils.getPage(data, pageable, result::getTotalElements);
 
-        // Calculate from/to (1-indexed positions in result set)
-        Integer from = total > 0 ? (zeroIndexedPage * size) + 1 : null;
-        Integer to = total > 0 ? Math.min((int) ((zeroIndexedPage + 1) * size), (int) total) : null;
-
-        PaginationLinks links = new PaginationLinks(BASE_PATH + "?page=1", BASE_PATH + "?page=" + lastPage,
-                result.hasPrevious() ? BASE_PATH + "?page=" + (currentPage - 1) : null,
-                result.hasNext() ? BASE_PATH + "?page=" + (currentPage + 1) : null);
-
-        List<PageLink> pageLinks = buildPageLinks(currentPage, lastPage);
-
-        PaginationMeta meta = new PaginationMeta(currentPage, from, lastPage, pageLinks, BASE_PATH, size, to, total);
-
-        return new TransactionPageResponse(data, links, meta, FILTERS);
-    }
-
-    /**
-     * Build page links array for pagination UI. Shows all pages like Laravel's
-     * LengthAwarePaginator.
-     */
-    private List<PageLink> buildPageLinks(int currentPage, int lastPage) {
-        List<PageLink> links = new ArrayList<>();
-
-        // Previous link
-        links.add(new PageLink(currentPage > 1 ? BASE_PATH + "?page=" + (currentPage - 1) : null, "&laquo; Previous",
-                false));
-
-        // All page number links (matching Laravel's default)
-        for (int i = 1; i <= lastPage; i++) {
-            links.add(new PageLink(BASE_PATH + "?page=" + i, String.valueOf(i), i == currentPage));
-        }
-
-        // Next link
-        links.add(new PageLink(currentPage < lastPage ? BASE_PATH + "?page=" + (currentPage + 1) : null, "Next &raquo;",
-                false));
-
-        return links;
+        // Use PagedResponse utility with filters as extra data
+        return PagedResponse.from(dtoPage, BASE_PATH, Map.of("filters", FILTERS));
     }
 
     /**
@@ -219,8 +179,7 @@ public class TransactionService {
     }
 
     /**
-     * Normalize status filter input to match stored values. Accepts both display
-     * names (Successful) and codes (completed).
+     * Normalize status filter input to match stored values.
      */
     private String normalizeStatus(String status) {
         if (status == null || status.isBlank())
