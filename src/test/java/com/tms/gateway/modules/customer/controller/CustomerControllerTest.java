@@ -5,6 +5,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import com.tms.gateway.core.dto.PagedResponse;
 import com.tms.gateway.core.exception.GlobalExceptionHandler;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.customer.dto.*;
@@ -43,12 +44,11 @@ class CustomerControllerTest {
     }
 
     @Test
-    void listUsesSearchAndOneBasedPagination() throws Exception {
-        when(service.list("m1", "jane", 1, 20))
-                .thenReturn(new CustomerListResponse(List.of(), 1, 20, 0, 0, false, false));
+    void listUsesSearchAndOneIndexedPagination() throws Exception {
+        when(service.list("m1", "jane", 1, 20)).thenReturn(PagedResponse.from(List.of(), 0, 1, 20, "/customers"));
 
         mvc.perform(get("/customers").param("search", "jane").param("size", "20")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.page").value(1)).andExpect(jsonPath("$.data.size").value(20));
+                .andExpect(jsonPath("$.meta.current_page").value(1)).andExpect(jsonPath("$.meta.per_page").value(20));
 
         verify(service).list("m1", "jane", 1, 20);
     }
@@ -103,11 +103,11 @@ class CustomerControllerTest {
     @Test
     void customerTransactionsHaveSeparatePagination() throws Exception {
         when(service.transactions("m1", "ref-1", 1, 10))
-                .thenReturn(new CustomerTransactionPageResponse(List.of(), 1, 10, 0, 0, false, false));
+                .thenReturn(PagedResponse.from(List.of(), 0, 1, 10, "/customers/ref-1/transactions"));
 
         mvc.perform(get("/customers/ref-1/transactions").param("page", "1").param("size", "10"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1))
-                .andExpect(jsonPath("$.data.size").value(10));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.meta.current_page").value(1))
+                .andExpect(jsonPath("$.meta.per_page").value(10));
 
         verify(service).transactions("m1", "ref-1", 1, 10);
     }

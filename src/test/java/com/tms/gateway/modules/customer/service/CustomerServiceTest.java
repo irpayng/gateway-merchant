@@ -6,6 +6,8 @@ import static org.mockito.Mockito.*;
 
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.modules.customer.dto.CreateCustomerRequest;
+import com.tms.gateway.modules.customer.dto.CustomerResponse;
+import com.tms.gateway.modules.customer.dto.CustomerTransactionResponse;
 import com.tms.gateway.modules.customer.entity.PgMerchantCustomerEntity;
 import com.tms.gateway.modules.customer.repository.PgMerchantCustomerRepository;
 import com.tms.gateway.modules.transaction.entity.PgMerchantTransactionEntity;
@@ -16,6 +18,7 @@ import com.tms.gateway.modules.user.repository.PgMerchantUserRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,7 @@ class CustomerServiceTest {
                 .thenReturn(List.of(PgMerchantUserEntity.builder().id(9L).merchantId("merchant-1").build()));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void listMergesSavedDetailsAndBlacklistWithTransactionAggregate() {
         Instant firstTransaction = Instant.parse("2025-03-01T10:00:00Z");
@@ -49,14 +53,17 @@ class CustomerServiceTest {
 
         var response = service.list("merchant-1", "234801", 1, 20);
 
-        assertEquals(1, response.totalElements());
-        var customer = response.content().getFirst();
+        Map<String, Object> meta = (Map<String, Object>) response.get("meta");
+        assertEquals(1L, meta.get("total"));
+        List<CustomerResponse> data = (List<CustomerResponse>) response.get("data");
+        var customer = data.getFirst();
         assertEquals("customer-1", customer.customerId());
         assertEquals("Jane Doe", customer.fullName());
         assertEquals(firstTransaction, customer.dateAdded());
         assertTrue(customer.blacklisted());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void customerListUsesOneBasedPageForOffsetAndResponse() {
         var first = aggregate("first@example.com", Instant.parse("2025-03-02T10:00:00Z"), "First", "0", 0, 1);
@@ -65,11 +72,15 @@ class CustomerServiceTest {
 
         var response = service.list("merchant-1", null, 2, 1);
 
-        assertEquals(2, response.page());
-        assertEquals(1, response.content().size());
-        assertEquals("second@example.com", response.content().getFirst().email());
-        assertTrue(response.hasPrevious());
-        assertFalse(response.hasNext());
+        Map<String, Object> meta = (Map<String, Object>) response.get("meta");
+        assertEquals(2, meta.get("current_page"));
+        List<CustomerResponse> data = (List<CustomerResponse>) response.get("data");
+        assertEquals(1, data.size());
+        assertEquals("second@example.com", data.getFirst().email());
+
+        Map<String, Object> links = (Map<String, Object>) response.get("links");
+        assertNotNull(links.get("prev"));
+        assertNull(links.get("next"));
     }
 
     @Test
@@ -106,6 +117,7 @@ class CustomerServiceTest {
         verify(customerRepository, never()).saveAndFlush(any());
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void customerDetailsReturnNgAndSuccessfulOnlySpend() {
         Instant firstTransaction = Instant.parse("2025-03-01T10:00:00Z");
@@ -115,7 +127,8 @@ class CustomerServiceTest {
                 customerRef("merchant-1", "jane@example.com"))).thenReturn(Optional.empty());
 
         var list = service.list("merchant-1", null, 1, 20);
-        var details = service.get("merchant-1", list.content().getFirst().customerRef());
+        List<CustomerResponse> data = (List<CustomerResponse>) list.get("data");
+        var details = service.get("merchant-1", data.getFirst().customerRef());
 
         assertEquals("150.25", details.totalSpend().toPlainString());
         assertEquals("NGN", details.currency());
@@ -139,6 +152,7 @@ class CustomerServiceTest {
                 argThat(c -> c.isBlacklisted() && c.getCustomerId() == null && "merchant-1".equals(c.getMerchantId())));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void customerTransactionRowsArePagedAndUseNgCurrency() {
         String ref = customerRef("merchant-1", "jane@example.com");
@@ -150,11 +164,12 @@ class CustomerServiceTest {
         when(transactionRepository.findCustomerTransactions(eq(List.of(9L)), eq("jane@example.com"), any()))
                 .thenReturn(new PageImpl<>(List.of(transaction), PageRequest.of(0, 20), 1));
 
-        var response = service.transactions("merchant-1", ref, 0, 20);
+        var response = service.transactions("merchant-1", ref, 1, 20);
 
-        assertEquals("NGN", response.content().getFirst().currency());
-        assertEquals("Card", response.content().getFirst().paymentMethodDisplay());
-        assertEquals("Successful", response.content().getFirst().statusDisplay());
+        List<CustomerTransactionResponse> data = (List<CustomerTransactionResponse>) response.get("data");
+        assertEquals("NGN", data.getFirst().currency());
+        assertEquals("Card", data.getFirst().paymentMethodDisplay());
+        assertEquals("Successful", data.getFirst().statusDisplay());
     }
 
     @Test

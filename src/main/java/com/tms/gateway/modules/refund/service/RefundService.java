@@ -1,6 +1,7 @@
 package com.tms.gateway.modules.refund.service;
 
 import com.google.protobuf.Timestamp;
+import com.tms.gateway.core.dto.PagedResponse;
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.grpc.transaction.GetRefundRequest;
 import com.tms.gateway.grpc.transaction.ListRefundsRequest;
@@ -10,10 +11,10 @@ import com.tms.gateway.grpc.transaction.RefundStatus;
 import com.tms.gateway.modules.grpc.service.TransactionGrpcClient;
 import com.tms.gateway.modules.refund.dto.RefundDetailDto;
 import com.tms.gateway.modules.refund.dto.RefundListItemDto;
-import com.tms.gateway.modules.refund.dto.RefundPageResponse;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,12 +27,13 @@ public class RefundService {
     private final TransactionGrpcClient transactionGrpcClient;
 
     @Transactional(readOnly = true)
-    public RefundPageResponse list(Long userId, String search, String status, Instant startDate, Instant endDate,
+    public Map<String, Object> list(Long userId, String search, String status, Instant startDate, Instant endDate,
             int page, int size) {
         validateFilters(status, startDate, endDate, page, size);
+        int zeroIndexedPage = page - 1; // Convert 1-indexed to 0-indexed
 
-        ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId).setPage(page - 1)
-                .setPageSize(size);
+        ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId)
+                .setPage(zeroIndexedPage).setPageSize(size);
         if (search != null) {
             request.setSearch(search);
         }
@@ -47,9 +49,8 @@ public class RefundService {
 
         ListRefundsResponse response = transactionGrpcClient.listRefunds(request.build());
         List<RefundListItemDto> content = response.getRefundsList().stream().map(this::toListItem).toList();
-        return new RefundPageResponse(content, response.getPage() + 1, response.getPageSize(),
-                response.getTotalElements(), response.getTotalPages(), response.getHasNext(),
-                response.getHasPrevious());
+
+        return PagedResponse.from(content, response.getTotalElements(), page, size, "/refunds");
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +71,7 @@ public class RefundService {
             throw new IllegalArgumentException("start_date must be earlier than end_date");
         }
         if (page < 1) {
-            throw new IllegalArgumentException("page must be one or greater");
+            throw new IllegalArgumentException("page must be 1 or greater");
         }
         if (size < 1) {
             throw new IllegalArgumentException("size must be greater than zero");

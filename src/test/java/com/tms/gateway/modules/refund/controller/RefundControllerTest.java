@@ -6,9 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.tms.gateway.core.dto.PagedResponse;
 import com.tms.gateway.core.exception.GlobalExceptionHandler;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
-import com.tms.gateway.modules.refund.dto.RefundPageResponse;
 import com.tms.gateway.modules.refund.service.RefundService;
 import java.time.Instant;
 import java.util.List;
@@ -47,12 +47,12 @@ class RefundControllerTest {
         Instant from = Instant.parse("2025-07-15T00:00:00Z");
         Instant to = Instant.parse("2025-07-16T00:00:00Z");
         when(service.list(42L, "john", "processed", from, to, 1, 10))
-                .thenReturn(new RefundPageResponse(List.of(), 1, 10, 0, 0, false, true));
+                .thenReturn(PagedResponse.from(List.of(), 0, 1, 10, "/refunds"));
 
         mvc.perform(get("/refunds").param("search", "john").param("status", "processed")
                 .param("start_date", from.toString()).param("end_date", to.toString()).param("page", "1")
-                .param("size", "10")).andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1))
-                .andExpect(jsonPath("$.data.size").value(10));
+                .param("size", "10")).andExpect(status().isOk()).andExpect(jsonPath("$.meta.current_page").value(1))
+                .andExpect(jsonPath("$.meta.per_page").value(10));
 
         verify(service).list(42L, "john", "processed", from, to, 1, 10);
     }
@@ -60,9 +60,9 @@ class RefundControllerTest {
     @Test
     void listDefaultsToFirstPage() throws Exception {
         when(service.list(42L, null, null, null, null, 1, 20))
-                .thenReturn(new RefundPageResponse(List.of(), 1, 20, 0, 0, false, false));
+                .thenReturn(PagedResponse.from(List.of(), 0, 1, 20, "/refunds"));
 
-        mvc.perform(get("/refunds")).andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1));
+        mvc.perform(get("/refunds")).andExpect(status().isOk()).andExpect(jsonPath("$.meta.current_page").value(1));
 
         verify(service).list(42L, null, null, null, null, 1, 20);
     }

@@ -15,7 +15,10 @@ import com.tms.gateway.grpc.transaction.ListRefundsResponse;
 import com.tms.gateway.grpc.transaction.Refund;
 import com.tms.gateway.grpc.transaction.RefundStatus;
 import com.tms.gateway.modules.grpc.service.TransactionGrpcClient;
+import com.tms.gateway.modules.refund.dto.RefundListItemDto;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -25,6 +28,7 @@ class RefundServiceTest {
     private final RefundService service = new RefundService(client);
 
     @Test
+    @SuppressWarnings("unchecked")
     void listMapsScreenFiltersAndResponse() {
         Instant from = Instant.parse("2025-07-15T00:00:00Z");
         Instant to = Instant.parse("2025-07-16T00:00:00Z");
@@ -35,7 +39,7 @@ class RefundServiceTest {
         when(client.listRefunds(any())).thenReturn(ListRefundsResponse.newBuilder().addRefunds(refund).setPage(0)
                 .setPageSize(10).setTotalElements(11).setTotalPages(2).setHasPrevious(true).build());
 
-        var result = service.list(42L, "John", "Processed", from, to, 1, 10);
+        Map<String, Object> result = service.list(42L, "John", "Processed", from, to, 1, 10);
 
         ArgumentCaptor<ListRefundsRequest> captor = ArgumentCaptor.forClass(ListRefundsRequest.class);
         verify(client).listRefunds(captor.capture());
@@ -47,11 +51,15 @@ class RefundServiceTest {
         assertEquals(to.getEpochSecond(), request.getCreatedAtTo().getSeconds());
         assertEquals(0, request.getPage());
         assertEquals(10, request.getPageSize());
-        assertEquals(1, result.content().size());
-        assertEquals("Processed", result.content().getFirst().statusDisplay());
-        assertEquals("15000.00", result.content().getFirst().amount().toPlainString());
-        assertEquals(11, result.totalElements());
-        assertEquals(1, result.page());
+
+        List<RefundListItemDto> data = (List<RefundListItemDto>) result.get("data");
+        assertEquals(1, data.size());
+        assertEquals("Processed", data.getFirst().statusDisplay());
+        assertEquals("15000.00", data.getFirst().amount().toPlainString());
+
+        Map<String, Object> meta = (Map<String, Object>) result.get("meta");
+        assertEquals(11L, meta.get("total"));
+        assertEquals(1, meta.get("current_page"));
     }
 
     @Test

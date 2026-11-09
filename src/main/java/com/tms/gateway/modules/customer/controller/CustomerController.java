@@ -5,18 +5,17 @@ import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.customer.dto.CreateCustomerRequest;
 import com.tms.gateway.modules.customer.dto.CustomerDetailsResponse;
-import com.tms.gateway.modules.customer.dto.CustomerListResponse;
 import com.tms.gateway.modules.customer.dto.CustomerResponse;
-import com.tms.gateway.modules.customer.dto.CustomerTransactionPageResponse;
 import com.tms.gateway.modules.customer.dto.UpdateCustomerBlacklistRequest;
 import com.tms.gateway.modules.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,11 +35,10 @@ public class CustomerController {
 
     @GetMapping
     @Operation(summary = "Search customers")
-    public ApiResponse<CustomerListResponse> list(@AuthenticationPrincipal GatewayMerchantUserDetails user,
-            @RequestParam(required = false) String search,
-            @Parameter(description = "One-based page number") @RequestParam(defaultValue = "1") int page,
+    public ResponseEntity<Map<String, Object>> list(@AuthenticationPrincipal GatewayMerchantUserDetails user,
+            @RequestParam(required = false) String search, @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success(service.list(merchantId(user), search, page, size), "Customers retrieved");
+        return ResponseEntity.ok(service.list(merchantId(user), search, page, size));
     }
 
     @PostMapping
@@ -59,11 +57,10 @@ public class CustomerController {
 
     @GetMapping("/{customerRef}/transactions")
     @Operation(summary = "List a customer's transactions")
-    public ApiResponse<CustomerTransactionPageResponse> transactions(
-            @AuthenticationPrincipal GatewayMerchantUserDetails user, @PathVariable("customerRef") String customerRef,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success(service.transactions(merchantId(user), customerRef, page, size),
-                "Customer transactions retrieved");
+    public ResponseEntity<Map<String, Object>> transactions(@AuthenticationPrincipal GatewayMerchantUserDetails user,
+            @PathVariable("customerRef") String customerRef, @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(service.transactions(merchantId(user), customerRef, page, size));
     }
 
     @PatchMapping("/{customerRef}/blacklist")

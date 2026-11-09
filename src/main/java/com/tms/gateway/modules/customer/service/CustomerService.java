@@ -1,5 +1,6 @@
 package com.tms.gateway.modules.customer.service;
 
+import com.tms.gateway.core.dto.PagedResponse;
 import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.modules.customer.dto.*;
 import com.tms.gateway.modules.customer.entity.PgMerchantCustomerEntity;
@@ -37,10 +38,10 @@ public class CustomerService {
     private final PgMerchantUserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public CustomerListResponse list(String merchantId, String search, int page, int size) {
-        if (page < 1)
-            throw new AppException("page must be one or greater", HttpStatus.BAD_REQUEST);
-        validatePageSize(size);
+    public Map<String, Object> list(String merchantId, String search, int page, int size) {
+        validatePage(page, size);
+        int zeroIndexedPage = page - 1; // Convert 1-indexed to 0-indexed
+
         Map<String, CustomerTransactionAggregate> aggregates = aggregates(merchantId);
         Map<String, PgMerchantCustomerEntity> saved = customerRepository.findAllByMerchantId(merchantId).stream()
                 .collect(Collectors.toMap(PgMerchantCustomerEntity::getNormalizedEmail, c -> c));
@@ -56,13 +57,12 @@ public class CustomerService {
                         .thenComparing(CustomerResponse::customerRef))
                 .toList();
 
-        long startLong = (long) (page - 1) * size;
+        long startLong = (long) zeroIndexedPage * size;
         int start = (int) Math.min(startLong, customers.size());
         int end = Math.min(start + size, customers.size());
         List<CustomerResponse> content = customers.subList(start, end);
-        int totalPages = customers.isEmpty() ? 0 : (int) Math.ceil((double) customers.size() / size);
-        return new CustomerListResponse(content, page, size, customers.size(), totalPages, end < customers.size(),
-                page > 1 && !customers.isEmpty());
+
+        return PagedResponse.from(content, customers.size(), page, size, "/customers");
     }
 
     @Transactional
@@ -103,13 +103,16 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
-    public CustomerTransactionPageResponse transactions(String merchantId, String customerRef, int page, int size) {
+    public Map<String, Object> transactions(String merchantId, String customerRef, int page, int size) {
         validatePage(page, size);
+        int zeroIndexedPage = page - 1; // Convert 1-indexed to 0-indexed
+
         ResolvedCustomer resolved = resolve(merchantId, customerRef);
         List<Long> userIds = merchantUserIds(merchantId);
         Page<PgMerchantTransactionEntity> result = userIds.isEmpty()
-                ? new PageImpl<>(List.of(), PageRequest.of(page, size), 0)
-                : transactionRepository.findCustomerTransactions(userIds, resolved.email(), PageRequest.of(page, size));
+                ? new PageImpl<>(List.of(), PageRequest.of(zeroIndexedPage, size), 0)
+                : transactionRepository.findCustomerTransactions(userIds, resolved.email(),
+                        PageRequest.of(zeroIndexedPage, size));
         List<CustomerTransactionResponse> content = result.getContent().stream().map(t -> {
             String method = normalized(t.getPaymentMethod());
             String status = normalized(t.getStatusCode());
@@ -117,8 +120,9 @@ public class CustomerService {
                     display(PAYMENT_METHOD_DISPLAY, method), t.getStatusCode(), display(STATUS_DISPLAY, status),
                     t.getCreatedAt());
         }).toList();
-        return new CustomerTransactionPageResponse(content, result.getNumber(), result.getSize(),
-                result.getTotalElements(), result.getTotalPages(), result.hasNext(), result.hasPrevious());
+
+        return PagedResponse.from(content, result.getTotalElements(), page, size,
+                "/customers/" + customerRef + "/transactions");
     }
 
     @Transactional
@@ -216,12 +220,8 @@ public class CustomerService {
     }
 
     private void validatePage(int page, int size) {
-        if (page < 0)
-            throw new AppException("page must be zero or greater", HttpStatus.BAD_REQUEST);
-        validatePageSize(size);
-    }
-
-    private void validatePageSize(int size) {
+        if (page < 1)
+            throw new AppException("page must be 1 or greater", HttpStatus.BAD_REQUEST);
         if (size < 1 || size > MAX_PAGE_SIZE)
             throw new AppException("size must be between 1 and " + MAX_PAGE_SIZE, HttpStatus.BAD_REQUEST);
     }
