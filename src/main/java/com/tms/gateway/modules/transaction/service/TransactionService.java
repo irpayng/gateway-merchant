@@ -1,6 +1,8 @@
 package com.tms.gateway.modules.transaction.service;
 
 import com.tms.gateway.modules.transaction.dto.TransactionDetailDto;
+import com.tms.gateway.modules.transaction.dto.TransactionFiltersDto;
+import com.tms.gateway.modules.transaction.dto.TransactionFiltersDto.FilterOption;
 import com.tms.gateway.modules.transaction.dto.TransactionListItemDto;
 import com.tms.gateway.modules.transaction.dto.TransactionPageResponse;
 import com.tms.gateway.modules.transaction.dto.TransactionSummaryDto;
@@ -36,6 +38,18 @@ public class TransactionService {
     // Payment method mappings
     private static final Map<String, String> PAYMENT_METHOD_DISPLAY_MAP = Map.of("card", "Card", "bank_transfer",
             "Bank Transfer", "wallet", "IRPay Wallet", "ussd", "USSD", "qr", "QR Code");
+
+    // Static filter options for dropdowns
+    private static final List<FilterOption> STATUS_OPTIONS = List.of(new FilterOption("completed", "Successful"),
+            new FilterOption("failed", "Failed"), new FilterOption("pending", "Pending"),
+            new FilterOption("reversed", "Reversed"));
+
+    private static final List<FilterOption> PAYMENT_METHOD_OPTIONS = List.of(new FilterOption("card", "Card"),
+            new FilterOption("bank_transfer", "Bank Transfer"), new FilterOption("wallet", "IRPay Wallet"),
+            new FilterOption("ussd", "USSD"), new FilterOption("qr", "QR Code"));
+
+    private static final TransactionFiltersDto FILTERS = new TransactionFiltersDto(STATUS_OPTIONS,
+            PAYMENT_METHOD_OPTIONS);
 
     /**
      * Get transaction summary statistics for dashboard cards.
@@ -91,15 +105,24 @@ public class TransactionService {
         String normalizedStatus = normalizeStatus(status);
         String normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
 
+        log.debug(
+                "Transaction list request: userId={}, status={} -> {}, paymentMethod={} -> {}, "
+                        + "startDate={}, endDate={}, search={}, page={}, size={}",
+                userId, status, normalizedStatus, paymentMethod, normalizedPaymentMethod, startDate, endDate, search,
+                page, size);
+
         Pageable pageable = PageRequest.of(page, size);
         Page<PgMerchantTransactionEntity> result = transactionRepository.findByFilters(userId, normalizedStatus,
                 normalizedPaymentMethod, startDate, endDate, search, pageable);
+
+        log.debug("Transaction list result: totalElements={}, totalPages={}, contentSize={}", result.getTotalElements(),
+                result.getTotalPages(), result.getContent().size());
 
         List<TransactionListItemDto> content = result.getContent().stream().map(this::toListItem)
                 .collect(Collectors.toList());
 
         return new TransactionPageResponse(content, result.getNumber(), result.getSize(), result.getTotalElements(),
-                result.getTotalPages(), result.hasNext(), result.hasPrevious());
+                result.getTotalPages(), result.hasNext(), result.hasPrevious(), FILTERS);
     }
 
     /**
