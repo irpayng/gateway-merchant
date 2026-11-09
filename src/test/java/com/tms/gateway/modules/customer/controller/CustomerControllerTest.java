@@ -43,13 +43,12 @@ class CustomerControllerTest {
     }
 
     @Test
-    void listUsesSearchAndZeroBasedPagination() throws Exception {
+    void listUsesSearchAndOneBasedPagination() throws Exception {
         when(service.list("m1", "jane", 1, 20))
                 .thenReturn(new CustomerListResponse(List.of(), 1, 20, 0, 0, false, false));
 
-        mvc.perform(get("/customers").param("search", "jane").param("size", "20"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1))
-                .andExpect(jsonPath("$.data.size").value(20));
+        mvc.perform(get("/customers").param("search", "jane").param("size", "20")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(1)).andExpect(jsonPath("$.data.size").value(20));
 
         verify(service).list("m1", "jane", 1, 20);
     }

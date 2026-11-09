@@ -38,8 +38,7 @@ public class CustomerController {
     @Operation(summary = "Search customers")
     public ApiResponse<CustomerListResponse> list(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @RequestParam(required = false) String search,
-            @Parameter(description = "One-based page number")
-            @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "One-based page number") @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(service.list(merchantId(user), search, page, size), "Customers retrieved");
     }

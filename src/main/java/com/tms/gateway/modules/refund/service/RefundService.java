@@ -30,8 +30,8 @@ public class RefundService {
             int page, int size) {
         validateFilters(status, startDate, endDate, page, size);
 
-        ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId)
-                .setPage(page - 1).setPageSize(size);
+        ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId).setPage(page - 1)
+                .setPageSize(size);
         if (search != null) {
             request.setSearch(search);
         }

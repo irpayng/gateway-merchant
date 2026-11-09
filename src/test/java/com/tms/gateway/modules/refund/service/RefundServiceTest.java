@@ -89,8 +89,7 @@ class RefundServiceTest {
     @Test
     void listRejectsInvalidDateRangeAndPagination() {
         Instant instant = Instant.parse("2025-07-15T00:00:00Z");
-        assertThrows(IllegalArgumentException.class,
-                () -> service.list(42L, null, null, instant, instant, 1, 20));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, instant, instant, 1, 20));
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 0, 20));
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, -1, 20));
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 1, 0));
