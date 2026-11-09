@@ -1,13 +1,19 @@
 package com.tms.gateway.modules.transaction.service;
 
 import com.tms.gateway.modules.transaction.dto.TransactionDetailDto;
+import com.tms.gateway.modules.transaction.dto.TransactionFiltersDto;
+import com.tms.gateway.modules.transaction.dto.TransactionFiltersDto.FilterOption;
 import com.tms.gateway.modules.transaction.dto.TransactionListItemDto;
 import com.tms.gateway.modules.transaction.dto.TransactionPageResponse;
+import com.tms.gateway.modules.transaction.dto.TransactionPageResponse.PageLink;
+import com.tms.gateway.modules.transaction.dto.TransactionPageResponse.PaginationLinks;
+import com.tms.gateway.modules.transaction.dto.TransactionPageResponse.PaginationMeta;
 import com.tms.gateway.modules.transaction.dto.TransactionSummaryDto;
 import com.tms.gateway.modules.transaction.entity.PgMerchantTransactionEntity;
 import com.tms.gateway.modules.transaction.repository.PgMerchantTransactionRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,6 +42,20 @@ public class TransactionService {
     // Payment method mappings
     private static final Map<String, String> PAYMENT_METHOD_DISPLAY_MAP = Map.of("card", "Card", "bank_transfer",
             "Bank Transfer", "wallet", "IRPay Wallet", "ussd", "USSD", "qr", "QR Code");
+
+    // Static filter options for dropdowns
+    private static final List<FilterOption> STATUS_OPTIONS = List.of(new FilterOption("completed", "Successful"),
+            new FilterOption("failed", "Failed"), new FilterOption("pending", "Pending"),
+            new FilterOption("reversed", "Reversed"));
+
+    private static final List<FilterOption> PAYMENT_METHOD_OPTIONS = List.of(new FilterOption("card", "Card"),
+            new FilterOption("bank_transfer", "Bank Transfer"), new FilterOption("wallet", "IRPay Wallet"),
+            new FilterOption("ussd", "USSD"), new FilterOption("qr", "QR Code"));
+
+    private static final List<Integer> LIMIT_OPTIONS = List.of(10, 20, 50, 100);
+
+    private static final TransactionFiltersDto FILTERS = new TransactionFiltersDto(STATUS_OPTIONS,
+            PAYMENT_METHOD_OPTIONS, LIMIT_OPTIONS);
 
     /**
      * Get transaction summary statistics for dashboard cards.
@@ -81,8 +101,13 @@ public class TransactionService {
                 failedValue, pendingCount, pendingValue);
     }
 
+    private static final String BASE_PATH = "/transactions";
+
     /**
      * Get paginated list of transactions with optional filters.
+     * 
+     * @param page
+     *            1-indexed page number (first page is 1)
      */
     @Transactional(readOnly = true)
     public TransactionPageResponse list(Long userId, String status, String paymentMethod, Instant startDate,
@@ -91,15 +116,68 @@ public class TransactionService {
         String normalizedStatus = normalizeStatus(status);
         String normalizedPaymentMethod = normalizePaymentMethod(paymentMethod);
 
-        Pageable pageable = PageRequest.of(page, size);
+        // Convert 1-indexed to 0-indexed for Spring Data
+        int zeroIndexedPage = Math.max(0, page - 1);
+
+        log.debug(
+                "Transaction list request: userId={}, status={} -> {}, paymentMethod={} -> {}, "
+                        + "startDate={}, endDate={}, search={}, page={} (0-indexed: {}), size={}",
+                userId, status, normalizedStatus, paymentMethod, normalizedPaymentMethod, startDate, endDate, search,
+                page, zeroIndexedPage, size);
+
+        Pageable pageable = PageRequest.of(zeroIndexedPage, size);
         Page<PgMerchantTransactionEntity> result = transactionRepository.findByFilters(userId, normalizedStatus,
                 normalizedPaymentMethod, startDate, endDate, search, pageable);
 
-        List<TransactionListItemDto> content = result.getContent().stream().map(this::toListItem)
+        log.debug("Transaction list result: totalElements={}, totalPages={}, contentSize={}", result.getTotalElements(),
+                result.getTotalPages(), result.getContent().size());
+
+        List<TransactionListItemDto> data = result.getContent().stream().map(this::toListItem)
                 .collect(Collectors.toList());
 
-        return new TransactionPageResponse(content, result.getNumber(), result.getSize(), result.getTotalElements(),
-                result.getTotalPages(), result.hasNext(), result.hasPrevious());
+        // Build Laravel-style response (1-indexed)
+        int currentPage = zeroIndexedPage + 1;
+        int lastPage = Math.max(1, result.getTotalPages());
+        long total = result.getTotalElements();
+
+        // Calculate from/to (1-indexed positions in result set)
+        Integer from = total > 0 ? (zeroIndexedPage * size) + 1 : null;
+        Integer to = total > 0 ? Math.min((int) ((zeroIndexedPage + 1) * size), (int) total) : null;
+
+        PaginationLinks links = new PaginationLinks(BASE_PATH + "?page=1", BASE_PATH + "?page=" + lastPage,
+                result.hasPrevious() ? BASE_PATH + "?page=" + (currentPage - 1) : null,
+                result.hasNext() ? BASE_PATH + "?page=" + (currentPage + 1) : null);
+
+        List<PageLink> pageLinks = buildPageLinks(currentPage, lastPage);
+
+        PaginationMeta meta = new PaginationMeta(currentPage, from, lastPage, pageLinks, BASE_PATH, size, to, total);
+
+        return new TransactionPageResponse(data, links, meta, FILTERS);
+    }
+
+    /**
+     * Build page links array for pagination UI.
+     */
+    private List<PageLink> buildPageLinks(int currentPage, int lastPage) {
+        List<PageLink> links = new ArrayList<>();
+
+        // Previous link
+        links.add(new PageLink(currentPage > 1 ? BASE_PATH + "?page=" + (currentPage - 1) : null, "&laquo; Previous",
+                false));
+
+        // Page number links (show up to 7 pages around current)
+        int startPage = Math.max(1, currentPage - 3);
+        int endPage = Math.min(lastPage, currentPage + 3);
+
+        for (int i = startPage; i <= endPage; i++) {
+            links.add(new PageLink(BASE_PATH + "?page=" + i, String.valueOf(i), i == currentPage));
+        }
+
+        // Next link
+        links.add(new PageLink(currentPage < lastPage ? BASE_PATH + "?page=" + (currentPage + 1) : null, "Next &raquo;",
+                false));
+
+        return links;
     }
 
     /**

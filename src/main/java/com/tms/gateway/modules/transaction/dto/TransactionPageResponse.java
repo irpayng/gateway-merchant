@@ -4,10 +4,23 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
- * Paginated response for transaction list.
+ * Laravel-style paginated response for transaction list.
  */
-public record TransactionPageResponse(@JsonProperty("content") List<TransactionListItemDto> content,
-        @JsonProperty("page") int page, @JsonProperty("size") int size,
-        @JsonProperty("total_elements") long totalElements, @JsonProperty("total_pages") int totalPages,
-        @JsonProperty("has_next") boolean hasNext, @JsonProperty("has_previous") boolean hasPrevious) {
+public record TransactionPageResponse(@JsonProperty("data") List<TransactionListItemDto> data,
+        @JsonProperty("links") PaginationLinks links, @JsonProperty("meta") PaginationMeta meta,
+        @JsonProperty("filters") TransactionFiltersDto filters) {
+
+    public record PaginationLinks(@JsonProperty("first") String first, @JsonProperty("last") String last,
+            @JsonProperty("prev") String prev, @JsonProperty("next") String next) {
+    }
+
+    public record PaginationMeta(@JsonProperty("current_page") int currentPage, @JsonProperty("from") Integer from,
+            @JsonProperty("last_page") int lastPage, @JsonProperty("links") List<PageLink> links,
+            @JsonProperty("path") String path, @JsonProperty("per_page") int perPage, @JsonProperty("to") Integer to,
+            @JsonProperty("total") long total) {
+    }
+
+    public record PageLink(@JsonProperty("url") String url, @JsonProperty("label") String label,
+            @JsonProperty("active") boolean active) {
+    }
 }

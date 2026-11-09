@@ -74,8 +74,8 @@ public interface PgMerchantTransactionRepository extends JpaRepository<PgMerchan
     @Query(value = """
             SELECT * FROM pg_merchant_transactions t
             WHERE t.user_id = :userId
-            AND (CAST(:statusCode AS VARCHAR) IS NULL OR t.status_code = :statusCode)
-            AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR t.payment_method = :paymentMethod)
+            AND (CAST(:statusCode AS VARCHAR) IS NULL OR LOWER(t.status_code) = LOWER(:statusCode))
+            AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR LOWER(t.payment_method) = LOWER(:paymentMethod))
             AND (CAST(:startDate AS TIMESTAMP) IS NULL OR t.created_at >= :startDate)
             AND (CAST(:endDate AS TIMESTAMP) IS NULL OR t.created_at <= :endDate)
             AND (COALESCE(CAST(:search AS VARCHAR), '') = '' OR (
@@ -87,8 +87,8 @@ public interface PgMerchantTransactionRepository extends JpaRepository<PgMerchan
             """, countQuery = """
             SELECT COUNT(*) FROM pg_merchant_transactions t
             WHERE t.user_id = :userId
-            AND (CAST(:statusCode AS VARCHAR) IS NULL OR t.status_code = :statusCode)
-            AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR t.payment_method = :paymentMethod)
+            AND (CAST(:statusCode AS VARCHAR) IS NULL OR LOWER(t.status_code) = LOWER(:statusCode))
+            AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR LOWER(t.payment_method) = LOWER(:paymentMethod))
             AND (CAST(:startDate AS TIMESTAMP) IS NULL OR t.created_at >= :startDate)
             AND (CAST(:endDate AS TIMESTAMP) IS NULL OR t.created_at <= :endDate)
             AND (COALESCE(CAST(:search AS VARCHAR), '') = '' OR (
