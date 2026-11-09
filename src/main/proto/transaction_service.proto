@@ -1,17 +1,24 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 option java_multiple_files = true;
 option java_package = "com.tms.gateway.grpc.transaction";
 
 package transaction;
 
 /**
- * Transaction service gRPC interface. Only includes RPCs needed by
- * gateway-merchant (name enquiry for payout validation).
+ * Transaction service gRPC interface used by gateway-merchant.
  */
 service TransactionService {
   // Verify a bank account holder's name before initiating a payout.
   rpc NameEnquiry (NameEnquiryGrpcRequest) returns (TransactionCommandResponse);
+
+  // List refunds belonging to the authenticated merchant user.
+  rpc ListRefunds (ListRefundsRequest) returns (ListRefundsResponse);
+
+  // Read one refund belonging to the authenticated merchant user.
+  rpc GetRefund (GetRefundRequest) returns (Refund);
 }
 
 message NameEnquiryGrpcRequest {
@@ -25,4 +32,63 @@ message TransactionCommandResponse {
   string reference = 3;
   // JSON object with account details: {"account_name": "...", "account_number": "...", "bank_code": "..."}
   string data_json = 4;
+}
+
+enum RefundStatus {
+  REFUND_STATUS_UNSPECIFIED = 0;
+  REFUND_STATUS_PROCESSED = 1;
+}
+
+message ListRefundsRequest {
+  // Authenticated gateway user ID. The service must enforce ownership.
+  int64 merchant_user_id = 1;
+  // Search amount, customer name, and customer email.
+  string search = 2;
+  // Unspecified means no status filter.
+  RefundStatus status = 3;
+  // Inclusive creation-time lower bound.
+  google.protobuf.Timestamp created_at_from = 4;
+  // Exclusive creation-time upper bound.
+  google.protobuf.Timestamp created_at_to = 5;
+  // Zero-based page number.
+  int32 page = 6;
+  int32 page_size = 7;
+}
+
+message ListRefundsResponse {
+  repeated Refund refunds = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total_elements = 4;
+  int32 total_pages = 5;
+  bool has_next = 6;
+  bool has_previous = 7;
+}
+
+message GetRefundRequest {
+  // Authenticated gateway user ID. The service must enforce ownership.
+  int64 merchant_user_id = 1;
+  // Stable opaque identifier returned by ListRefunds.
+  string refund_id = 2;
+}
+
+message Refund {
+  string refund_id = 1;
+  string transaction_reference = 2;
+  string customer_name = 3;
+  string customer_email = 4;
+  // Base-10 decimal string; must not be encoded as a floating-point value.
+  string amount = 5;
+  string currency_code = 6;
+  RefundStatus status = 7;
+  // Required for every refund.
+  google.protobuf.Timestamp created_at = 8;
+  // Required for processed refunds.
+  google.protobuf.Timestamp refunded_at = 9;
+  string refund_type = 10;
+  string refund_initiated_by = 11;
+  string refund_channel = 12;
+  string merchant_name = 13;
+  string merchant_email = 14;
+  string merchant_id = 15;
 }

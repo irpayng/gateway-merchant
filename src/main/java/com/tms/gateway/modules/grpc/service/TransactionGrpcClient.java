@@ -3,7 +3,11 @@ package com.tms.gateway.modules.grpc.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tms.gateway.core.exception.AppException;
+import com.tms.gateway.grpc.transaction.GetRefundRequest;
+import com.tms.gateway.grpc.transaction.ListRefundsRequest;
+import com.tms.gateway.grpc.transaction.ListRefundsResponse;
 import com.tms.gateway.grpc.transaction.NameEnquiryGrpcRequest;
+import com.tms.gateway.grpc.transaction.Refund;
 import com.tms.gateway.grpc.transaction.TransactionCommandResponse;
 import com.tms.gateway.grpc.transaction.TransactionServiceGrpc;
 import com.tms.gateway.modules.grpc.config.GrpcProperties;
@@ -134,5 +138,13 @@ public class TransactionGrpcClient {
         }
 
         throw new AppException("Name enquiry returned no data", HttpStatus.BAD_GATEWAY);
+    }
+
+    public ListRefundsResponse listRefunds(ListRefundsRequest request) {
+        return invoke("listRefunds", () -> timed().listRefunds(request));
+    }
+
+    public Refund getRefund(GetRefundRequest request) {
+        return invoke("getRefund", () -> timed().getRefund(request));
     }
 }

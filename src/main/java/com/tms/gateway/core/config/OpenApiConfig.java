@@ -46,7 +46,8 @@ public class OpenApiConfig {
                 Map.entry("/compliance/reference-data/{kind}", "Read authoritative reference options"),
                 Map.entry("/auth/login", "Log in and obtain a Bearer token"),
                 Map.entry("/auth/me", "Read the current user and merchant compliance status"),
-                Map.entry("/customers", "Access merchant customer records"));
+                Map.entry("/customers", "Access merchant customer records"),
+                Map.entry("/refunds", "List and filter merchant refunds"));
         return api -> api.getPaths().forEach((path, item) -> item.readOperationsMap().forEach((method, operation) -> {
             String tag = path.startsWith("/auth")
                     ? "Authentication"
@@ -64,7 +65,9 @@ public class OpenApiConfig {
                                                                     ? "Transactions"
                                                                     : path.startsWith("/customers")
                                                                             ? "Customers"
-                                                                            : "Health";
+                                                                            : path.startsWith("/refunds")
+                                                                                    ? "Refunds"
+                                                                                    : "Health";
             operation.setTags(List.of(tag));
             if (summaries.containsKey(path)) {
                 operation.setSummary(summaries.get(path));
