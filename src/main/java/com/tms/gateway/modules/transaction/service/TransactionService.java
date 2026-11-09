@@ -48,8 +48,10 @@ public class TransactionService {
             new FilterOption("bank_transfer", "Bank Transfer"), new FilterOption("wallet", "IRPay Wallet"),
             new FilterOption("ussd", "USSD"), new FilterOption("qr", "QR Code"));
 
+    private static final List<Integer> LIMIT_OPTIONS = List.of(10, 20, 50, 100);
+
     private static final TransactionFiltersDto FILTERS = new TransactionFiltersDto(STATUS_OPTIONS,
-            PAYMENT_METHOD_OPTIONS);
+            PAYMENT_METHOD_OPTIONS, LIMIT_OPTIONS);
 
     /**
      * Get transaction summary statistics for dashboard cards.
