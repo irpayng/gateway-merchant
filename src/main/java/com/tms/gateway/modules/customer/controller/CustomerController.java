@@ -11,6 +11,7 @@ import com.tms.gateway.modules.customer.dto.CustomerTransactionPageResponse;
 import com.tms.gateway.modules.customer.dto.UpdateCustomerBlacklistRequest;
 import com.tms.gateway.modules.customer.service.CustomerService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Objects;
@@ -36,7 +37,9 @@ public class CustomerController {
     @GetMapping
     @Operation(summary = "Search customers")
     public ApiResponse<CustomerListResponse> list(@AuthenticationPrincipal GatewayMerchantUserDetails user,
-            @RequestParam(required = false) String search, @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) String search,
+            @Parameter(description = "One-based page number")
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(service.list(merchantId(user), search, page, size), "Customers retrieved");
     }

@@ -47,7 +47,7 @@ class CustomerServiceTest {
         when(transactionRepository.aggregateCustomers(List.of(9L))).thenReturn(List.of(aggregate));
         when(customerRepository.findAllByMerchantId("merchant-1")).thenReturn(List.of(saved));
 
-        var response = service.list("merchant-1", "234801", 0, 20);
+        var response = service.list("merchant-1", "234801", 1, 20);
 
         assertEquals(1, response.totalElements());
         var customer = response.content().getFirst();
@@ -55,6 +55,21 @@ class CustomerServiceTest {
         assertEquals("Jane Doe", customer.fullName());
         assertEquals(firstTransaction, customer.dateAdded());
         assertTrue(customer.blacklisted());
+    }
+
+    @Test
+    void customerListUsesOneBasedPageForOffsetAndResponse() {
+        var first = aggregate("first@example.com", Instant.parse("2025-03-02T10:00:00Z"), "First", "0", 0, 1);
+        var second = aggregate("second@example.com", Instant.parse("2025-03-01T10:00:00Z"), "Second", "0", 0, 1);
+        when(transactionRepository.aggregateCustomers(List.of(9L))).thenReturn(List.of(first, second));
+
+        var response = service.list("merchant-1", null, 2, 1);
+
+        assertEquals(2, response.page());
+        assertEquals(1, response.content().size());
+        assertEquals("second@example.com", response.content().getFirst().email());
+        assertTrue(response.hasPrevious());
+        assertFalse(response.hasNext());
     }
 
     @Test
@@ -99,7 +114,7 @@ class CustomerServiceTest {
         when(customerRepository.findByMerchantIdAndCustomerRef("merchant-1",
                 customerRef("merchant-1", "jane@example.com"))).thenReturn(Optional.empty());
 
-        var list = service.list("merchant-1", null, 0, 20);
+        var list = service.list("merchant-1", null, 1, 20);
         var details = service.get("merchant-1", list.content().getFirst().customerRef());
 
         assertEquals("150.25", details.totalSpend().toPlainString());
@@ -147,7 +162,9 @@ class CustomerServiceTest {
         assertEquals(400,
                 assertThrows(AppException.class, () -> service.list("merchant-1", null, -1, 20)).getStatus().value());
         assertEquals(400,
-                assertThrows(AppException.class, () -> service.list("merchant-1", null, 0, 101)).getStatus().value());
+                assertThrows(AppException.class, () -> service.list("merchant-1", null, 0, 20)).getStatus().value());
+        assertEquals(400,
+                assertThrows(AppException.class, () -> service.list("merchant-1", null, 1, 101)).getStatus().value());
         verifyNoInteractions(transactionRepository);
     }
 

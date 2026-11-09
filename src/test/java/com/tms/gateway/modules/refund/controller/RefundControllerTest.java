@@ -57,4 +57,14 @@ class RefundControllerTest {
 
         verify(service).list(42L, "john", "processed", from, to, 1, 10);
     }
+
+    @Test
+    void listDefaultsToFirstPage() throws Exception {
+        when(service.list(42L, null, null, null, null, 1, 20))
+                .thenReturn(new RefundPageResponse(List.of(), 1, 20, 0, 0, false, false));
+
+        mvc.perform(get("/refunds")).andExpect(status().isOk()).andExpect(jsonPath("$.data.page").value(1));
+
+        verify(service).list(42L, null, null, null, null, 1, 20);
+    }
 }

@@ -31,7 +31,7 @@ public class RefundService {
         validateFilters(status, startDate, endDate, page, size);
 
         ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId)
-                .setPage(page).setPageSize(size);
+                .setPage(page - 1).setPageSize(size);
         if (search != null) {
             request.setSearch(search);
         }
@@ -47,7 +47,7 @@ public class RefundService {
 
         ListRefundsResponse response = transactionGrpcClient.listRefunds(request.build());
         List<RefundListItemDto> content = response.getRefundsList().stream().map(this::toListItem).toList();
-        return new RefundPageResponse(content, response.getPage(), response.getPageSize(),
+        return new RefundPageResponse(content, response.getPage() + 1, response.getPageSize(),
                 response.getTotalElements(), response.getTotalPages(), response.getHasNext(),
                 response.getHasPrevious());
     }
@@ -69,8 +69,8 @@ public class RefundService {
         if (startDate != null && endDate != null && !startDate.isBefore(endDate)) {
             throw new IllegalArgumentException("start_date must be earlier than end_date");
         }
-        if (page < 0) {
-            throw new IllegalArgumentException("page must be zero or greater");
+        if (page < 1) {
+            throw new IllegalArgumentException("page must be one or greater");
         }
         if (size < 1) {
             throw new IllegalArgumentException("size must be greater than zero");

@@ -32,7 +32,7 @@ class RefundServiceTest {
                 .setCustomerName("John Doe").setCustomerEmail("john@example.com")
                 .setStatus(RefundStatus.REFUND_STATUS_PROCESSED)
                 .setCreatedAt(Timestamp.newBuilder().setSeconds(from.getEpochSecond())).build();
-        when(client.listRefunds(any())).thenReturn(ListRefundsResponse.newBuilder().addRefunds(refund).setPage(1)
+        when(client.listRefunds(any())).thenReturn(ListRefundsResponse.newBuilder().addRefunds(refund).setPage(0)
                 .setPageSize(10).setTotalElements(11).setTotalPages(2).setHasPrevious(true).build());
 
         var result = service.list(42L, "John", "Processed", from, to, 1, 10);
@@ -45,17 +45,18 @@ class RefundServiceTest {
         assertEquals(RefundStatus.REFUND_STATUS_PROCESSED, request.getStatus());
         assertEquals(from.getEpochSecond(), request.getCreatedAtFrom().getSeconds());
         assertEquals(to.getEpochSecond(), request.getCreatedAtTo().getSeconds());
-        assertEquals(1, request.getPage());
+        assertEquals(0, request.getPage());
         assertEquals(10, request.getPageSize());
         assertEquals(1, result.content().size());
         assertEquals("Processed", result.content().getFirst().statusDisplay());
         assertEquals("15000.00", result.content().getFirst().amount().toPlainString());
         assertEquals(11, result.totalElements());
+        assertEquals(1, result.page());
     }
 
     @Test
     void listAllowsOnlyProcessedStatus() {
-        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, "pending", null, null, 0, 20));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, "pending", null, null, 1, 20));
         verify(client, never()).listRefunds(any());
     }
 
@@ -89,9 +90,10 @@ class RefundServiceTest {
     void listRejectsInvalidDateRangeAndPagination() {
         Instant instant = Instant.parse("2025-07-15T00:00:00Z");
         assertThrows(IllegalArgumentException.class,
-                () -> service.list(42L, null, null, instant, instant, 0, 20));
+                () -> service.list(42L, null, null, instant, instant, 1, 20));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 0, 20));
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, -1, 20));
-        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 1, 0));
         verify(client, never()).listRefunds(any());
     }
 
@@ -102,7 +104,7 @@ class RefundServiceTest {
                 .build());
 
         AppException exception = assertThrows(AppException.class,
-                () -> service.list(42L, null, null, null, null, 0, 20));
+                () -> service.list(42L, null, null, null, null, 1, 20));
 
         assertEquals(502, exception.getStatus().value());
     }

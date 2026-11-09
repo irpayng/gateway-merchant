@@ -38,7 +38,9 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public CustomerListResponse list(String merchantId, String search, int page, int size) {
-        validatePage(page, size);
+        if (page < 1)
+            throw new AppException("page must be one or greater", HttpStatus.BAD_REQUEST);
+        validatePageSize(size);
         Map<String, CustomerTransactionAggregate> aggregates = aggregates(merchantId);
         Map<String, PgMerchantCustomerEntity> saved = customerRepository.findAllByMerchantId(merchantId).stream()
                 .collect(Collectors.toMap(PgMerchantCustomerEntity::getNormalizedEmail, c -> c));
@@ -54,13 +56,13 @@ public class CustomerService {
                         .thenComparing(CustomerResponse::customerRef))
                 .toList();
 
-        long startLong = (long) page * size;
+        long startLong = (long) (page - 1) * size;
         int start = (int) Math.min(startLong, customers.size());
         int end = Math.min(start + size, customers.size());
         List<CustomerResponse> content = customers.subList(start, end);
         int totalPages = customers.isEmpty() ? 0 : (int) Math.ceil((double) customers.size() / size);
         return new CustomerListResponse(content, page, size, customers.size(), totalPages, end < customers.size(),
-                page > 0 && !customers.isEmpty());
+                page > 1 && !customers.isEmpty());
     }
 
     @Transactional
@@ -216,6 +218,10 @@ public class CustomerService {
     private void validatePage(int page, int size) {
         if (page < 0)
             throw new AppException("page must be zero or greater", HttpStatus.BAD_REQUEST);
+        validatePageSize(size);
+    }
+
+    private void validatePageSize(int size) {
         if (size < 1 || size > MAX_PAGE_SIZE)
             throw new AppException("size must be between 1 and " + MAX_PAGE_SIZE, HttpStatus.BAD_REQUEST);
     }
