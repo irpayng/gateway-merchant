@@ -156,7 +156,8 @@ public class TransactionService {
     }
 
     /**
-     * Build page links array for pagination UI.
+     * Build page links array for pagination UI. Shows all pages like Laravel's
+     * LengthAwarePaginator.
      */
     private List<PageLink> buildPageLinks(int currentPage, int lastPage) {
         List<PageLink> links = new ArrayList<>();
@@ -165,11 +166,8 @@ public class TransactionService {
         links.add(new PageLink(currentPage > 1 ? BASE_PATH + "?page=" + (currentPage - 1) : null, "&laquo; Previous",
                 false));
 
-        // Page number links (show up to 7 pages around current)
-        int startPage = Math.max(1, currentPage - 3);
-        int endPage = Math.min(lastPage, currentPage + 3);
-
-        for (int i = startPage; i <= endPage; i++) {
+        // All page number links (matching Laravel's default)
+        for (int i = 1; i <= lastPage; i++) {
             links.add(new PageLink(BASE_PATH + "?page=" + i, String.valueOf(i), i == currentPage));
         }
 
