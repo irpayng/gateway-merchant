@@ -63,8 +63,8 @@ public class TransactionController {
             @Parameter(description = "Start date filter (ISO-8601)") @RequestParam(name = "start_date", required = false) Instant startDate,
             @Parameter(description = "End date filter (ISO-8601)") @RequestParam(name = "end_date", required = false) Instant endDate,
             @Parameter(description = "Search by reference, email, or name") @RequestParam(required = false) String search,
-            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size) {
         TransactionPageResponse response = transactionService.list(userDetails.getUserId(), status, paymentMethod,
                 startDate, endDate, search, page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
