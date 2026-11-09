@@ -30,8 +30,8 @@ public class RefundService {
             int page, int size) {
         validateFilters(status, startDate, endDate, page, size);
 
-        ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId)
-                .setPage(page).setPageSize(size);
+        ListRefundsRequest.Builder request = ListRefundsRequest.newBuilder().setMerchantUserId(userId).setPage(page)
+                .setPageSize(size);
         if (search != null) {
             request.setSearch(search);
         }
@@ -47,9 +47,8 @@ public class RefundService {
 
         ListRefundsResponse response = transactionGrpcClient.listRefunds(request.build());
         List<RefundListItemDto> content = response.getRefundsList().stream().map(this::toListItem).toList();
-        return new RefundPageResponse(content, response.getPage(), response.getPageSize(),
-                response.getTotalElements(), response.getTotalPages(), response.getHasNext(),
-                response.getHasPrevious());
+        return new RefundPageResponse(content, response.getPage(), response.getPageSize(), response.getTotalElements(),
+                response.getTotalPages(), response.getHasNext(), response.getHasPrevious());
     }
 
     @Transactional(readOnly = true)
@@ -57,8 +56,8 @@ public class RefundService {
         if (refundId == null || refundId.isBlank()) {
             throw new IllegalArgumentException("refundId must not be blank");
         }
-        Refund refund = transactionGrpcClient.getRefund(
-                GetRefundRequest.newBuilder().setMerchantUserId(userId).setRefundId(refundId).build());
+        Refund refund = transactionGrpcClient
+                .getRefund(GetRefundRequest.newBuilder().setMerchantUserId(userId).setRefundId(refundId).build());
         return toDetail(refund);
     }
 
@@ -88,8 +87,7 @@ public class RefundService {
 
     private RefundDetailDto toDetail(Refund refund) {
         if (!refund.hasCreatedAt() || !refund.hasRefundedAt()) {
-            throw new AppException("Transaction service omitted a required refund timestamp",
-                    HttpStatus.BAD_GATEWAY);
+            throw new AppException("Transaction service omitted a required refund timestamp", HttpStatus.BAD_GATEWAY);
         }
         return new RefundDetailDto(refund.getRefundId(), parseAmount(refund.getAmount()), refund.getCurrencyCode(),
                 statusCode(refund.getStatus()), statusDisplay(refund.getStatus()), refund.getTransactionReference(),
@@ -108,8 +106,7 @@ public class RefundService {
 
     private String statusCode(RefundStatus status) {
         if (status != RefundStatus.REFUND_STATUS_PROCESSED) {
-            throw new AppException("Transaction service returned an unsupported refund status",
-                    HttpStatus.BAD_GATEWAY);
+            throw new AppException("Transaction service returned an unsupported refund status", HttpStatus.BAD_GATEWAY);
         }
         return "processed";
     }

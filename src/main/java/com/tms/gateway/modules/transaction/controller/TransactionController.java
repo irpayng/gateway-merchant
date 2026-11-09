@@ -3,13 +3,13 @@ package com.tms.gateway.modules.transaction.controller;
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.transaction.dto.TransactionDetailDto;
-import com.tms.gateway.modules.transaction.dto.TransactionPageResponse;
 import com.tms.gateway.modules.transaction.dto.TransactionSummaryDto;
 import com.tms.gateway.modules.transaction.service.TransactionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,10 +33,6 @@ public class TransactionController {
 
     /**
      * Get transaction summary statistics for dashboard cards.
-     *
-     * <p>
-     * Returns counts and total values for: - Total transactions - Successful
-     * transactions - Failed transactions - Pending transactions
      */
     @GetMapping("/summary")
     @Operation(summary = "Get transaction summary", description = "Get aggregated transaction statistics for dashboard cards")
@@ -48,16 +44,10 @@ public class TransactionController {
 
     /**
      * Get paginated list of transactions with optional filters.
-     *
-     * <p>
-     * Supports filtering by: - status: pending, successful, failed, reversed -
-     * payment_method: card, bank_transfer, wallet - start_date / end_date: ISO-8601
-     * timestamps - search: reference, customer email, or customer name
      */
     @GetMapping
     @Operation(summary = "List transactions", description = "Get paginated list of transactions with optional filters")
-    public ResponseEntity<ApiResponse<TransactionPageResponse>> list(
-            @AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
+    public ResponseEntity<Map<String, Object>> list(@AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
             @Parameter(description = "Transaction status filter") @RequestParam(required = false) String status,
             @Parameter(description = "Payment method filter") @RequestParam(name = "payment_method", required = false) String paymentMethod,
             @Parameter(description = "Start date filter (ISO-8601)") @RequestParam(name = "start_date", required = false) Instant startDate,
@@ -65,17 +55,13 @@ public class TransactionController {
             @Parameter(description = "Search by reference, email, or name") @RequestParam(required = false) String search,
             @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "10") int size) {
-        TransactionPageResponse response = transactionService.list(userDetails.getUserId(), status, paymentMethod,
+        Map<String, Object> response = transactionService.list(userDetails.getUserId(), status, paymentMethod,
                 startDate, endDate, search, page, size);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(response);
     }
 
     /**
      * Get single transaction details.
-     *
-     * <p>
-     * Returns full transaction information including metadata, bank details, and
-     * provider reference.
      */
     @GetMapping("/{reference}")
     @Operation(summary = "Get transaction detail", description = "Get full details of a single transaction")

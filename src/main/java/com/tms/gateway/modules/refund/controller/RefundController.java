@@ -30,18 +30,12 @@ public class RefundController {
     @Operation(summary = "List refunds", description = "Search and filter the authenticated merchant's refunds")
     public ResponseEntity<ApiResponse<RefundPageResponse>> list(
             @AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
-            @Parameter(description = "Search refund amount, customer name, or customer email")
-            @RequestParam(required = false) String search,
-            @Parameter(description = "The only supported refund status is processed")
-            @RequestParam(required = false) String status,
-            @Parameter(description = "Inclusive refund creation-time lower bound (ISO-8601)")
-            @RequestParam(name = "start_date", required = false) Instant startDate,
-            @Parameter(description = "Exclusive refund creation-time upper bound (ISO-8601)")
-            @RequestParam(name = "end_date", required = false) Instant endDate,
-            @Parameter(description = "Zero-based page number")
-            @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "Page size")
-            @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Search refund amount, customer name, or customer email") @RequestParam(required = false) String search,
+            @Parameter(description = "The only supported refund status is processed") @RequestParam(required = false) String status,
+            @Parameter(description = "Inclusive refund creation-time lower bound (ISO-8601)") @RequestParam(name = "start_date", required = false) Instant startDate,
+            @Parameter(description = "Exclusive refund creation-time upper bound (ISO-8601)") @RequestParam(name = "end_date", required = false) Instant endDate,
+            @Parameter(description = "Zero-based page number") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
         RefundPageResponse response = refundService.list(userDetails.getUserId(), search, status, startDate, endDate,
                 page, size);
         return ResponseEntity.ok(ApiResponse.success(response));
