@@ -1,6 +1,5 @@
 package com.tms.gateway.modules.auth.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -12,17 +11,16 @@ import lombok.Data;
 public class ResetPasswordRequest {
 
     /**
-     * The email address associated with the account.
+     * The email or phone number used during the forgot-password step.
      */
     @NotBlank(message = "Email is required")
-    @Email(message = "Invalid email format")
     private String email;
 
     /**
-     * The OTP code sent via email during forgot-password.
+     * The OTP/token sent via email during forgot-password.
      */
-    @NotBlank(message = "Verification code is required")
-    private String otp;
+    @NotBlank(message = "Token is required")
+    private String token;
 
     /**
      * The new password to set.
