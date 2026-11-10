@@ -4,10 +4,14 @@ import com.tms.gateway.core.exception.AppException;
 import com.tms.gateway.core.exception.GrpcException;
 import com.tms.gateway.grpc.user.AuthPgMerchantRequest;
 import com.tms.gateway.grpc.user.AuthPgMerchantResponse;
+import com.tms.gateway.grpc.user.ForgotPasswordPgMerchantRequest;
+import com.tms.gateway.grpc.user.ForgotPasswordPgMerchantResponse;
 import com.tms.gateway.grpc.user.RegisterPgMerchantRequest;
 import com.tms.gateway.grpc.user.RegisterPgMerchantResponse;
 import com.tms.gateway.grpc.user.ResendPgMerchantOtpRequest;
 import com.tms.gateway.grpc.user.ResendPgMerchantOtpResponse;
+import com.tms.gateway.grpc.user.ResetPasswordPgMerchantRequest;
+import com.tms.gateway.grpc.user.ResetPasswordPgMerchantResponse;
 import com.tms.gateway.grpc.user.UserServiceGrpc;
 import com.tms.gateway.grpc.user.VerifyPgMerchantEmailRequest;
 import com.tms.gateway.grpc.user.VerifyPgMerchantEmailResponse;
@@ -195,6 +199,81 @@ public class UserGrpcClient {
             log.error("gRPC call to user-service failed: {}", e.getStatus());
             throw new GrpcException("user-service", "ResendPgMerchantOtp", e.getStatus().getCode().name(),
                     "Failed to resend OTP: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Request a password reset OTP for a pg_merchant user.
+     *
+     * @param email
+     *            the user's email address
+     * @throws AppException
+     *             if the request fails (not found, not pg_merchant)
+     * @throws GrpcException
+     *             if the gRPC call fails
+     */
+    public void forgotPasswordPgMerchant(String email) {
+        try {
+            ForgotPasswordPgMerchantRequest request = ForgotPasswordPgMerchantRequest.newBuilder().setEmail(email)
+                    .build();
+
+            ForgotPasswordPgMerchantResponse response = userStub.withDeadlineAfter(props.getTimeout(), TimeUnit.SECONDS)
+                    .forgotPasswordPgMerchant(request);
+
+            if (!response.getSuccess()) {
+                HttpStatus status = switch (response.getReason()) {
+                    case "not_found" -> HttpStatus.NOT_FOUND;
+                    case "not_pg_merchant" -> HttpStatus.FORBIDDEN;
+                    case "throttled" -> HttpStatus.TOO_MANY_REQUESTS;
+                    default -> HttpStatus.BAD_REQUEST;
+                };
+                throw new AppException(response.getMessage(), status);
+            }
+
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC call to user-service failed: {}", e.getStatus());
+            throw new GrpcException("user-service", "ForgotPasswordPgMerchant", e.getStatus().getCode().name(),
+                    "Failed to request password reset: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Reset a pg_merchant's password using the OTP.
+     *
+     * @param email
+     *            the user's email address
+     * @param otp
+     *            the verification code
+     * @param newPassword
+     *            the new password
+     * @throws AppException
+     *             if reset fails (invalid OTP, expired, not found)
+     * @throws GrpcException
+     *             if the gRPC call fails
+     */
+    public void resetPasswordPgMerchant(String email, String otp, String newPassword) {
+        try {
+            ResetPasswordPgMerchantRequest request = ResetPasswordPgMerchantRequest.newBuilder().setEmail(email)
+                    .setOtp(otp).setNewPassword(newPassword).build();
+
+            ResetPasswordPgMerchantResponse response = userStub.withDeadlineAfter(props.getTimeout(), TimeUnit.SECONDS)
+                    .resetPasswordPgMerchant(request);
+
+            if (!response.getSuccess()) {
+                HttpStatus status = switch (response.getReason()) {
+                    case "invalid_otp", "expired" -> HttpStatus.UNPROCESSABLE_ENTITY;
+                    case "not_found" -> HttpStatus.NOT_FOUND;
+                    case "not_pg_merchant" -> HttpStatus.FORBIDDEN;
+                    case "invalid_password" -> HttpStatus.BAD_REQUEST;
+                    default -> HttpStatus.BAD_REQUEST;
+                };
+                throw new AppException(response.getMessage(), status);
+            }
+
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC call to user-service failed: {}", e.getStatus());
+            throw new GrpcException("user-service", "ResetPasswordPgMerchant", e.getStatus().getCode().name(),
+                    "Failed to reset password: " + e.getStatus().getDescription());
         }
     }
 }

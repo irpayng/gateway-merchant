@@ -21,6 +21,13 @@ service UserService {
 
   // Resend the email verification OTP for a PG merchant. Throttled to 60 seconds.
   rpc ResendPgMerchantOtp (ResendPgMerchantOtpRequest) returns (ResendPgMerchantOtpResponse);
+
+  // ── PG Merchant password reset ──
+  // Request a password reset OTP for a pg_merchant user. Sends OTP via email.
+  rpc ForgotPasswordPgMerchant (ForgotPasswordPgMerchantRequest) returns (ForgotPasswordPgMerchantResponse);
+
+  // Reset a pg_merchant's password using the OTP from forgot-password.
+  rpc ResetPasswordPgMerchant (ResetPasswordPgMerchantRequest) returns (ResetPasswordPgMerchantResponse);
 }
 
 message AuthPgMerchantRequest {
@@ -93,6 +100,33 @@ message ResendPgMerchantOtpRequest {
 message ResendPgMerchantOtpResponse {
   bool success = 1;
   // "ok", "not_found", "already_verified", "throttled", or error
+  string reason = 2;
+  string message = 3;
+}
+
+
+// ── PG Merchant password reset messages ──
+
+message ForgotPasswordPgMerchantRequest {
+  string email = 1;
+}
+
+message ForgotPasswordPgMerchantResponse {
+  bool success = 1;
+  // "ok", "not_found", "not_pg_merchant", "throttled", or error
+  string reason = 2;
+  string message = 3;
+}
+
+message ResetPasswordPgMerchantRequest {
+  string email = 1;
+  string otp = 2;
+  string new_password = 3;
+}
+
+message ResetPasswordPgMerchantResponse {
+  bool success = 1;
+  // "ok", "invalid_otp", "expired", "not_found", "not_pg_merchant", or error
   string reason = 2;
   string message = 3;
 }

@@ -2,11 +2,13 @@ package com.tms.gateway.modules.auth.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.auth.dto.ForgotPasswordRequest;
 import com.tms.gateway.modules.auth.dto.LoginRequest;
 import com.tms.gateway.modules.auth.dto.LoginResponse;
 import com.tms.gateway.modules.auth.dto.RegisterRequest;
 import com.tms.gateway.modules.auth.dto.RegisterResponse;
 import com.tms.gateway.modules.auth.dto.ResendOtpRequest;
+import com.tms.gateway.modules.auth.dto.ResetPasswordRequest;
 import com.tms.gateway.modules.auth.dto.UserData;
 import com.tms.gateway.modules.auth.dto.VerifyEmailRequest;
 import com.tms.gateway.modules.auth.service.AuthService;
@@ -78,6 +80,30 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
         authService.resendOtp(request);
         return ResponseEntity.ok(ApiResponse.success(null, "Verification code sent"));
+    }
+
+    /**
+     * Request a password reset OTP.
+     *
+     * <p>
+     * Sends an OTP to the email address if an account exists.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(null, "A password reset code has been sent to your email"));
+    }
+
+    /**
+     * Reset password using the OTP from forgot-password.
+     *
+     * <p>
+     * Sets a new password after verifying the OTP.
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getOtp(), request.getPassword());
+        return ResponseEntity.ok(ApiResponse.success(null, "Your password has been reset successfully"));
     }
 
     /**

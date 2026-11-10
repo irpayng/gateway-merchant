@@ -138,6 +138,32 @@ public class AuthService {
     }
 
     /**
+     * Request a password reset OTP for a pg_merchant user.
+     *
+     * @param email
+     *            the user's email address
+     */
+    public void forgotPassword(String email) {
+        userGrpcClient.forgotPasswordPgMerchant(email.trim().toLowerCase());
+        log.info("Password reset OTP sent for email={}", email);
+    }
+
+    /**
+     * Reset a pg_merchant's password using the OTP.
+     *
+     * @param email
+     *            the user's email address
+     * @param otp
+     *            the verification code
+     * @param newPassword
+     *            the new password
+     */
+    public void resetPassword(String email, String otp, String newPassword) {
+        userGrpcClient.resetPasswordPgMerchant(email.trim().toLowerCase(), otp.trim(), newPassword);
+        log.info("Password reset completed for email={}", email);
+    }
+
+    /**
      * Get current user data from local replica.
      *
      * @param userDetails
