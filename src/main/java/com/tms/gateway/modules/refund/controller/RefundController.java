@@ -34,7 +34,7 @@ public class RefundController {
             @Parameter(description = "Inclusive refund creation-time lower bound (ISO-8601)") @RequestParam(name = "start_date", required = false) Instant startDate,
             @Parameter(description = "Exclusive refund creation-time upper bound (ISO-8601)") @RequestParam(name = "end_date", required = false) Instant endDate,
             @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "5") int size) {
         return ResponseEntity
                 .ok(refundService.list(userDetails.getUserId(), search, status, startDate, endDate, page, size));
     }

@@ -14,7 +14,6 @@ import com.tms.gateway.grpc.transaction.ListRefundsRequest;
 import com.tms.gateway.grpc.transaction.ListRefundsResponse;
 import com.tms.gateway.grpc.transaction.Refund;
 import com.tms.gateway.grpc.transaction.RefundStatus;
-import com.tms.gateway.modules.grpc.service.TransactionGrpcClient;
 import com.tms.gateway.modules.refund.dto.RefundListItemDto;
 import java.time.Instant;
 import java.util.List;
@@ -24,7 +23,7 @@ import org.mockito.ArgumentCaptor;
 
 class RefundServiceTest {
 
-    private final TransactionGrpcClient client = org.mockito.Mockito.mock(TransactionGrpcClient.class);
+    private final RefundDataProvider client = org.mockito.Mockito.mock(RefundDataProvider.class);
     private final RefundService service = new RefundService(client);
 
     @Test
@@ -36,13 +35,13 @@ class RefundServiceTest {
                 .setCustomerName("John Doe").setCustomerEmail("john@example.com")
                 .setStatus(RefundStatus.REFUND_STATUS_PROCESSED)
                 .setCreatedAt(Timestamp.newBuilder().setSeconds(from.getEpochSecond())).build();
-        when(client.listRefunds(any())).thenReturn(ListRefundsResponse.newBuilder().addRefunds(refund).setPage(0)
+        when(client.list(any())).thenReturn(ListRefundsResponse.newBuilder().addRefunds(refund).setPage(0)
                 .setPageSize(10).setTotalElements(11).setTotalPages(2).setHasPrevious(true).build());
 
         Map<String, Object> result = service.list(42L, "John", "Processed", from, to, 1, 10);
 
         ArgumentCaptor<ListRefundsRequest> captor = ArgumentCaptor.forClass(ListRefundsRequest.class);
-        verify(client).listRefunds(captor.capture());
+        verify(client).list(captor.capture());
         ListRefundsRequest request = captor.getValue();
         assertEquals(42L, request.getMerchantUserId());
         assertEquals("John", request.getSearch());
@@ -65,7 +64,7 @@ class RefundServiceTest {
     @Test
     void listAllowsOnlyProcessedStatus() {
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, "pending", null, null, 1, 20));
-        verify(client, never()).listRefunds(any());
+        verify(client, never()).list(any());
     }
 
     @Test
@@ -78,12 +77,12 @@ class RefundServiceTest {
                 .setRefundInitiatedBy("john@example.com").setRefundChannel("Original Payment")
                 .setMerchantName("Shoprite Supermarket").setMerchantEmail("shoprite@gmail.com")
                 .setMerchantId("merchant-1").build();
-        when(client.getRefund(any())).thenReturn(refund);
+        when(client.get(any())).thenReturn(refund);
 
         var result = service.getDetail(42L, "refund-1");
 
         ArgumentCaptor<GetRefundRequest> captor = ArgumentCaptor.forClass(GetRefundRequest.class);
-        verify(client).getRefund(captor.capture());
+        verify(client).get(captor.capture());
         assertEquals(42L, captor.getValue().getMerchantUserId());
         assertEquals("refund-1", captor.getValue().getRefundId());
         assertEquals("transaction-1", result.transactionReference());
@@ -101,12 +100,12 @@ class RefundServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 0, 20));
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, -1, 20));
         assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 1, 0));
-        verify(client, never()).listRefunds(any());
+        verify(client, never()).list(any());
     }
 
     @Test
     void invalidUpstreamAmountFailsAsBadGateway() {
-        when(client.listRefunds(any())).thenReturn(ListRefundsResponse.newBuilder()
+        when(client.list(any())).thenReturn(ListRefundsResponse.newBuilder()
                 .addRefunds(Refund.newBuilder().setAmount("invalid").setStatus(RefundStatus.REFUND_STATUS_PROCESSED))
                 .build());
 

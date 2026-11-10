@@ -8,7 +8,6 @@ import com.tms.gateway.grpc.transaction.ListRefundsRequest;
 import com.tms.gateway.grpc.transaction.ListRefundsResponse;
 import com.tms.gateway.grpc.transaction.Refund;
 import com.tms.gateway.grpc.transaction.RefundStatus;
-import com.tms.gateway.modules.grpc.service.TransactionGrpcClient;
 import com.tms.gateway.modules.refund.dto.RefundDetailDto;
 import com.tms.gateway.modules.refund.dto.RefundListItemDto;
 import java.math.BigDecimal;
@@ -24,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RefundService {
 
-    private final TransactionGrpcClient transactionGrpcClient;
+    private final RefundDataProvider refundDataProvider;
 
     @Transactional(readOnly = true)
     public Map<String, Object> list(Long userId, String search, String status, Instant startDate, Instant endDate,
@@ -47,7 +46,7 @@ public class RefundService {
             request.setCreatedAtTo(toTimestamp(endDate));
         }
 
-        ListRefundsResponse response = transactionGrpcClient.listRefunds(request.build());
+        ListRefundsResponse response = refundDataProvider.list(request.build());
         List<RefundListItemDto> content = response.getRefundsList().stream().map(this::toListItem).toList();
 
         return PagedResponse.from(content, response.getTotalElements(), page, size, "/refunds");
@@ -58,8 +57,8 @@ public class RefundService {
         if (refundId == null || refundId.isBlank()) {
             throw new IllegalArgumentException("refundId must not be blank");
         }
-        Refund refund = transactionGrpcClient
-                .getRefund(GetRefundRequest.newBuilder().setMerchantUserId(userId).setRefundId(refundId).build());
+        Refund refund = refundDataProvider
+                .get(GetRefundRequest.newBuilder().setMerchantUserId(userId).setRefundId(refundId).build());
         return toDetail(refund);
     }
 

@@ -59,11 +59,12 @@ class RefundControllerTest {
 
     @Test
     void listDefaultsToFirstPage() throws Exception {
-        when(service.list(42L, null, null, null, null, 1, 20))
-                .thenReturn(PagedResponse.from(List.of(), 0, 1, 20, "/refunds"));
+        when(service.list(42L, null, null, null, null, 1, 5))
+                .thenReturn(PagedResponse.from(List.of(), 0, 1, 5, "/refunds"));
 
-        mvc.perform(get("/refunds")).andExpect(status().isOk()).andExpect(jsonPath("$.meta.current_page").value(1));
+        mvc.perform(get("/refunds")).andExpect(status().isOk()).andExpect(jsonPath("$.meta.current_page").value(1))
+                .andExpect(jsonPath("$.meta.per_page").value(5));
 
-        verify(service).list(42L, null, null, null, null, 1, 20);
+        verify(service).list(42L, null, null, null, null, 1, 5);
     }
 }
