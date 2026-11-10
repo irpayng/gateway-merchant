@@ -46,8 +46,8 @@ class MockRefundDataProviderTest {
 
     @Test
     void searchesDisplayedCurrencyAmount() {
-        var response = provider.list(ListRefundsRequest.newBuilder().setSearch("\u20a615,000.00").setPage(0)
-                .setPageSize(5).build());
+        var response = provider
+                .list(ListRefundsRequest.newBuilder().setSearch("\u20a615,000.00").setPage(0).setPageSize(5).build());
 
         assertEquals(50, response.getTotalElements());
         assertEquals(5, response.getRefundsCount());
