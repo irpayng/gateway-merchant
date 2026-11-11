@@ -23,6 +23,7 @@ public class GrpcProperties {
         private ServiceEndpoint transaction = new ServiceEndpoint();
         private ServiceEndpoint notification = new ServiceEndpoint();
         private ServiceEndpoint config = new ServiceEndpoint();
+        private ServiceEndpoint b2b = new ServiceEndpoint();
     }
 
     @Data
@@ -71,5 +72,13 @@ public class GrpcProperties {
 
     public int getConfigServicePort() {
         return services.getConfig().getPort();
+    }
+
+    public String getB2bServiceHost() {
+        return services.getB2b().getHost();
+    }
+
+    public int getB2bServicePort() {
+        return services.getB2b().getPort();
     }
 }

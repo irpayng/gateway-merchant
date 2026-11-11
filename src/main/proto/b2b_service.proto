@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.tms.gateway.modules.grpc.b2b";
+option java_outer_classname = "B2bProto";
+
+package b2b;
+
+/**
+ * B2B service client for gateway-merchant.
+ * Subset of tms-b2b's BusinessService for pg_merchant API key management.
+ */
+service BusinessService {
+  // Enable API access for a pg_merchant. Creates a B2bAccountEntity linked to
+  // the existing pg_merchant user and issues the first sandbox key.
+  rpc EnableApiAccess (EnableApiAccessRequest) returns (EnableApiAccessResponse);
+
+  // List all API keys for a pg_merchant user.
+  rpc GetApiKeys (GetApiKeysRequest) returns (GetApiKeysResponse);
+
+  // Create a new API key for a pg_merchant user.
+  rpc CreateApiKey (CreateApiKeyRequest) returns (CreateApiKeyResponse);
+
+  // Rotate an existing API key — mints a replacement with the same scope.
+  rpc RotateApiKey (RotateApiKeyRequest) returns (CreateApiKeyResponse);
+
+  // Revoke an API key.
+  rpc RevokeApiKey (RevokeApiKeyRequest) returns (B2bCommandResponse);
+}
+
+// ── Common response ──
+
+message B2bCommandResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ── EnableApiAccess ──
+
+message EnableApiAccessRequest {
+  int64 user_id = 1;        // pg_merchant's user.id from tms-user
+  string merchant_id = 2;   // pg_merchant's MID (e.g. "MID-XXXXXXXX")
+  string company_name = 3;  // business name
+  string business_email = 4;
+}
+
+message EnableApiAccessResponse {
+  bool success = 1;
+  string message = 2;
+  int64 account_id = 3;     // B2bAccountEntity.id
+  ApiKeyCreated api_key = 4; // first sandbox key
+}
+
+// ── GetApiKeys ──
+
+message GetApiKeysRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+}
+
+message GetApiKeysResponse {
+  bool success = 1;
+  string message = 2;
+  repeated ApiKeyInfo keys = 3;
+}
+
+message ApiKeyInfo {
+  string id = 1;            // ULID
+  string public_id = 2;     // pk_test_* or pk_live_*
+  string environment = 3;   // sandbox | live
+  string status = 4;        // active | revoked
+  string scopes = 5;
+  string plan = 6;
+  string created_at = 7;
+  string last_used_at = 8;
+}
+
+// ── CreateApiKey ──
+
+message CreateApiKeyRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string environment = 2;   // sandbox | live
+}
+
+message CreateApiKeyResponse {
+  bool success = 1;
+  string message = 2;
+  ApiKeyCreated api_key = 3;
+}
+
+message ApiKeyCreated {
+  string id = 1;            // ULID
+  string public_id = 2;     // pk_test_* or pk_live_*
+  string secret = 3;        // sk_test_* or sk_live_* — shown once!
+  string environment = 4;
+  string scopes = 5;
+  string plan = 6;
+}
+
+// ── RotateApiKey ──
+
+message RotateApiKeyRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string key_id = 2;        // ULID of the key to rotate
+}
+
+// ── RevokeApiKey ──
+
+message RevokeApiKeyRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string key_id = 2;        // ULID of the key to revoke
+}
