@@ -24,6 +24,7 @@ public class GrpcProperties {
         private ServiceEndpoint notification = new ServiceEndpoint();
         private ServiceEndpoint config = new ServiceEndpoint();
         private ServiceEndpoint b2b = new ServiceEndpoint();
+        private ServiceEndpoint dispute = new ServiceEndpoint();
     }
 
     @Data
@@ -80,5 +81,13 @@ public class GrpcProperties {
 
     public int getB2bServicePort() {
         return services.getB2b().getPort();
+    }
+
+    public String getDisputeServiceHost() {
+        return services.getDispute().getHost();
+    }
+
+    public int getDisputeServicePort() {
+        return services.getDispute().getPort();
     }
 }
