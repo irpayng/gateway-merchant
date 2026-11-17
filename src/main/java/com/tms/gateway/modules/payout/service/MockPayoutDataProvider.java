@@ -27,10 +27,8 @@ public class MockPayoutDataProvider implements PayoutDataProvider {
     @Override
     public PayoutRecord get(Long userId, String payoutId) {
         return PAYOUTS.stream()
-                .filter(payout -> payout.payoutId().equals(payoutId)
-                        || payout.paymentReference().equals(payoutId))
-                .findFirst()
-                .orElseThrow(() -> new AppException("Payout not found: " + payoutId, HttpStatus.NOT_FOUND));
+                .filter(payout -> payout.payoutId().equals(payoutId) || payout.paymentReference().equals(payoutId))
+                .findFirst().orElseThrow(() -> new AppException("Payout not found: " + payoutId, HttpStatus.NOT_FOUND));
     }
 
     private static List<PayoutRecord> createPayouts() {

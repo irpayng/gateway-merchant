@@ -66,9 +66,9 @@ public class PayoutHistoryService {
             throw new IllegalArgumentException("payoutId must not be blank");
         }
         PayoutRecord payout = payoutDataProvider.get(userId, payoutId);
-        return new PayoutDetailDto(payout.payoutId(), payout.payoutValue(), payout.currencyCode(),
-                payout.status(), statusDisplay(payout.status()), payout.paymentReference(), payout.totalValue(),
-                payout.payoutValue(), payout.dateTimeSettled(),
+        return new PayoutDetailDto(payout.payoutId(), payout.payoutValue(), payout.currencyCode(), payout.status(),
+                statusDisplay(payout.status()), payout.paymentReference(), payout.totalValue(), payout.payoutValue(),
+                payout.dateTimeSettled(),
                 new PayoutDetailDto.ReceivingBank(payout.bankName(), payout.accountName(), payout.accountNumber()));
     }
 

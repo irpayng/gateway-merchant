@@ -61,9 +61,8 @@ class PayoutControllerTest {
         when(historyService.list(42L, "access", "completed", from, to, 1, 5))
                 .thenReturn(PagedResponse.from(List.of(item), 1, 1, 5, "/payouts"));
 
-        mvc.perform(get("/payouts").param("search", "access").param("status", "completed")
-                .param("start_date", from).param("end_date", to))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray())
+        mvc.perform(get("/payouts").param("search", "access").param("status", "completed").param("start_date", from)
+                .param("end_date", to)).andExpect(status().isOk()).andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].payment_reference").value("reference-001"))
                 .andExpect(jsonPath("$.data[0].total_value").value(15000))
                 .andExpect(jsonPath("$.data[0].receiving_bank").value("Access Bank"))
@@ -75,11 +74,10 @@ class PayoutControllerTest {
 
     @Test
     void detailReturnsPayoutEnvelope() throws Exception {
-        when(historyService.getDetail(42L, "payout-001")).thenReturn(
-                new PayoutDetailDto("payout-001", new BigDecimal("15000"), "NGN", "completed", "Completed",
-                        "reference-001", new BigDecimal("15000"), new BigDecimal("15000"),
-                        Instant.parse("2025-03-15T07:20:00Z"),
-                        new PayoutDetailDto.ReceivingBank("Access Bank", "John Doe", "0029299292")));
+        when(historyService.getDetail(42L, "payout-001")).thenReturn(new PayoutDetailDto("payout-001",
+                new BigDecimal("15000"), "NGN", "completed", "Completed", "reference-001", new BigDecimal("15000"),
+                new BigDecimal("15000"), Instant.parse("2025-03-15T07:20:00Z"),
+                new PayoutDetailDto.ReceivingBank("Access Bank", "John Doe", "0029299292")));
 
         mvc.perform(get("/payouts/payout-001")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.payment_reference").value("reference-001"))
@@ -92,8 +90,7 @@ class PayoutControllerTest {
         when(historyService.exportCsv(42L, null, "completed", null, null))
                 .thenReturn("\"Payment Reference\",\"Total Value\"\r\n");
 
-        mvc.perform(get("/payouts/export").param("status", "completed"))
-                .andExpect(status().isOk())
+        mvc.perform(get("/payouts/export").param("status", "completed")).andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"payouts.csv\""))
                 .andExpect(content().contentType("text/csv;charset=UTF-8"))
                 .andExpect(content().string("\"Payment Reference\",\"Total Value\"\r\n"));

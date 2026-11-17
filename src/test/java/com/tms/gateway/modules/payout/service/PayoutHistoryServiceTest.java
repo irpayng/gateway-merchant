@@ -34,8 +34,8 @@ class PayoutHistoryServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void filtersByStatusSearchAndSalesDate() {
-        Map<String, Object> response = service.list(42L, "309022002909209006", "PENDING", "14/03/2025", "14/03/2025",
-                1, 5);
+        Map<String, Object> response = service.list(42L, "309022002909209006", "PENDING", "14/03/2025", "14/03/2025", 1,
+                5);
         List<PayoutListItemDto> data = (List<PayoutListItemDto>) response.get("data");
         Map<String, Object> meta = (Map<String, Object>) response.get("meta");
 
@@ -55,8 +55,7 @@ class PayoutHistoryServiceTest {
         assertEquals(50L, meta.get("total"));
         assertNull(meta.get("from"));
         assertNull(meta.get("to"));
-        assertThrows(IllegalArgumentException.class,
-                () -> service.list(42L, null, null, "31/02/2025", null, 1, 5));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, "31/02/2025", null, 1, 5));
         assertThrows(IllegalArgumentException.class,
                 () -> service.list(42L, null, null, "2025-03-16", "2025-03-14", 1, 5));
         assertThrows(IllegalArgumentException.class,
@@ -98,10 +97,8 @@ class PayoutHistoryServiceTest {
 
     @Test
     void rejectsUnsupportedFiltersAndReturnsNotFoundForUnknownPayout() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.list(42L, null, "processed", null, null, 1, 5));
-        assertThrows(IllegalArgumentException.class,
-                () -> service.list(42L, null, null, null, null, 0, 5));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, "processed", null, null, 1, 5));
+        assertThrows(IllegalArgumentException.class, () -> service.list(42L, null, null, null, null, 0, 5));
         assertThrows(AppException.class, () -> service.getDetail(42L, "unknown"));
     }
 }

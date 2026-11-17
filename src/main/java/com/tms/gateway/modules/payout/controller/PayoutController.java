@@ -29,7 +29,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Payout history and bank account verification endpoints for the merchant dashboard.
+ * Payout history and bank account verification endpoints for the merchant
+ * dashboard.
  */
 @RestController
 @RequestMapping("/payouts")
@@ -50,8 +51,8 @@ public class PayoutController {
             @Parameter(description = "Inclusive sales date (yyyy-MM-dd, dd/MM/yyyy, or ISO-8601 date-time)") @RequestParam(name = "end_date", required = false) String endDate,
             @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "5") int size) {
-        return ResponseEntity.ok(payoutHistoryService.list(userDetails.getUserId(), search, status, startDate, endDate,
-                page, size));
+        return ResponseEntity
+                .ok(payoutHistoryService.list(userDetails.getUserId(), search, status, startDate, endDate, page, size));
     }
 
     @GetMapping("/export")
@@ -71,7 +72,8 @@ public class PayoutController {
     public ResponseEntity<ApiResponse<PayoutDetailDto>> getDetail(
             @AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
             @Parameter(description = "Payout identifier") @PathVariable String payoutId) {
-        return ResponseEntity.ok(ApiResponse.success(payoutHistoryService.getDetail(userDetails.getUserId(), payoutId)));
+        return ResponseEntity
+                .ok(ApiResponse.success(payoutHistoryService.getDetail(userDetails.getUserId(), payoutId)));
     }
 
     /**
