@@ -23,6 +23,10 @@ class OpenApiConfigTest {
                 .addPathItem("/payouts/banks", new PathItem().get(new Operation()))
                 .addPathItem("/transactions", new PathItem().get(new Operation()))
                 .addPathItem("/customers", new PathItem().get(new Operation()))
+                .addPathItem("/refunds", new PathItem().get(new Operation()))
+                .addPathItem("/disputes", new PathItem().get(new Operation()))
+                .addPathItem("/api-keys", new PathItem().get(new Operation()))
+                .addPathItem("/unexpected-route", new PathItem().get(new Operation()))
                 .addPathItem("/health", new PathItem().get(new Operation())));
 
         config.gatewayOperations().customise(api);
@@ -31,6 +35,10 @@ class OpenApiConfigTest {
         var payouts = api.getPaths().get("/payouts/banks").getGet();
         var transactions = api.getPaths().get("/transactions").getGet();
         var customers = api.getPaths().get("/customers").getGet();
+        var refunds = api.getPaths().get("/refunds").getGet();
+        var disputes = api.getPaths().get("/disputes").getGet();
+        var apiKeys = api.getPaths().get("/api-keys").getGet();
+        var unexpected = api.getPaths().get("/unexpected-route").getGet();
         var health = api.getPaths().get("/health").getGet();
         assertEquals("bearer", api.getComponents().getSecuritySchemes().get("bearerAuth").getScheme());
         assertTrue(api.getSecurity().getFirst().containsKey("bearerAuth"));
@@ -41,6 +49,10 @@ class OpenApiConfigTest {
         assertEquals(List.of("Payouts"), payouts.getTags());
         assertEquals(List.of("Transactions"), transactions.getTags());
         assertEquals(List.of("Customers"), customers.getTags());
+        assertEquals(List.of("Refunds"), refunds.getTags());
+        assertEquals(List.of("Disputes"), disputes.getTags());
+        assertEquals(List.of("API Keys"), apiKeys.getTags());
+        assertEquals(List.of("Other"), unexpected.getTags());
         assertEquals(List.of("Health"), health.getTags());
         assertTrue(save.getParameters().getFirst().getDescription().contains("same key"));
         assertTrue(save.getParameters().get(1).getDescription().contains("Latest application version"));

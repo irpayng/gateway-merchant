@@ -67,7 +67,15 @@ public class OpenApiConfig {
                                                                             ? "Customers"
                                                                             : path.startsWith("/refunds")
                                                                                     ? "Refunds"
-                                                                                    : "Health";
+                                                                                    : path.startsWith("/disputes")
+                                                                                            ? "Disputes"
+                                                                                            : path.startsWith(
+                                                                                                    "/api-keys")
+                                                                                                            ? "API Keys"
+                                                                                                            : path.equals(
+                                                                                                                    "/health")
+                                                                                                                            ? "Health"
+                                                                                                                            : "Other";
             operation.setTags(List.of(tag));
             if (summaries.containsKey(path)) {
                 operation.setSummary(summaries.get(path));
