@@ -1,26 +1,35 @@
 package com.tms.gateway.modules.payout.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
+import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.modules.grpc.service.ConfigGrpcClient;
 import com.tms.gateway.modules.payout.dto.BankResponse;
 import com.tms.gateway.modules.payout.dto.NameEnquiryRequest;
 import com.tms.gateway.modules.payout.dto.NameEnquiryResponse;
+import com.tms.gateway.modules.payout.dto.PayoutDetailDto;
+import com.tms.gateway.modules.payout.service.PayoutHistoryService;
 import com.tms.gateway.modules.payout.service.PayoutService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Payout endpoints for merchant dashboard. Allows merchants to verify bank
- * accounts before initiating payouts to customers.
+ * Payout history and bank account verification endpoints for the merchant dashboard.
  */
 @RestController
 @RequestMapping("/payouts")
@@ -29,7 +38,41 @@ import org.springframework.web.bind.annotation.RestController;
 public class PayoutController {
 
     private final PayoutService payoutService;
+    private final PayoutHistoryService payoutHistoryService;
     private final ConfigGrpcClient configGrpcClient;
+
+    @GetMapping
+    @Operation(summary = "List payouts", description = "Search and filter the authenticated merchant's payouts")
+    public ResponseEntity<Map<String, Object>> list(@AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
+            @Parameter(description = "Search payment reference, bank, or account") @RequestParam(required = false) String search,
+            @Parameter(description = "Payout status: completed, pending, or failed") @RequestParam(required = false) String status,
+            @Parameter(description = "Inclusive sales date (yyyy-MM-dd, dd/MM/yyyy, or ISO-8601 date-time)") @RequestParam(name = "start_date", required = false) String startDate,
+            @Parameter(description = "Inclusive sales date (yyyy-MM-dd, dd/MM/yyyy, or ISO-8601 date-time)") @RequestParam(name = "end_date", required = false) String endDate,
+            @Parameter(description = "Page number (1-indexed)") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "5") int size) {
+        return ResponseEntity.ok(payoutHistoryService.list(userDetails.getUserId(), search, status, startDate, endDate,
+                page, size));
+    }
+
+    @GetMapping("/export")
+    @Operation(summary = "Export payouts", description = "Download all payouts matching the supplied filters as CSV")
+    public ResponseEntity<String> export(@AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
+            @Parameter(description = "Search payment reference, bank, or account") @RequestParam(required = false) String search,
+            @Parameter(description = "Payout status: completed, pending, or failed") @RequestParam(required = false) String status,
+            @Parameter(description = "Inclusive sales date (yyyy-MM-dd, dd/MM/yyyy, or ISO-8601 date-time)") @RequestParam(name = "start_date", required = false) String startDate,
+            @Parameter(description = "Inclusive sales date (yyyy-MM-dd, dd/MM/yyyy, or ISO-8601 date-time)") @RequestParam(name = "end_date", required = false) String endDate) {
+        String csv = payoutHistoryService.exportCsv(userDetails.getUserId(), search, status, startDate, endDate);
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"payouts.csv\"").body(csv);
+    }
+
+    @GetMapping("/{payoutId}")
+    @Operation(summary = "Get payout details", description = "Get a payout's details for the authenticated merchant")
+    public ResponseEntity<ApiResponse<PayoutDetailDto>> getDetail(
+            @AuthenticationPrincipal GatewayMerchantUserDetails userDetails,
+            @Parameter(description = "Payout identifier") @PathVariable String payoutId) {
+        return ResponseEntity.ok(ApiResponse.success(payoutHistoryService.getDetail(userDetails.getUserId(), payoutId)));
+    }
 
     /**
      * Get list of all supported banks for payouts.

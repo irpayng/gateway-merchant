@@ -39,6 +39,9 @@ public class PagedResponse {
         int currentPage = page.getNumber() + 1; // Convert 0-indexed to 1-indexed
         int lastPage = Math.max(page.getTotalPages(), 1);
         long total = page.getTotalElements();
+        long firstIndex = (long) page.getNumber() * page.getSize() + 1;
+        Long from = total > 0 && firstIndex <= total ? firstIndex : null;
+        Long to = from == null ? null : Math.min((long) currentPage * page.getSize(), total);
 
         response.put("data", page.getContent());
 
@@ -53,12 +56,12 @@ public class PagedResponse {
         // Meta
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("current_page", currentPage);
-        meta.put("from", total > 0 ? page.getNumber() * page.getSize() + 1 : null);
+        meta.put("from", from);
         meta.put("last_page", lastPage);
         meta.put("links", buildMetaLinks(currentPage, lastPage, path));
         meta.put("path", path);
         meta.put("per_page", page.getSize());
-        meta.put("to", total > 0 ? Math.min((long) currentPage * page.getSize(), total) : null);
+        meta.put("to", to);
         meta.put("total", total);
         response.put("meta", meta);
 
@@ -106,6 +109,9 @@ public class PagedResponse {
         Map<String, Object> response = new LinkedHashMap<>();
 
         int lastPage = Math.max((int) Math.ceil((double) total / perPage), 1);
+        long firstIndex = ((long) currentPage - 1) * perPage + 1;
+        Long from = total > 0 && firstIndex <= total ? firstIndex : null;
+        Long to = from == null ? null : Math.min((long) currentPage * perPage, total);
 
         response.put("data", data);
 
@@ -120,12 +126,12 @@ public class PagedResponse {
         // Meta
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("current_page", currentPage);
-        meta.put("from", total > 0 ? (currentPage - 1) * perPage + 1 : null);
+        meta.put("from", from);
         meta.put("last_page", lastPage);
         meta.put("links", buildMetaLinks(currentPage, lastPage, path));
         meta.put("path", path);
         meta.put("per_page", perPage);
-        meta.put("to", total > 0 ? Math.min((long) currentPage * perPage, total) : null);
+        meta.put("to", to);
         meta.put("total", total);
         response.put("meta", meta);
 
