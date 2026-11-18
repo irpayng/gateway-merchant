@@ -212,13 +212,14 @@ message GetApiKeysResponse {
 message ApiKeyInfo {
   string id = 1;            // ULID
   string public_id = 2;     // pk_test_* or pk_live_*
-  string environment = 3;   // sandbox | live
-  string status = 4;        // active | revoked
-  string scopes = 5;
-  string plan = 6;
-  string created_at = 7;
-  string last_used_at = 8;
-  string ip_whitelist = 9;  // Comma-separated IPs or CIDR blocks
+  string secret = 3;        // sk_test_* or sk_live_* — frontend masks this
+  string environment = 4;   // sandbox | live
+  string status = 5;        // active | revoked
+  string scopes = 6;
+  string plan = 7;
+  string created_at = 8;
+  string last_used_at = 9;
+  string ip_whitelist = 10;  // Comma-separated IPs or CIDR blocks
 }
 
 message CreateApiKeyResponse {
