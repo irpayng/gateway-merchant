@@ -143,12 +143,27 @@ public class DisputeEventConsumer {
             return;
         }
 
+        Long disputeId = data.path("disputeId").asLong(data.path("dispute_id").asLong(0));
+        if (disputeId == 0) {
+            log.warn("Conversation event missing disputeId field, skipping id={}", id);
+            return;
+        }
+
+        // Skip conversations whose parent dispute hasn't been replicated yet.
+        // The FK was dropped (V9) so this is a soft guard: we log and discard
+        // rather than retrying a message that will never succeed without the
+        // parent.
+        if (!disputeRepository.existsById(disputeId)) {
+            log.debug(
+                    "Skipping conversation id={} — parent dispute id={} not in local replica (may belong to a different merchant type)",
+                    id, disputeId);
+            return;
+        }
+
         ConversationEntity conv = conversationRepository.findById(id).orElse(new ConversationEntity());
         conv.setId(id);
 
-        if (data.has("disputeId") || data.has("dispute_id")) {
-            conv.setDisputeId(data.path("disputeId").asLong(data.path("dispute_id").asLong()));
-        }
+        conv.setDisputeId(disputeId);
         if (data.has("userId") || data.has("user_id")) {
             Long userId = data.path("userId").asLong(data.path("user_id").asLong(0));
             conv.setUserId(userId > 0 ? userId : null);

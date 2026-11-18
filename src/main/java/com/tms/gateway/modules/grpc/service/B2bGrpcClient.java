@@ -3,7 +3,6 @@ package com.tms.gateway.modules.grpc.service;
 import com.tms.gateway.core.exception.GrpcException;
 import com.tms.gateway.modules.grpc.b2b.B2bCommandResponse;
 import com.tms.gateway.modules.grpc.b2b.BusinessServiceGrpc;
-import com.tms.gateway.modules.grpc.b2b.CreateApiKeyRequest;
 import com.tms.gateway.modules.grpc.b2b.CreateApiKeyResponse;
 import com.tms.gateway.modules.grpc.b2b.EnableApiAccessRequest;
 import com.tms.gateway.modules.grpc.b2b.EnableApiAccessResponse;
@@ -102,25 +101,6 @@ public class B2bGrpcClient {
     }
 
     /**
-     * Create a new API key for a pg_merchant user.
-     */
-    public CreateApiKeyResponse createApiKey(long userId, String environment) {
-        try {
-            CreateApiKeyResponse response = stub.createApiKey(CreateApiKeyRequest.newBuilder().setUserId(userId)
-                    .setEnvironment(nullToEmpty(environment)).build());
-
-            if (!response.getSuccess()) {
-                throw new GrpcException(SERVICE_NAME, "createApiKey", "FAILED", response.getMessage());
-            }
-            return response;
-        } catch (StatusRuntimeException e) {
-            log.error("gRPC error in createApiKey: {}", e.getStatus());
-            throw new GrpcException(SERVICE_NAME, "createApiKey", e.getStatus().getCode().name(),
-                    "Failed to create API key: " + e.getStatus().getDescription());
-        }
-    }
-
-    /**
      * Rotate an existing API key — mints a replacement with the same scope.
      */
     public CreateApiKeyResponse rotateApiKey(long userId, String keyId) {
@@ -155,6 +135,25 @@ public class B2bGrpcClient {
             log.error("gRPC error in revokeApiKey: {}", e.getStatus());
             throw new GrpcException(SERVICE_NAME, "revokeApiKey", e.getStatus().getCode().name(),
                     "Failed to revoke API key: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Update IP whitelist for an API key.
+     */
+    public void updateIpWhitelist(long userId, String keyId, String ipWhitelist) {
+        try {
+            com.tms.gateway.modules.grpc.b2b.UpdateApiKeyIpWhitelistResponse response = stub.updateApiKeyIpWhitelist(
+                    com.tms.gateway.modules.grpc.b2b.UpdateApiKeyIpWhitelistRequest.newBuilder().setUserId(userId)
+                            .setKeyId(nullToEmpty(keyId)).setIpWhitelist(nullToEmpty(ipWhitelist)).build());
+
+            if (!response.getSuccess()) {
+                throw new GrpcException(SERVICE_NAME, "updateIpWhitelist", "FAILED", response.getMessage());
+            }
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error in updateIpWhitelist: {}", e.getStatus());
+            throw new GrpcException(SERVICE_NAME, "updateIpWhitelist", e.getStatus().getCode().name(),
+                    "Failed to update IP whitelist: " + e.getStatus().getDescription());
         }
     }
 

@@ -3,7 +3,6 @@ package com.tms.gateway.modules.apikeys.service;
 import com.tms.gateway.modules.apikeys.dto.ApiKeyListResponse;
 import com.tms.gateway.modules.apikeys.dto.ApiKeyResponse;
 import com.tms.gateway.modules.apikeys.dto.CreatedApiKeyResponse;
-import com.tms.gateway.modules.apikeys.dto.EnableApiAccessResponse;
 import com.tms.gateway.modules.grpc.b2b.ApiKeyCreated;
 import com.tms.gateway.modules.grpc.b2b.ApiKeyInfo;
 import com.tms.gateway.modules.grpc.b2b.B2bCommandResponse;
@@ -31,23 +30,6 @@ public class ApiKeyService {
     }
 
     /**
-     * Enable API access for a pg_merchant user. Creates a B2bAccountEntity linked
-     * to the existing user and issues the first sandbox key.
-     */
-    public EnableApiAccessResponse enableApiAccess(long userId, String merchantId, String businessName, String email) {
-        log.info("Enabling API access for userId={}, merchantId={}", userId, merchantId);
-
-        var response = b2bGrpcClient.enableApiAccess(userId, merchantId, businessName, email);
-
-        CreatedApiKeyResponse apiKey = null;
-        if (response.hasApiKey()) {
-            apiKey = toCreatedApiKeyResponse(response.getApiKey());
-        }
-
-        return new EnableApiAccessResponse(response.getSuccess(), response.getAccountId(), apiKey);
-    }
-
-    /**
      * Get all API keys for a pg_merchant user.
      */
     public ApiKeyListResponse getApiKeys(long userId) {
@@ -58,17 +40,6 @@ public class ApiKeyService {
         List<ApiKeyResponse> keys = response.getKeysList().stream().map(this::toApiKeyResponse).toList();
 
         return new ApiKeyListResponse(keys);
-    }
-
-    /**
-     * Create a new API key for a pg_merchant user.
-     */
-    public CreatedApiKeyResponse createApiKey(long userId, String environment) {
-        log.info("Creating {} API key for userId={}", environment, userId);
-
-        CreateApiKeyResponse response = b2bGrpcClient.createApiKey(userId, environment);
-
-        return toCreatedApiKeyResponse(response.getApiKey());
     }
 
     /**
@@ -93,12 +64,24 @@ public class ApiKeyService {
         log.debug("Revoke result: success={}, message={}", response.getSuccess(), response.getMessage());
     }
 
+    /**
+     * Update IP whitelist for an API key.
+     */
+    public void updateIpWhitelist(long userId, String keyId, String ipWhitelist) {
+        log.info("Updating IP whitelist for keyId={}, userId={}", keyId, userId);
+
+        b2bGrpcClient.updateIpWhitelist(userId, keyId, ipWhitelist);
+
+        log.debug("IP whitelist updated for keyId={}", keyId);
+    }
+
     // ── Mapping helpers ──
 
     private ApiKeyResponse toApiKeyResponse(ApiKeyInfo info) {
         return new ApiKeyResponse(emptyToNull(info.getId()), emptyToNull(info.getPublicId()),
                 emptyToNull(info.getEnvironment()), emptyToNull(info.getStatus()), emptyToNull(info.getScopes()),
-                emptyToNull(info.getPlan()), emptyToNull(info.getCreatedAt()), emptyToNull(info.getLastUsedAt()));
+                emptyToNull(info.getPlan()), emptyToNull(info.getCreatedAt()), emptyToNull(info.getLastUsedAt()),
+                emptyToNull(info.getIpWhitelist()));
     }
 
     private CreatedApiKeyResponse toCreatedApiKeyResponse(ApiKeyCreated created) {

@@ -1,16 +1,27 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "com.tms.gateway.modules.grpc.b2b";
+option java_package = "com.b2b.grpc";
 option java_outer_classname = "B2bProto";
 
 package b2b;
 
-/**
- * B2B service client for gateway-merchant.
- * Subset of tms-b2b's BusinessService for pg_merchant API key management.
- */
 service BusinessService {
+  // Called by the gateway on every API-key request. Fails closed.
+  rpc ValidateApiKey (ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
+
+  // Admin commands (called by tms-report-java).
+  rpc ApproveGoLive (ApproveGoLiveRequest) returns (B2bCommandResponse);
+  rpc RejectGoLive (RejectGoLiveRequest) returns (B2bCommandResponse);
+  rpc SuspendB2b (SuspendB2bRequest) returns (B2bCommandResponse);
+  rpc UnsuspendB2b (SuspendB2bRequest) returns (B2bCommandResponse);
+
+  // Admin read queries (called by tms-report-java to render the review UI).
+  rpc ListGoLiveApplications (ListGoLiveApplicationsRequest) returns (ListGoLiveApplicationsResponse);
+  rpc GetGoLiveApplication (GetGoLiveApplicationRequest) returns (GoLiveApplicationDetail);
+
+  // ── pg_merchant API key management (called by gateway-merchant) ──
+
   // Enable API access for a pg_merchant. Creates a B2bAccountEntity linked to
   // the existing pg_merchant user and issues the first sandbox key.
   rpc EnableApiAccess (EnableApiAccessRequest) returns (EnableApiAccessResponse);
@@ -18,24 +29,144 @@ service BusinessService {
   // List all API keys for a pg_merchant user.
   rpc GetApiKeys (GetApiKeysRequest) returns (GetApiKeysResponse);
 
-  // Create a new API key for a pg_merchant user.
-  rpc CreateApiKey (CreateApiKeyRequest) returns (CreateApiKeyResponse);
-
   // Rotate an existing API key — mints a replacement with the same scope.
   rpc RotateApiKey (RotateApiKeyRequest) returns (CreateApiKeyResponse);
 
   // Revoke an API key.
   rpc RevokeApiKey (RevokeApiKeyRequest) returns (B2bCommandResponse);
+
+  // Update IP whitelist for an API key.
+  rpc UpdateApiKeyIpWhitelist (UpdateApiKeyIpWhitelistRequest) returns (UpdateApiKeyIpWhitelistResponse);
 }
 
-// ── Common response ──
+message ValidateApiKeyRequest {
+  // The public id (pk_*) or the full secret (sk_*) as presented by the caller.
+  // The service derives the lookup key from whichever is provided.
+  string public_id = 1;
+  string secret = 2;        // bearer mode (sent over TLS)
+  string signature = 3;     // HMAC mode (required for live)
+  string method = 4;
+  string path = 5;
+  string body_sha256 = 6;
+  string timestamp = 7;     // RFC3339; enforced against the replay window for HMAC
+}
+
+message RateLimit {
+  int32 requests_per_second = 1;
+  int32 requests_per_minute = 2;
+  int64 daily_quota = 3;
+}
+
+message ValidateApiKeyResponse {
+  bool valid = 1;
+  // invalid | revoked | suspended | signature_mismatch | expired | stale_timestamp | not_live | ip_not_whitelisted
+  string reason = 2;
+  int64 backing_user_id = 3;
+  string environment = 4;   // sandbox | live
+  int64 b2b_id = 5;
+  repeated string scopes = 6;
+  string plan = 7;
+  RateLimit rate_limit = 8;
+  // Exact biller codes the account enabled (e.g. "mtn","ikedc"). Empty = no
+  // per-biller restriction. The gateway forwards these so the transaction
+  // service can enforce the specific biller within an allowed category.
+  repeated string billers = 9;
+  // The account's company name. The gateway forwards it so a hosted checkout
+  // shows the payer who they are paying.
+  string company_name = 10;
+  // Comma-separated list of IP addresses or CIDR blocks. Empty = no restriction.
+  string ip_whitelist = 11;
+}
+
+message ApproveGoLiveRequest {
+  int64 b2b_id = 1;
+  int64 kyc_application_id = 2;
+  string reviewer = 3;
+}
+
+message RejectGoLiveRequest {
+  int64 b2b_id = 1;
+  string reason = 2;
+  string reviewer = 3;
+}
+
+message SuspendB2bRequest {
+  int64 b2b_id = 1;
+  string reason = 2;
+  string actor = 3;
+}
 
 message B2bCommandResponse {
   bool success = 1;
   string message = 2;
 }
 
-// ── EnableApiAccess ──
+message ListGoLiveApplicationsRequest {
+  string status = 1;   // optional filter: under_review | approved | rejected | pending
+  string search = 2;   // optional: matches company name / legal name / rc / email
+  int32 page = 3;      // 1-based
+  int32 limit = 4;
+}
+
+// Summary row for the admin list view.
+message B2bGoLiveSummary {
+  int64 application_id = 1;
+  int64 b2b_id = 2;
+  string company_name = 3;
+  string business_email = 4;
+  string business_legal_name = 5;
+  string rc_number = 6;
+  string business_type = 7;
+  string status = 8;          // application status
+  string account_status = 9;  // b2b account status (pending|sandbox|live|suspended)
+  string submitted_at = 10;
+  string plan = 11;
+}
+
+message ListGoLiveApplicationsResponse {
+  repeated B2bGoLiveSummary items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+  int64 pending_count = 5;
+  int64 approved_count = 6;
+  int64 rejected_count = 7;
+}
+
+message GetGoLiveApplicationRequest {
+  int64 application_id = 1;
+}
+
+// Full detail incl. KYB document storage keys (the caller presigns them).
+message GoLiveApplicationDetail {
+  int64 application_id = 1;
+  int64 b2b_id = 2;
+  string company_name = 3;
+  string business_email = 4;
+  string business_legal_name = 5;
+  string business_type = 6;
+  string rc_number = 7;
+  string contact_name = 8;
+  string contact_phone = 9;
+  string status = 10;
+  string account_status = 11;
+  string plan = 12;
+  string reason = 13;
+  string reviewed_by = 14;
+  string submitted_at = 15;
+  string decided_at = 16;
+  int64 sandbox_user_id = 17;
+  int64 live_user_id = 18;
+  // Document storage keys (S3 keys in prod). Empty when not provided.
+  string cac_url = 19;
+  string directors_id_url = 20;
+  string proof_of_address_url = 21;
+  string form_co2_url = 22;
+  string form_co7_url = 23;
+  bool found = 24;
+}
+
+// ── pg_merchant API key management messages ──
 
 message EnableApiAccessRequest {
   int64 user_id = 1;        // pg_merchant's user.id from tms-user
@@ -50,8 +181,6 @@ message EnableApiAccessResponse {
   int64 account_id = 3;     // B2bAccountEntity.id
   ApiKeyCreated api_key = 4; // first sandbox key
 }
-
-// ── GetApiKeys ──
 
 message GetApiKeysRequest {
   int64 user_id = 1;        // pg_merchant's user.id
@@ -72,13 +201,7 @@ message ApiKeyInfo {
   string plan = 6;
   string created_at = 7;
   string last_used_at = 8;
-}
-
-// ── CreateApiKey ──
-
-message CreateApiKeyRequest {
-  int64 user_id = 1;        // pg_merchant's user.id
-  string environment = 2;   // sandbox | live
+  string ip_whitelist = 9;  // Comma-separated IPs or CIDR blocks
 }
 
 message CreateApiKeyResponse {
@@ -96,16 +219,23 @@ message ApiKeyCreated {
   string plan = 6;
 }
 
-// ── RotateApiKey ──
-
 message RotateApiKeyRequest {
   int64 user_id = 1;        // pg_merchant's user.id
   string key_id = 2;        // ULID of the key to rotate
 }
 
-// ── RevokeApiKey ──
-
 message RevokeApiKeyRequest {
   int64 user_id = 1;        // pg_merchant's user.id
   string key_id = 2;        // ULID of the key to revoke
+}
+
+message UpdateApiKeyIpWhitelistRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string key_id = 2;        // ULID of the key to update
+  string ip_whitelist = 3;  // Comma-separated IPs or CIDR blocks (empty = no restriction)
+}
+
+message UpdateApiKeyIpWhitelistResponse {
+  bool success = 1;
+  string message = 2;
 }
