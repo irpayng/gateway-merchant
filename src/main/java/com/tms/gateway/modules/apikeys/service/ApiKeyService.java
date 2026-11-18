@@ -1,13 +1,13 @@
 package com.tms.gateway.modules.apikeys.service;
 
+import com.b2b.grpc.ApiKeyCreated;
+import com.b2b.grpc.ApiKeyInfo;
+import com.b2b.grpc.B2bCommandResponse;
+import com.b2b.grpc.CreateApiKeyResponse;
+import com.b2b.grpc.GetApiKeysResponse;
 import com.tms.gateway.modules.apikeys.dto.ApiKeyListResponse;
 import com.tms.gateway.modules.apikeys.dto.ApiKeyResponse;
 import com.tms.gateway.modules.apikeys.dto.CreatedApiKeyResponse;
-import com.tms.gateway.modules.grpc.b2b.ApiKeyCreated;
-import com.tms.gateway.modules.grpc.b2b.ApiKeyInfo;
-import com.tms.gateway.modules.grpc.b2b.B2bCommandResponse;
-import com.tms.gateway.modules.grpc.b2b.CreateApiKeyResponse;
-import com.tms.gateway.modules.grpc.b2b.GetApiKeysResponse;
 import com.tms.gateway.modules.grpc.service.B2bGrpcClient;
 import java.util.List;
 import org.slf4j.Logger;

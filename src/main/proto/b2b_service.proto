@@ -37,6 +37,23 @@ service BusinessService {
 
   // Update IP whitelist for an API key.
   rpc UpdateApiKeyIpWhitelist (UpdateApiKeyIpWhitelistRequest) returns (UpdateApiKeyIpWhitelistResponse);
+
+  // ── Webhook management (called by gateway-merchant) ──
+
+  // List webhooks for a pg_merchant user.
+  rpc GetWebhooks (GetWebhooksRequest) returns (GetWebhooksResponse);
+
+  // Create a new webhook endpoint.
+  rpc CreateWebhook (CreateWebhookRequest) returns (CreateWebhookResponse);
+
+  // Update an existing webhook.
+  rpc UpdateWebhook (UpdateWebhookRequest) returns (UpdateWebhookResponse);
+
+  // Delete a webhook.
+  rpc DeleteWebhook (DeleteWebhookRequest) returns (DeleteWebhookResponse);
+
+  // Test a webhook by sending a test event.
+  rpc TestWebhook (TestWebhookRequest) returns (TestWebhookResponse);
 }
 
 message ValidateApiKeyRequest {
@@ -236,6 +253,76 @@ message UpdateApiKeyIpWhitelistRequest {
 }
 
 message UpdateApiKeyIpWhitelistResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ── Webhook management messages ──
+
+message GetWebhooksRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+}
+
+message GetWebhooksResponse {
+  bool success = 1;
+  string message = 2;
+  repeated WebhookInfo webhooks = 3;
+}
+
+message WebhookInfo {
+  string id = 1;            // Webhook entity ID
+  string environment = 2;   // sandbox | live
+  string url = 3;           // Webhook endpoint URL
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+message CreateWebhookRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string environment = 2;   // sandbox | live
+  string url = 3;           // Webhook endpoint URL
+}
+
+message CreateWebhookResponse {
+  bool success = 1;
+  string message = 2;
+  WebhookCreated webhook = 3;
+}
+
+message WebhookCreated {
+  string id = 1;            // Webhook entity ID
+  string environment = 2;
+  string url = 3;
+  string secret = 4;        // HMAC signing secret — shown once!
+}
+
+message UpdateWebhookRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string webhook_id = 2;    // Webhook entity ID
+  string url = 3;           // New webhook URL
+}
+
+message UpdateWebhookResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DeleteWebhookRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string webhook_id = 2;    // Webhook entity ID
+}
+
+message DeleteWebhookResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message TestWebhookRequest {
+  int64 user_id = 1;        // pg_merchant's user.id
+  string webhook_id = 2;    // Webhook entity ID
+}
+
+message TestWebhookResponse {
   bool success = 1;
   string message = 2;
 }

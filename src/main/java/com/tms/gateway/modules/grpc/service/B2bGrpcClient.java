@@ -1,15 +1,27 @@
 package com.tms.gateway.modules.grpc.service;
 
+import com.b2b.grpc.B2bCommandResponse;
+import com.b2b.grpc.BusinessServiceGrpc;
+import com.b2b.grpc.CreateApiKeyResponse;
+import com.b2b.grpc.CreateWebhookRequest;
+import com.b2b.grpc.CreateWebhookResponse;
+import com.b2b.grpc.DeleteWebhookRequest;
+import com.b2b.grpc.DeleteWebhookResponse;
+import com.b2b.grpc.EnableApiAccessRequest;
+import com.b2b.grpc.EnableApiAccessResponse;
+import com.b2b.grpc.GetApiKeysRequest;
+import com.b2b.grpc.GetApiKeysResponse;
+import com.b2b.grpc.GetWebhooksRequest;
+import com.b2b.grpc.GetWebhooksResponse;
+import com.b2b.grpc.RevokeApiKeyRequest;
+import com.b2b.grpc.RotateApiKeyRequest;
+import com.b2b.grpc.TestWebhookRequest;
+import com.b2b.grpc.TestWebhookResponse;
+import com.b2b.grpc.UpdateApiKeyIpWhitelistRequest;
+import com.b2b.grpc.UpdateApiKeyIpWhitelistResponse;
+import com.b2b.grpc.UpdateWebhookRequest;
+import com.b2b.grpc.UpdateWebhookResponse;
 import com.tms.gateway.core.exception.GrpcException;
-import com.tms.gateway.modules.grpc.b2b.B2bCommandResponse;
-import com.tms.gateway.modules.grpc.b2b.BusinessServiceGrpc;
-import com.tms.gateway.modules.grpc.b2b.CreateApiKeyResponse;
-import com.tms.gateway.modules.grpc.b2b.EnableApiAccessRequest;
-import com.tms.gateway.modules.grpc.b2b.EnableApiAccessResponse;
-import com.tms.gateway.modules.grpc.b2b.GetApiKeysRequest;
-import com.tms.gateway.modules.grpc.b2b.GetApiKeysResponse;
-import com.tms.gateway.modules.grpc.b2b.RevokeApiKeyRequest;
-import com.tms.gateway.modules.grpc.b2b.RotateApiKeyRequest;
 import com.tms.gateway.modules.grpc.config.GrpcProperties;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -143,8 +155,8 @@ public class B2bGrpcClient {
      */
     public void updateIpWhitelist(long userId, String keyId, String ipWhitelist) {
         try {
-            com.tms.gateway.modules.grpc.b2b.UpdateApiKeyIpWhitelistResponse response = stub.updateApiKeyIpWhitelist(
-                    com.tms.gateway.modules.grpc.b2b.UpdateApiKeyIpWhitelistRequest.newBuilder().setUserId(userId)
+            UpdateApiKeyIpWhitelistResponse response = stub
+                    .updateApiKeyIpWhitelist(UpdateApiKeyIpWhitelistRequest.newBuilder().setUserId(userId)
                             .setKeyId(nullToEmpty(keyId)).setIpWhitelist(nullToEmpty(ipWhitelist)).build());
 
             if (!response.getSuccess()) {
@@ -154,6 +166,102 @@ public class B2bGrpcClient {
             log.error("gRPC error in updateIpWhitelist: {}", e.getStatus());
             throw new GrpcException(SERVICE_NAME, "updateIpWhitelist", e.getStatus().getCode().name(),
                     "Failed to update IP whitelist: " + e.getStatus().getDescription());
+        }
+    }
+
+    // ── Webhook management ──────────────────────────────────────
+
+    /**
+     * Get all webhooks for a pg_merchant user.
+     */
+    public GetWebhooksResponse getWebhooks(long userId) {
+        try {
+            GetWebhooksResponse response = stub.getWebhooks(GetWebhooksRequest.newBuilder().setUserId(userId).build());
+
+            if (!response.getSuccess()) {
+                throw new GrpcException(SERVICE_NAME, "getWebhooks", "FAILED", response.getMessage());
+            }
+            return response;
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error in getWebhooks: {}", e.getStatus());
+            throw new GrpcException(SERVICE_NAME, "getWebhooks", e.getStatus().getCode().name(),
+                    "Failed to get webhooks: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Create a new webhook endpoint.
+     */
+    public CreateWebhookResponse createWebhook(long userId, String environment, String url) {
+        try {
+            CreateWebhookResponse response = stub.createWebhook(CreateWebhookRequest.newBuilder().setUserId(userId)
+                    .setEnvironment(nullToEmpty(environment)).setUrl(nullToEmpty(url)).build());
+
+            if (!response.getSuccess()) {
+                throw new GrpcException(SERVICE_NAME, "createWebhook", "FAILED", response.getMessage());
+            }
+            return response;
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error in createWebhook: {}", e.getStatus());
+            throw new GrpcException(SERVICE_NAME, "createWebhook", e.getStatus().getCode().name(),
+                    "Failed to create webhook: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Update an existing webhook.
+     */
+    public UpdateWebhookResponse updateWebhook(long userId, String webhookId, String url) {
+        try {
+            UpdateWebhookResponse response = stub.updateWebhook(UpdateWebhookRequest.newBuilder().setUserId(userId)
+                    .setWebhookId(nullToEmpty(webhookId)).setUrl(nullToEmpty(url)).build());
+
+            if (!response.getSuccess()) {
+                throw new GrpcException(SERVICE_NAME, "updateWebhook", "FAILED", response.getMessage());
+            }
+            return response;
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error in updateWebhook: {}", e.getStatus());
+            throw new GrpcException(SERVICE_NAME, "updateWebhook", e.getStatus().getCode().name(),
+                    "Failed to update webhook: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Delete a webhook.
+     */
+    public DeleteWebhookResponse deleteWebhook(long userId, String webhookId) {
+        try {
+            DeleteWebhookResponse response = stub.deleteWebhook(
+                    DeleteWebhookRequest.newBuilder().setUserId(userId).setWebhookId(nullToEmpty(webhookId)).build());
+
+            if (!response.getSuccess()) {
+                throw new GrpcException(SERVICE_NAME, "deleteWebhook", "FAILED", response.getMessage());
+            }
+            return response;
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error in deleteWebhook: {}", e.getStatus());
+            throw new GrpcException(SERVICE_NAME, "deleteWebhook", e.getStatus().getCode().name(),
+                    "Failed to delete webhook: " + e.getStatus().getDescription());
+        }
+    }
+
+    /**
+     * Test a webhook by sending a test event.
+     */
+    public TestWebhookResponse testWebhook(long userId, String webhookId) {
+        try {
+            TestWebhookResponse response = stub.testWebhook(
+                    TestWebhookRequest.newBuilder().setUserId(userId).setWebhookId(nullToEmpty(webhookId)).build());
+
+            if (!response.getSuccess()) {
+                throw new GrpcException(SERVICE_NAME, "testWebhook", "FAILED", response.getMessage());
+            }
+            return response;
+        } catch (StatusRuntimeException e) {
+            log.error("gRPC error in testWebhook: {}", e.getStatus());
+            throw new GrpcException(SERVICE_NAME, "testWebhook", e.getStatus().getCode().name(),
+                    "Failed to test webhook: " + e.getStatus().getDescription());
         }
     }
 
