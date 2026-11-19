@@ -79,9 +79,9 @@ public class ApiKeyService {
 
     private ApiKeyResponse toApiKeyResponse(ApiKeyInfo info) {
         return new ApiKeyResponse(emptyToNull(info.getId()), emptyToNull(info.getPublicId()),
-                emptyToNull(info.getEnvironment()), emptyToNull(info.getStatus()), emptyToNull(info.getScopes()),
-                emptyToNull(info.getPlan()), emptyToNull(info.getCreatedAt()), emptyToNull(info.getLastUsedAt()),
-                emptyToNull(info.getIpWhitelist()));
+                emptyToNull(info.getSecret()), emptyToNull(info.getEnvironment()), emptyToNull(info.getStatus()),
+                emptyToNull(info.getScopes()), emptyToNull(info.getPlan()), emptyToNull(info.getCreatedAt()),
+                emptyToNull(info.getLastUsedAt()), emptyToNull(info.getIpWhitelist()));
     }
 
     private CreatedApiKeyResponse toCreatedApiKeyResponse(ApiKeyCreated created) {
