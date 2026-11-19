@@ -2,9 +2,15 @@ package com.tms.gateway.modules.auth.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.auth.dto.ForgotPasswordRequest;
 import com.tms.gateway.modules.auth.dto.LoginRequest;
 import com.tms.gateway.modules.auth.dto.LoginResponse;
+import com.tms.gateway.modules.auth.dto.RegisterRequest;
+import com.tms.gateway.modules.auth.dto.RegisterResponse;
+import com.tms.gateway.modules.auth.dto.ResendOtpRequest;
+import com.tms.gateway.modules.auth.dto.ResetPasswordRequest;
 import com.tms.gateway.modules.auth.dto.UserData;
+import com.tms.gateway.modules.auth.dto.VerifyEmailRequest;
 import com.tms.gateway.modules.auth.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +43,67 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    /**
+     * Register a new pg_merchant account.
+     *
+     * <p>
+     * Creates a new user with type "pg_merchant" and a unique MID. Sends an email
+     * verification OTP that must be confirmed before login is allowed.
+     */
+    @PostMapping("/register/pg-merchant")
+    public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        RegisterResponse response = authService.register(request);
+        return ResponseEntity.ok(ApiResponse.success(response, response.getMessage()));
+    }
+
+    /**
+     * Verify email address using the OTP sent during registration.
+     *
+     * <p>
+     * Once verified, the merchant can log in to the dashboard.
+     */
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request);
+        return ResponseEntity.ok(ApiResponse.success(null, "Email verified successfully"));
+    }
+
+    /**
+     * Resend the email verification OTP.
+     *
+     * <p>
+     * Throttled to one request per 60 seconds.
+     */
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        authService.resendOtp(request);
+        return ResponseEntity.ok(ApiResponse.success(null, "Verification code sent"));
+    }
+
+    /**
+     * Request a password reset OTP.
+     *
+     * <p>
+     * Sends an OTP to the email address if an account exists.
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(null, "A password reset code has been sent to your email"));
+    }
+
+    /**
+     * Reset password using the OTP from forgot-password.
+     *
+     * <p>
+     * Sets a new password after verifying the OTP.
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getEmail(), request.getToken(), request.getPassword());
+        return ResponseEntity.ok(ApiResponse.success(null, "Your password has been reset successfully"));
     }
 
     /**

@@ -32,7 +32,7 @@ public class PgMerchantComplianceReplicaEntity {
     @Column(name = "source_id", nullable = false, unique = true)
     private Long sourceId;
 
-    @Column(name = "user_id", nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
     @Column(name = "merchant_id", nullable = false, unique = true, length = 50)
@@ -87,4 +87,22 @@ public class PgMerchantComplianceReplicaEntity {
     public boolean isApproved() {
         return "approved".equals(status);
     }
+
+    @Column(name = "version")
+    private long version;
+
+    @Column(name = "registration_number", columnDefinition = "text")
+    private String registrationNumber;
+
+    @Column(name = "tax_identification_number", columnDefinition = "text")
+    private String taxIdentificationNumber;
+
+    @Column(name = "registration_complete")
+    private boolean registrationComplete;
+
+    @Column(name = "corrections_json", columnDefinition = "text")
+    private String correctionsJson;
+
+    @Column(name = "updated_by")
+    private Long updatedBy;
 }

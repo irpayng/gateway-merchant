@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
  * local reads. The source of truth is always tms-user.
  *
  * <p>
- * The id is NOT auto-generated — it matches the user.id from tms-user.
+ * The id is NOT auto-generated â€” it matches the user.id from tms-user.
  */
 @Entity
 @Table(name = "pg_merchant_users")
@@ -31,7 +31,7 @@ public class PgMerchantUserEntity {
     @Id
     private Long id;
 
-    @Column(name = "merchant_id", nullable = false, unique = true, length = 20)
+    @Column(name = "merchant_id", length = 50)
     private String merchantId;
 
     @Column(nullable = false, unique = true)
@@ -42,6 +42,13 @@ public class PgMerchantUserEntity {
 
     @Column(name = "business_name")
     private String businessName;
+
+    /**
+     * Business registration type chosen at signup: "starter" (unregistered) or
+     * "registered" (CAC registered). Used to route the compliance flow.
+     */
+    @Column(name = "business_type", length = 20)
+    private String businessType;
 
     @Column(name = "first_name", length = 100)
     private String firstName;

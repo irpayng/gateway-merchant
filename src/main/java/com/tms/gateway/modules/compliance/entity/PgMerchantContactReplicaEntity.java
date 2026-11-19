@@ -70,4 +70,22 @@ public class PgMerchantContactReplicaEntity {
 
     @Column(name = "synced_at", nullable = false)
     private Instant syncedAt;
+
+    @Column(name = "support_email", columnDefinition = "text")
+    private String supportEmail;
+
+    @Column(name = "dispute_email", columnDefinition = "text")
+    private String disputeEmail;
+
+    @Column(name = "lga", columnDefinition = "text")
+    private String lga;
+
+    @Column(name = "same_as_support_email")
+    private Boolean sameAsSupportEmail;
+
+    @Column(name = "business_address_document_id", columnDefinition = "text")
+    private String businessAddressDocumentId;
+
+    @Column(name = "online_links_json", columnDefinition = "text")
+    private String onlineLinksJson;
 }

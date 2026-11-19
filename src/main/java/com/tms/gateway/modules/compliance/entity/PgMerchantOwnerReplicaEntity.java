@@ -86,4 +86,25 @@ public class PgMerchantOwnerReplicaEntity {
 
     @Column(name = "synced_at", nullable = false)
     private Instant syncedAt;
+
+    @Column(name = "full_name", columnDefinition = "text")
+    private String fullName;
+
+    @Column(name = "nationality", columnDefinition = "text")
+    private String nationality;
+
+    @Column(name = "state", columnDefinition = "text")
+    private String state;
+
+    @Column(name = "lga", columnDefinition = "text")
+    private String lga;
+
+    @Column(name = "same_as_business_address")
+    private Boolean sameAsBusinessAddress;
+
+    @Column(name = "id_document_id", columnDefinition = "text")
+    private String idDocumentId;
+
+    @Column(name = "proof_of_address_document_id", columnDefinition = "text")
+    private String proofOfAddressDocumentId;
 }

@@ -25,6 +25,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.0.3</version>
+        </dependency>
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -63,10 +68,12 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Flyway for database migrations -->
+        <!-- Flyway for database migrations. Spring Boot 4 moved the Flyway
+             auto-configuration into its own module, so flyway-core alone no
+             longer runs migrations at startup; the starter brings both. -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>
@@ -205,11 +212,10 @@
                     <pluginId>grpc-java</pluginId>
                     <pluginArtifact>
                         io.grpc:protoc-gen-grpc-java:${protoc-gen-grpc-java.version}:exe:${os.detected.classifier}</pluginArtifact>
-                    <clearOutputDirectory>false</clearOutputDirectory>
-                    <checkStaleness>true</checkStaleness>
                 </configuration>
                 <executions>
                     <execution>
+                        <phase>generate-sources</phase>
                         <goals>
                             <goal>compile</goal>
                             <goal>compile-custom</goal>

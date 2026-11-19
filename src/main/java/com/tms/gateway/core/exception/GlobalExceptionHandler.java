@@ -4,6 +4,7 @@ import com.tms.gateway.core.dto.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -16,8 +17,38 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /**
  * Global exception handler for all REST endpoints.
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(com.tms.gateway.modules.compliance.service.ComplianceValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleComplianceValidation(
+            com.tms.gateway.modules.compliance.service.ComplianceValidationException ex) {
+        return ResponseEntity.unprocessableEntity()
+                .body(Map.of("code", 422, "message", ex.getMessage(), "errors", ex.getErrors()));
+    }
+
+    @ExceptionHandler(com.tms.gateway.modules.compliance.service.CompliancePartialSaveException.class)
+    public ResponseEntity<Map<String, Object>> handleCompliancePartialSave(
+            com.tms.gateway.modules.compliance.service.CompliancePartialSaveException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", ex.getStatus().value());
+        body.put("message",
+                "Business profile was saved, but contact details were not. Refresh the compliance draft before retrying.");
+        body.put("partial_save", true);
+        body.put("saved_version", ex.getSavedVersion());
+        body.put("saved_sections", java.util.List.of("profile"));
+        if (!ex.getErrors().isEmpty())
+            body.put("errors", ex.getErrors());
+        return ResponseEntity.status(ex.getStatus()).body(body);
+    }
+
+    @ExceptionHandler({org.springframework.web.bind.ServletRequestBindingException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMalformedRequest(Exception ex) {
+        return ResponseEntity.badRequest().body(ApiResponse.error(400, "Malformed request or missing required header"));
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(EntityNotFoundException ex) {
@@ -54,11 +85,32 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GrpcException.class)
     public ResponseEntity<Map<String, Object>> handleGrpcException(GrpcException ex) {
+        // Map gRPC status codes to appropriate HTTP status codes
+        HttpStatus status = switch (ex.getGrpcStatus()) {
+            case "UNAVAILABLE" -> HttpStatus.SERVICE_UNAVAILABLE;
+            case "DEADLINE_EXCEEDED" -> HttpStatus.GATEWAY_TIMEOUT;
+            case "UNIMPLEMENTED" -> HttpStatus.NOT_IMPLEMENTED;
+            case "PERMISSION_DENIED" -> HttpStatus.FORBIDDEN;
+            case "UNAUTHENTICATED" -> HttpStatus.UNAUTHORIZED;
+            case "NOT_FOUND" -> HttpStatus.NOT_FOUND;
+            case "ALREADY_EXISTS" -> HttpStatus.CONFLICT;
+            case "INVALID_ARGUMENT" -> HttpStatus.BAD_REQUEST;
+            case "RESOURCE_EXHAUSTED" -> HttpStatus.TOO_MANY_REQUESTS;
+            default -> HttpStatus.BAD_GATEWAY;
+        };
+
+        String userMessage = switch (ex.getGrpcStatus()) {
+            case "UNAVAILABLE" -> "Service temporarily unavailable. Please try again.";
+            case "DEADLINE_EXCEEDED" -> "Request timed out. Please try again.";
+            case "UNIMPLEMENTED" -> "This feature is not available.";
+            default -> ex.getMessage();
+        };
+
         Map<String, Object> body = new HashMap<>();
-        body.put("code", 502);
-        body.put("message", ex.getMessage());
+        body.put("code", status.value());
+        body.put("message", userMessage);
         body.put("error", ex.toMap());
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(body);
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -66,10 +118,36 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(403, "Forbidden"));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataAccess(org.springframework.dao.DataAccessException ex) {
+        log.error("Database error: {}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(500, "Database operation failed. Please try again."));
+    }
+
+    @ExceptionHandler(io.grpc.StatusRuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleGrpcStatusRuntime(io.grpc.StatusRuntimeException ex) {
+        log.error("Unhandled gRPC error: {}", ex.getStatus(), ex);
+        HttpStatus status = switch (ex.getStatus().getCode()) {
+            case UNAVAILABLE -> HttpStatus.SERVICE_UNAVAILABLE;
+            case DEADLINE_EXCEEDED -> HttpStatus.GATEWAY_TIMEOUT;
+            case PERMISSION_DENIED -> HttpStatus.FORBIDDEN;
+            case UNAUTHENTICATED -> HttpStatus.UNAUTHORIZED;
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            default -> HttpStatus.BAD_GATEWAY;
+        };
+        String message = switch (ex.getStatus().getCode()) {
+            case UNAVAILABLE -> "Service temporarily unavailable. Please try again.";
+            case DEADLINE_EXCEEDED -> "Request timed out. Please try again.";
+            default -> "Service communication error: " + ex.getStatus().getCode();
+        };
+        return ResponseEntity.status(status).body(ApiResponse.error(status.value(), message));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
-        ex.printStackTrace();
+        log.error("Unhandled exception: {} - {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(500, "Internal server error: " + ex.getMessage()));
+                .body(ApiResponse.error(500, "An unexpected error occurred. Please try again."));
     }
 }

@@ -26,6 +26,7 @@ public class GatewayMerchantUserDetails implements UserDetails {
     private final String email;
     private final String phoneNumber;
     private final String businessName;
+    private final String businessType;
     private final String firstName;
     private final String lastName;
     private final Instant emailVerifiedAt;

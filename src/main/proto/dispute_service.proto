@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.tms.gateway.modules.grpc.dispute";
+
+package dispute;
+
+service DisputeService {
+  // Admin commands (called by tms-report-java)
+  rpc CloseDispute (CloseDisputeRequest) returns (DisputeCommandResponse);
+  rpc ResolveDispute (ResolveDisputeRequest) returns (DisputeCommandResponse);
+  rpc AddConversation (AddConversationRequest) returns (DisputeCommandResponse);
+  rpc UpdateDispute (UpdateDisputeRequest) returns (DisputeCommandResponse);
+
+  // Merchant commands (called by gateway-merchant)
+  rpc CreateDispute (CreateDisputeRequest) returns (DisputeCommandResponse);
+  // User message — sets sender_type = 'user', not 'agent'
+  rpc AddUserConversation (AddUserConversationRequest) returns (DisputeCommandResponse);
+}
+
+message CloseDisputeRequest {
+  int64 dispute_id = 1;
+  string reason = 2;
+  Actor actor = 3;
+}
+
+message ResolveDisputeRequest {
+  int64 dispute_id = 1;
+  string resolution = 2;
+  Actor actor = 3;
+}
+
+message AddConversationRequest {
+  int64 dispute_id = 1;
+  // Optional when an attachment is present — an image with no caption is a
+  // normal message.
+  string message = 2;
+  Actor actor = 3;
+
+  // Attachment metadata. The admin backend uploads the file to the shared
+  // bucket itself and passes the resulting storage KEY here (not a presigned
+  // URL, which would be persisted and then expire). Empty attachment_key means
+  // a text-only message.
+  string attachment_key = 4;
+  string attachment_name = 5;
+  string attachment_type = 6;
+  int64 attachment_size = 7;
+}
+
+message UpdateDisputeRequest {
+  int64 dispute_id = 1;
+  string description = 2;
+  string status_code = 3;
+  Actor actor = 4;
+}
+
+message DisputeCommandResponse {
+  bool success = 1;
+  string message = 2;
+  string reference = 3;
+  string data_json = 4;
+}
+
+message Actor {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message CreateDisputeRequest {
+  int64 user_id = 1;
+  string transaction_reference = 2;
+  string subject = 3;
+  string message = 4;
+  Actor actor = 5;
+}
+
+// Request for user/merchant messages — uses sender_type = 'user'
+message AddUserConversationRequest {
+  int64 dispute_id = 1;
+  int64 user_id = 2;
+  string message = 3;
+  string sender_name = 4;  // Optional display name
+}

@@ -59,7 +59,7 @@ public class ComplianceEventConsumer {
     public void consumeKycEvent(String message) {
         try {
             JsonNode root = objectMapper.readTree(message);
-            JsonNode payload = root.has("payload") ? root.get("payload") : root;
+            JsonNode payload = root.path("payload").isObject() ? root.get("payload") : root;
 
             String eventType = getText(payload, "type");
             if (eventType == null || !eventType.startsWith("pg_merchant.compliance.")) {
@@ -68,8 +68,7 @@ public class ComplianceEventConsumer {
 
             String payloadJson = getText(payload, "payload");
             if (payloadJson == null) {
-                log.warn("Empty payload in compliance event: {}", eventType);
-                return;
+                throw new IllegalArgumentException("Compliance event payload is required");
             }
 
             JsonNode eventData = objectMapper.readTree(payloadJson);
@@ -78,7 +77,7 @@ public class ComplianceEventConsumer {
             processComplianceEvent(eventType, eventData);
 
         } catch (Exception e) {
-            log.error("Failed to process compliance event: {}", e.getMessage(), e);
+            throw new IllegalStateException("Failed to replicate compliance event", e);
         }
     }
 
@@ -87,9 +86,8 @@ public class ComplianceEventConsumer {
         Long userId = getLong(data, "user_id");
         String merchantId = getText(data, "merchant_id");
 
-        if (sourceId == null || userId == null) {
-            log.warn("Invalid compliance event - missing compliance_id or user_id");
-            return;
+        if (sourceId == null || userId == null || merchantId == null || merchantId.isBlank()) {
+            throw new IllegalArgumentException("Compliance event identifiers are required");
         }
 
         // Upsert the master compliance record
@@ -97,6 +95,25 @@ public class ComplianceEventConsumer {
                 .orElseGet(() -> PgMerchantComplianceReplicaEntity.builder().sourceId(sourceId).userId(userId)
                         .merchantId(merchantId).createdAt(Instant.now()).build());
 
+        Long incomingVersion = getLong(data, "version");
+        if (data.has("version") && (incomingVersion == null || incomingVersion < 1)) {
+            throw new IllegalArgumentException("Versioned compliance events require a positive version");
+        }
+        if (compliance.getId() != null && compliance.getVersion() > 0
+                && (incomingVersion == null || incomingVersion <= compliance.getVersion()))
+            return;
+        if (!merchantId.equals(compliance.getMerchantId()))
+            throw new IllegalArgumentException("Merchant cannot change");
+        if (incomingVersion != null)
+            compliance.setVersion(incomingVersion);
+        compliance.setUpdatedBy(getLong(data, "updated_by"));
+        compliance.setRegistrationComplete(getBoolean(data, "registration_complete"));
+        if (data.has("registration")) {
+            compliance.setRegistrationNumber(getText(data.get("registration"), "registration_number"));
+            compliance.setTaxIdentificationNumber(getText(data.get("registration"), "tax_identification_number"));
+        }
+        if (data.has("corrections"))
+            compliance.setCorrectionsJson(data.get("corrections").toString());
         compliance.setStatus(getText(data, "status"));
         compliance.setCurrentStep(getInt(data, "current_step"));
         compliance.setProfileComplete(getBoolean(data, "profile_complete"));
@@ -107,6 +124,7 @@ public class ComplianceEventConsumer {
         compliance.setRejectionReason(getText(data, "rejection_reason"));
         compliance.setReviewedBy(getText(data, "reviewed_by"));
         compliance.setReviewedAt(getInstant(data, "reviewed_at"));
+        compliance.setSubmittedAt(getInstant(data, "submitted_at"));
         compliance.setUpdatedAt(Instant.now());
         compliance.setSyncedAt(Instant.now());
 
@@ -145,6 +163,8 @@ public class ComplianceEventConsumer {
         profile.setBusinessName(getText(data, "business_name"));
         profile.setRcNumber(getText(data, "rc_number"));
         profile.setCacUrl(getText(data, "cac_url"));
+        profile.setBusinessDescription(getText(data, "business_description"));
+        profile.setCurrency(getText(data, "currency"));
         profile.setUpdatedAt(Instant.now());
         profile.setSyncedAt(Instant.now());
 
@@ -163,6 +183,13 @@ public class ComplianceEventConsumer {
         contact.setState(getText(data, "state"));
         contact.setPostalCode(getText(data, "postal_code"));
         contact.setCountry(getText(data, "country"));
+        contact.setSupportEmail(getText(data, "support_email"));
+        contact.setDisputeEmail(getText(data, "dispute_email"));
+        contact.setLga(getText(data, "lga"));
+        contact.setSameAsSupportEmail(getBoolean(data, "same_as_support_email"));
+        contact.setBusinessAddressDocumentId(getText(data, "business_address_document_id"));
+        if (data.has("online_links"))
+            contact.setOnlineLinksJson(data.get("online_links").toString());
         contact.setUpdatedAt(Instant.now());
         contact.setSyncedAt(Instant.now());
 
@@ -185,6 +212,13 @@ public class ComplianceEventConsumer {
                     .idDocumentUrl(getText(ownerData, "id_document_url"))
                     .idDocumentType(getText(ownerData, "id_document_type")).createdAt(Instant.now())
                     .updatedAt(Instant.now()).syncedAt(Instant.now()).build();
+            owner.setFullName(getText(ownerData, "full_name"));
+            owner.setNationality(getText(ownerData, "nationality"));
+            owner.setState(getText(ownerData, "state"));
+            owner.setLga(getText(ownerData, "lga"));
+            owner.setSameAsBusinessAddress(getBoolean(ownerData, "same_as_business_address"));
+            owner.setIdDocumentId(getText(ownerData, "id_document_id"));
+            owner.setProofOfAddressDocumentId(getText(ownerData, "proof_of_address_document_id"));
             ownerRepo.save(owner);
         }
     }
@@ -223,7 +257,8 @@ public class ComplianceEventConsumer {
         agreementRepo.save(agreement);
     }
 
-    // ── JSON Helpers ──────────────────────────────────────────
+    // â”€â”€ JSON Helpers
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private String getText(JsonNode node, String field) {
         if (node == null || !node.has(field) || node.get(field).isNull()) {

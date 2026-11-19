@@ -1,290 +1,236 @@
 package com.tms.gateway.modules.compliance.service;
 
-import com.tms.gateway.modules.compliance.dto.ComplianceResponse;
-import com.tms.gateway.modules.compliance.dto.ComplianceResponse.AgreementData;
-import com.tms.gateway.modules.compliance.dto.ComplianceResponse.BankAccountData;
-import com.tms.gateway.modules.compliance.dto.ComplianceResponse.ContactData;
-import com.tms.gateway.modules.compliance.dto.ComplianceResponse.OwnerData;
-import com.tms.gateway.modules.compliance.dto.ComplianceResponse.ProfileData;
-import com.tms.gateway.modules.compliance.dto.SaveAgreementRequest;
-import com.tms.gateway.modules.compliance.dto.SaveBankAccountRequest;
-import com.tms.gateway.modules.compliance.dto.SaveContactRequest;
-import com.tms.gateway.modules.compliance.dto.SaveOwnerRequest;
-import com.tms.gateway.modules.compliance.dto.SaveProfileRequest;
-import com.tms.gateway.modules.compliance.entity.PgMerchantAgreementReplicaEntity;
-import com.tms.gateway.modules.compliance.entity.PgMerchantBankAccountReplicaEntity;
-import com.tms.gateway.modules.compliance.entity.PgMerchantComplianceReplicaEntity;
-import com.tms.gateway.modules.compliance.entity.PgMerchantContactReplicaEntity;
-import com.tms.gateway.modules.compliance.entity.PgMerchantOwnerReplicaEntity;
-import com.tms.gateway.modules.compliance.entity.PgMerchantProfileReplicaEntity;
-import com.tms.gateway.modules.compliance.repository.PgMerchantAgreementReplicaRepository;
-import com.tms.gateway.modules.compliance.repository.PgMerchantBankAccountReplicaRepository;
-import com.tms.gateway.modules.compliance.repository.PgMerchantComplianceReplicaRepository;
-import com.tms.gateway.modules.compliance.repository.PgMerchantContactReplicaRepository;
-import com.tms.gateway.modules.compliance.repository.PgMerchantOwnerReplicaRepository;
-import com.tms.gateway.modules.compliance.repository.PgMerchantProfileReplicaRepository;
+import com.tms.gateway.core.exception.AppException;
+import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.compliance.controller.ComplianceController.OwnerFiles;
+import com.tms.gateway.modules.compliance.dto.*;
 import com.tms.gateway.modules.grpc.compliance.ComplianceData;
+import com.tms.gateway.modules.grpc.compliance.MutationContext;
 import com.tms.gateway.modules.grpc.service.ComplianceGrpcClient;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Service for PG merchant compliance operations.
- *
- * <p>
- * Hybrid read strategy:
- * <ul>
- * <li>Reads first try the local replica (populated via Kafka)</li>
- * <li>Falls back to gRPC if replica not found (e.g., new compliance before
- * Kafka sync)</li>
- * </ul>
- *
- * <p>
- * All writes go through gRPC to tms-kyc (source of truth).
+ * Authoritative reads avoid stale drafts and approval decisions while Kafka
+ * catches up.
  */
 @Service
+@RequiredArgsConstructor
 public class ComplianceService {
 
-    private static final Logger log = LoggerFactory.getLogger(ComplianceService.class);
-
     private final ComplianceGrpcClient grpcClient;
-    private final PgMerchantComplianceReplicaRepository complianceRepo;
-    private final PgMerchantProfileReplicaRepository profileRepo;
-    private final PgMerchantContactReplicaRepository contactRepo;
-    private final PgMerchantOwnerReplicaRepository ownerRepo;
-    private final PgMerchantBankAccountReplicaRepository bankAccountRepo;
-    private final PgMerchantAgreementReplicaRepository agreementRepo;
-
-    public ComplianceService(ComplianceGrpcClient grpcClient, PgMerchantComplianceReplicaRepository complianceRepo,
-            PgMerchantProfileReplicaRepository profileRepo, PgMerchantContactReplicaRepository contactRepo,
-            PgMerchantOwnerReplicaRepository ownerRepo, PgMerchantBankAccountReplicaRepository bankAccountRepo,
-            PgMerchantAgreementReplicaRepository agreementRepo) {
-        this.grpcClient = grpcClient;
-        this.complianceRepo = complianceRepo;
-        this.profileRepo = profileRepo;
-        this.contactRepo = contactRepo;
-        this.ownerRepo = ownerRepo;
-        this.bankAccountRepo = bankAccountRepo;
-        this.agreementRepo = agreementRepo;
-    }
+    private final ComplianceMapper mapper;
 
     /**
-     * Start a new compliance application (write via gRPC).
+     * Thread-local to pass business type from controller to mapper without changing
+     * all method signatures.
      */
-    public ComplianceResponse startCompliance(long userId, String merchantId) {
-        log.info("Starting compliance for userId={}, merchantId={}", userId, merchantId);
-        ComplianceData data = grpcClient.startCompliance(userId, merchantId);
-        return toResponse(data);
+    private static final ThreadLocal<String> BUSINESS_TYPE_CONTEXT = new ThreadLocal<>();
+
+    public MutationContext context(GatewayMerchantUserDetails user, String key, Long version) {
+        if (user == null) {
+            throw new AppException("Authentication required", HttpStatus.UNAUTHORIZED);
+        }
+        if (!user.isEnabled()) {
+            throw new AppException("Account is disabled or not verified", HttpStatus.FORBIDDEN);
+        }
+        if (user.getUserId() == null) {
+            throw new AppException("User ID is missing", HttpStatus.FORBIDDEN);
+        }
+        if (user.getMerchantId() == null || user.getMerchantId().isBlank()) {
+            throw new AppException("Merchant ID is not assigned. Please contact support.", HttpStatus.FORBIDDEN);
+        }
+        if (key != null && (!key.matches("[A-Za-z0-9._:-]{1,128}")))
+            throw new AppException("Invalid Idempotency-Key");
+        if (version != null && version < 0)
+            throw new AppException("Expected version must be nonnegative");
+
+        // Store the user's business type for the mapper to use
+        BUSINESS_TYPE_CONTEXT.set(user.getBusinessType());
+
+        return MutationContext.newBuilder().setActorUserId(user.getUserId()).setMerchantId(user.getMerchantId())
+                .setIdempotencyKey(key == null ? "" : key).setExpectedVersion(version == null ? 0 : version).build();
     }
 
-    /**
-     * Get current compliance with full step data. Uses local replica when
-     * available, falls back to gRPC.
-     */
-    public ComplianceResponse getCompliance(long userId) {
-        // Try local replica first
-        Optional<PgMerchantComplianceReplicaEntity> replicaOpt = complianceRepo.findByUserId(userId);
-        if (replicaOpt.isPresent()) {
-            log.debug("Serving compliance from local replica for userId={}", userId);
-            return toResponseFromReplica(replicaOpt.get());
-        }
-
-        // Fallback to gRPC
-        log.debug("Replica not found, fetching via gRPC for userId={}", userId);
-        ComplianceData data = grpcClient.getCompliance(userId);
-        if (data == null) {
-            return null;
-        }
-        return toResponse(data);
+    public MutationContext mutation(GatewayMerchantUserDetails user, String key, long version) {
+        if (key == null || key.isBlank())
+            throw new AppException("Idempotency-Key is required");
+        return context(user, key, version);
     }
 
-    /**
-     * Check if user has approved compliance (fast local check).
-     */
-    public boolean isComplianceApproved(long userId) {
-        return complianceRepo.findByUserId(userId).map(PgMerchantComplianceReplicaEntity::isApproved).orElse(false);
+    private ComplianceResponse checked(MutationContext c, ComplianceData d) {
+        try {
+            if (d == null)
+                return null;
+            if (!c.getMerchantId().equals(d.getMerchantId()))
+                throw new AppException("KYC returned a different merchant", HttpStatus.BAD_GATEWAY);
+            return mapper.toResponse(d, BUSINESS_TYPE_CONTEXT.get());
+        } finally {
+            BUSINESS_TYPE_CONTEXT.remove();
+        }
     }
 
-    /**
-     * Get compliance status only (fast local check with gRPC fallback).
-     */
-    public String getComplianceStatus(long userId) {
-        return complianceRepo.findByUserId(userId).map(PgMerchantComplianceReplicaEntity::getStatus).orElseGet(() -> {
-            ComplianceData data = grpcClient.getCompliance(userId);
-            return data != null ? data.getStatus() : null;
-        });
+    public ComplianceResponse startCompliance(MutationContext c) {
+        return checked(c, grpcClient.startCompliance(c));
     }
 
-    /**
-     * Save step 1: Profile details (write via gRPC).
-     */
-    public ComplianceResponse saveProfile(long userId, SaveProfileRequest request) {
-        log.info("Saving profile for userId={}", userId);
-        ComplianceData data = grpcClient.saveProfile(userId, request);
-        return toResponse(data);
+    public ComplianceResponse getCompliance(MutationContext c) {
+        return checked(c, grpcClient.getCompliance(c));
     }
 
-    /**
-     * Save step 2: Contact information (write via gRPC).
-     */
-    public ComplianceResponse saveContact(long userId, SaveContactRequest request) {
-        log.info("Saving contact for userId={}", userId);
-        ComplianceData data = grpcClient.saveContact(userId, request);
-        return toResponse(data);
+    public ComplianceResponse saveProfile(MutationContext c, SaveProfileRequest r) {
+        ComplianceDraftValidator.profile(r);
+        return checked(c, grpcClient.saveProfile(c, r));
     }
 
-    /**
-     * Save step 3: Owners (write via gRPC).
-     */
-    public ComplianceResponse saveOwners(long userId, List<SaveOwnerRequest> owners) {
-        log.info("Saving {} owners for userId={}", owners.size(), userId);
-        ComplianceData data = grpcClient.saveOwners(userId, owners);
-        return toResponse(data);
+    public ComplianceResponse saveContact(MutationContext c, SaveContactRequest r) {
+        ComplianceDraftValidator.contact(r);
+        return checked(c, grpcClient.saveContact(c, r));
     }
 
-    /**
-     * Save step 4: Bank accounts (write via gRPC).
-     */
-    public ComplianceResponse saveBankAccounts(long userId, List<SaveBankAccountRequest> accounts) {
-        log.info("Saving {} bank accounts for userId={}", accounts.size(), userId);
-        ComplianceData data = grpcClient.saveBankAccounts(userId, accounts);
-        return toResponse(data);
+    public ComplianceResponse saveOwners(MutationContext c, SaveOwnersRequest r) {
+        ComplianceDraftValidator.owners(r);
+        return checked(c, grpcClient.saveOwners(c, r.owners()));
     }
 
-    /**
-     * Save step 5: Agreement (write via gRPC).
-     */
-    public ComplianceResponse saveAgreement(long userId, SaveAgreementRequest request) {
-        log.info("Saving agreement for userId={}", userId);
-        ComplianceData data = grpcClient.saveAgreement(userId, request);
-        return toResponse(data);
+    public ComplianceResponse saveBankAccounts(MutationContext c, SaveBankAccountsRequest r) {
+        return checked(c, grpcClient.saveBankAccounts(c, r.bankAccounts()));
     }
 
-    /**
-     * Submit compliance for review (write via gRPC).
-     */
-    public ComplianceResponse submitCompliance(long userId) {
-        log.info("Submitting compliance for userId={}", userId);
-        ComplianceData data = grpcClient.submitCompliance(userId);
-        return toResponse(data);
+    public ComplianceResponse saveRegistration(MutationContext c, SaveRegistrationRequest r) {
+        return checked(c, grpcClient.saveRegistration(c, r));
     }
 
-    // ── Mapping from gRPC response ────────────────────────────
+    // ── Methods with file uploads ───────────────────────────────
 
-    private ComplianceResponse toResponse(ComplianceData data) {
-        ProfileData profile = null;
-        if (data.hasProfile()) {
-            var p = data.getProfile();
-            profile = new ProfileData(emptyToNull(p.getCountry()), emptyToNull(p.getIndustry()),
-                    emptyToNull(p.getCategory()), emptyToNull(p.getTradingName()), emptyToNull(p.getSalesVolume()),
-                    emptyToNull(p.getBusinessType()), emptyToNull(p.getBusinessName()), emptyToNull(p.getRcNumber()),
-                    emptyToNull(p.getCacUrl()));
-        }
-
-        ContactData contact = null;
-        if (data.hasContact()) {
-            var c = data.getContact();
-            contact = new ContactData(emptyToNull(c.getEmail()), emptyToNull(c.getPhone()), emptyToNull(c.getAddress()),
-                    emptyToNull(c.getCity()), emptyToNull(c.getState()), emptyToNull(c.getPostalCode()),
-                    emptyToNull(c.getCountry()));
-        }
-
-        List<OwnerData> owners = null;
-        if (data.getOwnersCount() > 0) {
-            owners = data.getOwnersList().stream()
-                    .map(o -> new OwnerData(o.getId() > 0 ? o.getId() : null, emptyToNull(o.getRole()),
-                            emptyToNull(o.getFirstName()), emptyToNull(o.getLastName()), emptyToNull(o.getEmail()),
-                            emptyToNull(o.getPhone()), emptyToNull(o.getBvn()), emptyToNull(o.getNin()),
-                            emptyToNull(o.getDateOfBirth()), emptyToNull(o.getAddress()),
-                            o.getOwnershipPercentage() > 0 ? o.getOwnershipPercentage() : null,
-                            emptyToNull(o.getIdDocumentUrl()), emptyToNull(o.getIdDocumentType())))
-                    .toList();
-        }
-
-        List<BankAccountData> bankAccounts = null;
-        if (data.getBankAccountsCount() > 0) {
-            bankAccounts = data.getBankAccountsList().stream()
-                    .map(b -> new BankAccountData(b.getId() > 0 ? b.getId() : null, emptyToNull(b.getBankCode()),
-                            emptyToNull(b.getBankName()), emptyToNull(b.getAccountNumber()),
-                            emptyToNull(b.getAccountName()), b.getIsPrimary(), emptyToNull(b.getCurrency())))
-                    .toList();
-        }
-
-        AgreementData agreement = null;
-        if (data.hasAgreement()) {
-            var a = data.getAgreement();
-            agreement = new AgreementData(a.getTermsAccepted(), emptyToNull(a.getTermsVersion()),
-                    a.getPrivacyAccepted(), emptyToNull(a.getIpAddress()), emptyToNull(a.getUserAgent()),
-                    emptyToNull(a.getAcceptedAt()));
-        }
-
-        return new ComplianceResponse(data.getComplianceId(), data.getUserId(), emptyToNull(data.getMerchantId()),
-                emptyToNull(data.getStatus()), data.getCurrentStep(), data.getProfileComplete(),
-                data.getContactComplete(), data.getOwnersComplete(), data.getBankAccountsComplete(),
-                data.getAgreementComplete(), emptyToNull(data.getRejectionReason()), emptyToNull(data.getReviewedBy()),
-                emptyToNull(data.getReviewedAt()), emptyToNull(data.getCreatedAt()), emptyToNull(data.getUpdatedAt()),
-                profile, contact, owners, bankAccounts, agreement);
+    public ComplianceResponse saveProfileWithFile(MutationContext c, SaveProfileRequest r,
+            MultipartFile cacCertificate) {
+        ComplianceDraftValidator.profile(r);
+        return checked(c, grpcClient.saveProfileWithFile(c, r, cacCertificate));
     }
 
-    // ── Mapping from local replica ────────────────────────────
-
-    private ComplianceResponse toResponseFromReplica(PgMerchantComplianceReplicaEntity c) {
-        ProfileData profile = null;
-        Optional<PgMerchantProfileReplicaEntity> profileOpt = profileRepo.findByComplianceId(c.getId());
-        if (profileOpt.isPresent()) {
-            var p = profileOpt.get();
-            profile = new ProfileData(p.getCountry(), p.getIndustry(), p.getCategory(), p.getTradingName(),
-                    p.getSalesVolume(), p.getBusinessType(), p.getBusinessName(), p.getRcNumber(), p.getCacUrl());
-        }
-
-        ContactData contact = null;
-        Optional<PgMerchantContactReplicaEntity> contactOpt = contactRepo.findByComplianceId(c.getId());
-        if (contactOpt.isPresent()) {
-            var ct = contactOpt.get();
-            contact = new ContactData(ct.getEmail(), ct.getPhone(), ct.getAddress(), ct.getCity(), ct.getState(),
-                    ct.getPostalCode(), ct.getCountry());
-        }
-
-        List<OwnerData> owners = null;
-        List<PgMerchantOwnerReplicaEntity> ownerEntities = ownerRepo.findByComplianceId(c.getId());
-        if (!ownerEntities.isEmpty()) {
-            owners = ownerEntities.stream()
-                    .map(o -> new OwnerData(o.getSourceId(), o.getRole(), o.getFirstName(), o.getLastName(),
-                            o.getEmail(), o.getPhone(), o.getBvn(), o.getNin(), o.getDateOfBirth(), o.getAddress(),
-                            o.getOwnershipPercentage(), o.getIdDocumentUrl(), o.getIdDocumentType()))
-                    .toList();
-        }
-
-        List<BankAccountData> bankAccounts = null;
-        List<PgMerchantBankAccountReplicaEntity> bankEntities = bankAccountRepo.findByComplianceId(c.getId());
-        if (!bankEntities.isEmpty()) {
-            bankAccounts = bankEntities.stream().map(b -> new BankAccountData(b.getSourceId(), b.getBankCode(),
-                    b.getBankName(), b.getAccountNumber(), b.getAccountName(), b.isPrimary(), b.getCurrency()))
-                    .toList();
-        }
-
-        AgreementData agreement = null;
-        Optional<PgMerchantAgreementReplicaEntity> agreementOpt = agreementRepo.findByComplianceId(c.getId());
-        if (agreementOpt.isPresent()) {
-            var a = agreementOpt.get();
-            agreement = new AgreementData(a.isTermsAccepted(), a.getTermsVersion(), a.isPrivacyAccepted(),
-                    a.getIpAddress(), a.getUserAgent(),
-                    a.getAcceptedAt() != null ? a.getAcceptedAt().toString() : null);
-        }
-
-        return new ComplianceResponse(c.getSourceId(), c.getUserId(), c.getMerchantId(), c.getStatus(),
-                c.getCurrentStep(), c.isProfileComplete(), c.isContactComplete(), c.isOwnersComplete(),
-                c.isBankAccountsComplete(), c.isAgreementComplete(), c.getRejectionReason(), c.getReviewedBy(),
-                c.getReviewedAt() != null ? c.getReviewedAt().toString() : null,
-                c.getCreatedAt() != null ? c.getCreatedAt().toString() : null,
-                c.getUpdatedAt() != null ? c.getUpdatedAt().toString() : null, profile, contact, owners, bankAccounts,
-                agreement);
+    public ComplianceResponse saveContactWithFile(MutationContext c, SaveContactRequest r, MultipartFile addressProof) {
+        ComplianceDraftValidator.contact(r);
+        return checked(c, grpcClient.saveContactWithFile(c, r, addressProof));
     }
 
-    private String emptyToNull(String s) {
-        return (s == null || s.isEmpty()) ? null : s;
+    public ComplianceResponse saveOwnersWithFiles(MutationContext c, SaveOwnersRequest r,
+            Map<Integer, OwnerFiles> ownerFiles) {
+        ComplianceDraftValidator.owners(r);
+        return checked(c, grpcClient.saveOwnersWithFiles(c, r.owners(), ownerFiles));
+    }
+
+    public ComplianceResponse saveShareholdersWithFiles(MutationContext c, SaveRegisteredShareholdersRequest r,
+            Map<Integer, OwnerFiles> ownerFiles) {
+        ComplianceDraftValidator.registeredShareholders(r);
+        List<SaveOwnerRequest> owners = r.shareholders().stream().map(shareholder -> {
+            String dateOfBirth = shareholder.dateOfBirth();
+            if (dateOfBirth != null && !dateOfBirth.isEmpty())
+                dateOfBirth = LocalDate.parse(dateOfBirth, DateTimeFormatter.ofPattern("dd-MM-uuuu")).toString();
+            return new SaveOwnerRequest(null, shareholder.role(), dateOfBirth, shareholder.address(),
+                    shareholder.idDocumentType(), shareholder.fullName(), shareholder.nationality(),
+                    shareholder.state(), shareholder.lga(), shareholder.sameAsBusinessAddress());
+        }).toList();
+        return checked(c, grpcClient.saveOwnersWithFiles(c, owners, ownerFiles));
+    }
+
+    public ComplianceResponse saveRegisteredBusinessDetails(MutationContext c, RegisteredBusinessDetailsRequest r) {
+        return saveRegisteredBusinessDetailsWithFile(c, r, null);
+    }
+
+    public ComplianceResponse saveRegisteredBusinessDetailsWithFile(MutationContext c,
+            RegisteredBusinessDetailsRequest r, MultipartFile businessAddressProof) {
+        ComplianceDraftValidator.registeredBusinessDetails(r);
+        SaveProfileRequest profile = new SaveProfileRequest(r.country(), r.industry(), r.category(), r.tradingName(),
+                r.salesVolume(), r.businessType(), r.businessDescription());
+        SaveContactRequest contact = new SaveContactRequest(null, r.phone(), r.address(), r.supportEmail(),
+                r.disputeEmail(), r.state(), r.lga(), r.sameAsSupportEmail(), r.onlineLinks());
+
+        boolean hasProfileFields = r.country() != null || r.industry() != null || r.category() != null
+                || r.tradingName() != null || r.salesVolume() != null || r.businessType() != null
+                || r.businessDescription() != null;
+        boolean hasContactFields = r.phone() != null || r.address() != null || r.supportEmail() != null
+                || r.disputeEmail() != null || r.state() != null || r.lga() != null || r.sameAsSupportEmail() != null
+                || r.onlineLinks() != null;
+        boolean hasFile = businessAddressProof != null && !businessAddressProof.isEmpty();
+
+        if (!hasProfileFields && !hasContactFields && !hasFile)
+            throw new ComplianceValidationException(List.of(new ComplianceResponse.CorrectionData("business_details",
+                    "business_details", "At least one field must be supplied")));
+
+        ComplianceResponse response = null;
+        MutationContext current = c;
+        String savedBusinessType = BUSINESS_TYPE_CONTEXT.get();
+        try {
+            if (hasProfileFields) {
+                response = checkedRequired(current, grpcClient.saveProfile(current, profile));
+                current = withExpectedVersion(c, response.version());
+                // Restore business type context for next call
+                BUSINESS_TYPE_CONTEXT.set(savedBusinessType);
+            }
+            if (hasContactFields || hasFile) {
+                try {
+                    response = checkedRequired(current,
+                            grpcClient.saveContactWithFile(current, contact, businessAddressProof));
+                } catch (AppException e) {
+                    if (hasProfileFields)
+                        throw new CompliancePartialSaveException(e, response.version());
+                    throw e;
+                } catch (ComplianceValidationException e) {
+                    if (hasProfileFields)
+                        throw new CompliancePartialSaveException(e, response.version());
+                    throw e;
+                }
+            }
+        } finally {
+            BUSINESS_TYPE_CONTEXT.remove();
+        }
+        return response;
+    }
+
+    public ComplianceResponse saveRegisteredBusinessRegistration(MutationContext c,
+            RegisteredBusinessRegistrationRequest r) {
+        var request = new SaveRegistrationRequest(null, r.registrationNumber(), r.taxIdentificationNumber());
+        return checked(c, grpcClient.saveRegistration(c, request));
+    }
+
+    public ComplianceResponse saveRegisteredBusinessShareholders(MutationContext c,
+            SaveRegisteredShareholdersRequest r) {
+        ComplianceDraftValidator.registeredShareholders(r);
+        List<SaveOwnerRequest> owners = r.shareholders().stream().map(shareholder -> {
+            String dateOfBirth = shareholder.dateOfBirth();
+            if (dateOfBirth != null && !dateOfBirth.isEmpty())
+                dateOfBirth = LocalDate.parse(dateOfBirth, DateTimeFormatter.ofPattern("dd-MM-uuuu")).toString();
+            return new SaveOwnerRequest(null, shareholder.role(), dateOfBirth, shareholder.address(),
+                    shareholder.idDocumentType(), shareholder.fullName(), shareholder.nationality(),
+                    shareholder.state(), shareholder.lga(), shareholder.sameAsBusinessAddress());
+        }).toList();
+        return checkedRequired(c, grpcClient.saveOwners(c, owners));
+    }
+
+    private ComplianceResponse checkedRequired(MutationContext context, ComplianceData data) {
+        if (data == null)
+            throw new AppException("KYC returned no compliance data", HttpStatus.BAD_GATEWAY);
+        if (!context.getMerchantId().equals(data.getMerchantId()))
+            throw new AppException("KYC returned a different merchant", HttpStatus.BAD_GATEWAY);
+        return mapper.toResponse(data, BUSINESS_TYPE_CONTEXT.get());
+    }
+
+    private MutationContext withExpectedVersion(MutationContext context, long version) {
+        return MutationContext.newBuilder().setActorUserId(context.getActorUserId())
+                .setMerchantId(context.getMerchantId()).setIdempotencyKey(context.getIdempotencyKey())
+                .setExpectedVersion(version).build();
+    }
+
+    public ComplianceResponse submitCompliance(MutationContext c, SubmitComplianceRequest r, String ip, String agent) {
+        if (!Boolean.TRUE.equals(r.agreementAccepted()))
+            throw new AppException("Agreement must be accepted", HttpStatus.UNPROCESSABLE_ENTITY);
+        return checked(c, grpcClient.submitCompliance(c, true, ip, agent));
     }
 }

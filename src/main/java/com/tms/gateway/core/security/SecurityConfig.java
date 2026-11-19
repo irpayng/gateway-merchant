@@ -52,11 +52,18 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource())).csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR)
                         .permitAll().requestMatchers("/health", "/error").permitAll()
-                        .requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
+                                "/v3/api-docs.yaml")
+                        .permitAll().requestMatchers("/actuator/prometheus", "/actuator/health").permitAll()
                         // Auth endpoints are public
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/register/pg-merchant").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/verify-email").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/resend-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/reset-password").permitAll()
+                        // Compliance schema is public (needed before login for registration flow)
+                        .requestMatchers(HttpMethod.GET, "/compliance/schema").permitAll()
                         // All other endpoints require authentication
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
@@ -91,8 +98,14 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Static so Spring can create it without first building this class, which
+     * itself injects an ObjectMapper. As an instance method it formed a cycle and
+     * the application failed to start: Spring Boot 4's own mapper is a Jackson 3
+     * type, so this is the only com.fasterxml ObjectMapper bean.
+     */
     @Bean
-    public ObjectMapper objectMapper() {
+    public static ObjectMapper objectMapper() {
         return new ObjectMapper();
     }
 }

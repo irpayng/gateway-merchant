@@ -1,0 +1,1473 @@
+syntax = "proto3";
+option java_multiple_files = true;
+option java_package = "com.config.grpc";
+package config;
+
+service ConfigService {
+  rpc GetProduct (GetProductRequest) returns (ProductResponse);
+  rpc GetChannel (GetChannelRequest) returns (ChannelResponse);
+  rpc GetTier (GetTierRequest) returns (TierResponse);
+  rpc GetProviderRoute (GetProviderRouteRequest) returns (ProviderRouteResponse);
+  rpc GetCostBreakdown (GetCostBreakdownRequest) returns (CostBreakdownResponse);
+  rpc GetLimits (GetLimitsRequest) returns (LimitsResponse);
+  rpc GetMaxBalance (GetMaxBalanceRequest) returns (MaxBalanceResponse);
+  rpc GetBankCode (GetBankCodeRequest) returns (BankCodeResponse);
+  // List all bank codes. Used by gateway-merchant payout flow for bank selection.
+  rpc ListBankCodes (ListBankCodesRequest) returns (ListBankCodesResponse);
+  // List most commonly used banks for quick selection in UI.
+  rpc ListMostUsedBanks (ListMostUsedBanksRequest) returns (ListMostUsedBanksResponse);
+  rpc CheckPnd (CheckPndRequest) returns (CheckPndResponse);
+  rpc CheckAvailability (CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
+  rpc CheckTransactionLimits (CheckTransactionLimitsRequest) returns (CheckTransactionLimitsResponse);
+  rpc ValidateTransaction (ValidateTransactionRequest) returns (ValidateTransactionResponse);
+  rpc GetConfigValue (GetConfigValueRequest) returns (GetConfigValueResponse);
+  // Resolve a configuration value for a specific user with strict
+  // agent > aggregator > global precedence. Unlike GetConfigValue (which scores
+  // by raw expression specificity), this RPC understands the user hierarchy:
+  // it first looks for a row scoped to the user ({"user":"<id>"}), then to the
+  // user's aggregator parent ({"user":"<parent_id>"} or
+  // {"aggregator":"<parent_id>"}), then the global default (null expression).
+  // Backs admin-configurable values that cascade down the aggregator tree —
+  // POS lease fee and target grace periods.
+  rpc ResolveScopedValue (ResolveScopedValueRequest) returns (ResolveScopedValueResponse);
+  rpc GetDataPlan (GetDataPlanRequest) returns (GetDataPlanResponse);
+  // List all data plans for a network. Used by the USSD channel to render a
+  // selectable, paginated plan menu (the mobile/POS clients fetch the same
+  // catalogue over REST). Returns an empty list for an unknown network.
+  rpc ListDataPlans (ListDataPlansRequest) returns (ListDataPlansResponse);
+  rpc GetBouquetPrice (GetBouquetPriceRequest) returns (GetBouquetPriceResponse);
+  // List all bouquets for a cable type (dstv|gotv|startimes) for the USSD menu.
+  rpc ListBouquets (ListBouquetsRequest) returns (ListBouquetsResponse);
+  // Admin command RPCs
+  rpc CreateConfiguration (CreateConfigurationRequest) returns (ConfigCommandResponse);
+  rpc UpdateConfiguration (UpdateConfigurationRequest) returns (ConfigCommandResponse);
+  rpc DeleteConfiguration (DeleteConfigurationRequest) returns (ConfigCommandResponse);
+  rpc CreateDataPlan (DataPlanRequest) returns (ConfigCommandResponse);
+  rpc UpdateDataPlan (DataPlanRequest) returns (ConfigCommandResponse);
+  rpc DeleteDataPlan (DeleteDataPlanRequest) returns (ConfigCommandResponse);
+  rpc ImportDataPlans (ImportDataPlansRequest) returns (ConfigCommandResponse);
+  rpc SetMaxBalance (SetMaxBalanceRequest) returns (ConfigCommandResponse);
+  rpc RemoveMaxBalance (RemoveMaxBalanceRequest) returns (ConfigCommandResponse);
+  // Terminal management RPCs
+  rpc CreateTerminal (CreateTerminalRequest) returns (ConfigCommandResponse);
+  rpc CreateTerminalsBatch (CreateTerminalsBatchRequest) returns (ConfigCommandResponse);
+  rpc UpdateTerminal (UpdateTerminalRequest) returns (ConfigCommandResponse);
+  rpc MapTerminal (MapTerminalRequest) returns (ConfigCommandResponse);
+  rpc UnmapTerminal (UnmapTerminalRequest) returns (ConfigCommandResponse);
+  // TID management RPCs
+  rpc CreateTid (CreateTidRequest) returns (ConfigCommandResponse);
+  rpc UpdateTid (UpdateTidRequest) returns (ConfigCommandResponse);
+  rpc DeleteTid (DeleteTidRequest) returns (ConfigCommandResponse);
+  // Bank settlement config RPCs (managed by super-merchant admin portal)
+  rpc GetBankSettlementConfig (GetBankSettlementConfigRequest) returns (BankSettlementConfigResponse);
+  rpc SetBankSettlementConfig (SetBankSettlementConfigRequest) returns (ConfigCommandResponse);
+  // Funding alert RPCs
+  rpc CreateFundingAlert (CreateFundingAlertRequest) returns (ConfigCommandResponse);
+  rpc UpdateFundingAlert (UpdateFundingAlertRequest) returns (ConfigCommandResponse);
+  rpc DeleteFundingAlert (DeleteFundingAlertRequest) returns (ConfigCommandResponse);
+  // Provider balance cache RPCs (balance updates come via Kafka provider-balance topic)
+  rpc GetProviderBalance (GetProviderBalanceRequest) returns (ProviderBalanceResponse);
+  rpc GetAllProviderBalances (GetAllProviderBalancesRequest) returns (AllProviderBalancesResponse);
+  // Trigger an immediate on-demand balance poll for a provider (admin action).
+  // Broadcasts a provider-balance-refresh command; the owning provider self-filters and re-polls.
+  rpc RefreshProviderBalance (RefreshProviderBalanceRequest) returns (ConfigCommandResponse);
+  // Trigger an immediate on-demand card-key (TMK/TSK/TPK) re-download for a card
+  // processor (admin action). Broadcasts a provider-keys-refresh command; the
+  // owning provider (nibss/upsl/interswitch) self-filters and re-downloads keys.
+  rpc RefreshProviderCardKeys (RefreshProviderCardKeysRequest) returns (ConfigCommandResponse);
+  // Provider self-registration
+  rpc RegisterProvider (RegisterProviderRequest) returns (ConfigCommandResponse);
+  // Provider routing with failover
+  rpc ResolveProvider (ResolveProviderRequest) returns (ResolveProviderResponse);
+  rpc GetProviderUrl (GetProviderUrlRequest) returns (GetProviderUrlResponse);
+  rpc GetProviderById (GetProviderByIdRequest) returns (GetProviderByIdResponse);
+  rpc ReportProviderFailure (ReportProviderFailureRequest) returns (ConfigCommandResponse);
+  rpc ResetProviderOverride (ResetProviderOverrideRequest) returns (ConfigCommandResponse);
+  // Report a completed provider failover (primary timed out, alternate was used
+  // on the same request). After a configurable number of consecutive failovers
+  // for the same product+route, the config service permanently overrides routing
+  // to the alternate provider for that product.
+  rpc ReportFailover (ReportFailoverRequest) returns (ReportFailoverResponse);
+  // Card transaction preparation
+  rpc PrepareCardTransaction (PrepareCardTransactionRequest) returns (PrepareCardTransactionResponse);
+  // Terminal secret lookup (used by provider-nibss /terminals/secret endpoint)
+  rpc GetTerminalSecret (GetTerminalSecretRequest) returns (GetTerminalSecretResponse);
+  // Reverse of GetTerminalSecret: authenticate a device by the secret_key it
+  // presents, rather than looking a secret up by serial. Used by provider-nibss
+  // to gate POST /geo-fence/token, where the NIBSS POS-tracker SDK only ever
+  // sends the x-secret-key header (it has no serial to offer). Replaces the
+  // legacy tms-api ValidateDeviceSecretKey middleware, which did
+  // Terminal::firstWhere('secret_key', $key). Read-only.
+  rpc ValidateTerminalSecret (ValidateTerminalSecretRequest) returns (ValidateTerminalSecretResponse);
+  // Terminal lock status — used by transaction-service to hard-stop wallet-funded
+  // outflows on a locked terminal regardless of what UI surface the caller used.
+  rpc GetTerminalLockStatus (GetTerminalLockStatusRequest) returns (GetTerminalLockStatusResponse);
+  // Aggregator-for-serial lookup — used by user-service at POS login to enforce
+  // the rule that an agent signing in on an aggregator-dispatched terminal must
+  // match (or inherit) that aggregator. Unlike the prep-time bind in the same
+  // service, this RPC is read-only and does not mutate users.
+  rpc GetAggregatorForSerial (GetAggregatorForSerialRequest) returns (GetAggregatorForSerialResponse);
+  // Owner-of-serial lookup — used by user-service at POS login to enforce that a
+  // device already bound to one user cannot be signed into by another user until
+  // an admin detaches it (clears terminals.user_id via UnmapTerminal). Read-only;
+  // the binding itself is written at prep/map time. This is the device-ownership
+  // sibling of GetAggregatorForSerial (which enforces the aggregator hierarchy).
+  rpc GetTerminalOwner (GetTerminalOwnerRequest) returns (GetTerminalOwnerResponse);
+  // Count of POS terminals currently mapped to a user. Used by target-service
+  // to (a) gate target eligibility — an agent with zero mapped devices can
+  // never accrue a target — and (b) scale global default targets by the number
+  // of devices an agent holds. Read-only.
+  rpc CountUserTerminals (CountUserTerminalsRequest) returns (CountUserTerminalsResponse);
+  // Count of POS terminals in an aggregator's managed pool — the dedup union of
+  // serials explicitly dispatched to the aggregator and terminals owned by the
+  // aggregator's downliner agents. Used by target-service to compute the
+  // aggregator's default baseline target (global baseline × pool size, plus the
+  // sum of downliners' individual targets). Read-only.
+  rpc CountAggregatorPoolTerminals (CountAggregatorPoolTerminalsRequest) returns (CountAggregatorPoolTerminalsResponse);
+  // Instant settlement management
+  rpc EnrollInstantSettlement (EnrollInstantSettlementRequest) returns (ConfigCommandResponse);
+  rpc SuspendInstantSettlement (SuspendInstantSettlementRequest) returns (ConfigCommandResponse);
+  rpc RevokeInstantSettlement (RevokeInstantSettlementRequest) returns (ConfigCommandResponse);
+  rpc ReactivateInstantSettlement (ReactivateInstantSettlementRequest) returns (ConfigCommandResponse);
+  rpc CheckInstantSettlement (CheckInstantSettlementRequest) returns (CheckInstantSettlementResponse);
+  rpc UpdateSettlementWindow (UpdateSettlementWindowRequest) returns (ConfigCommandResponse);
+  rpc ListDueSettlements (ListDueSettlementsRequest) returns (ListDueSettlementsResponse);
+  // Reference data lookups
+  rpc GetLocationNames (GetLocationNamesRequest) returns (GetLocationNamesResponse);
+  // App configs for mobile client (SMS charge, minimum amounts, etc.)
+  rpc GetAppConfigs (GetAppConfigsRequest) returns (GetAppConfigsResponse);
+  // Electricity discos with resolved provider routes
+  rpc ListElectricityDiscos (ListElectricityDiscosRequest) returns (ListElectricityDiscosResponse);
+  // Bank-level settlement configuration (T+0 instant/hourly purchase settlement)
+  // Check if a bank has purchase settlement enabled and what mode (instant/hourly)
+  rpc CheckBankSettlement (CheckBankSettlementRequest) returns (CheckBankSettlementResponse);
+  // List banks with hourly settlement enabled (for the hourly settlement scheduler)
+  rpc ListHourlySettlementBanks (ListHourlySettlementBanksRequest) returns (ListHourlySettlementBanksResponse);
+  // List merchants (user_ids) belonging to a bank (have TIDs with that bank_code)
+  // Used by the hourly settlement scheduler to sweep all merchants for a bank
+  rpc ListBankMerchants (ListBankMerchantsRequest) returns (ListBankMerchantsResponse);
+  // Resolve settlement destination for a TID or user using multi-branch structure:
+  // TID's settlement_account_id → merchant's default account → legacy fallback
+  rpc ResolveSettlementDestination (ResolveSettlementDestinationRequest) returns (ResolveSettlementDestinationResponse);
+  
+  // ── Merchant Settlement Account Management RPCs ──
+  // List all settlement accounts for a merchant
+  rpc ListMerchantSettlementAccounts (ListMerchantSettlementAccountsRequest) returns (ListMerchantSettlementAccountsResponse);
+  // Get a single settlement account by ID
+  rpc GetMerchantSettlementAccount (GetMerchantSettlementAccountRequest) returns (GetMerchantSettlementAccountResponse);
+  // Create a new settlement account
+  rpc CreateMerchantSettlementAccount (CreateMerchantSettlementAccountRequest) returns (ConfigCommandResponse);
+  // Update an existing settlement account
+  rpc UpdateMerchantSettlementAccount (UpdateMerchantSettlementAccountRequest) returns (ConfigCommandResponse);
+  // Set an account as the default for the merchant
+  rpc SetDefaultMerchantSettlementAccount (SetDefaultMerchantSettlementAccountRequest) returns (ConfigCommandResponse);
+  // Delete a settlement account
+  rpc DeleteMerchantSettlementAccount (DeleteMerchantSettlementAccountRequest) returns (ConfigCommandResponse);
+  
+  // ── Merchant Branch Management RPCs ──
+  // List all branches for a merchant
+  rpc ListMerchantBranches (ListMerchantBranchesRequest) returns (ListMerchantBranchesResponse);
+  // Get a single branch by ID
+  rpc GetMerchantBranch (GetMerchantBranchRequest) returns (GetMerchantBranchResponse);
+  // Create a new branch
+  rpc CreateMerchantBranch (CreateMerchantBranchRequest) returns (ConfigCommandResponse);
+  // Update an existing branch
+  rpc UpdateMerchantBranch (UpdateMerchantBranchRequest) returns (ConfigCommandResponse);
+  // Set a branch as the primary for the merchant
+  rpc SetPrimaryMerchantBranch (SetPrimaryMerchantBranchRequest) returns (ConfigCommandResponse);
+  // Delete a branch
+  rpc DeleteMerchantBranch (DeleteMerchantBranchRequest) returns (ConfigCommandResponse);
+  // Ensure a terminal has a TID mapping for its assigned branch. Called by
+  // Merchant-Backend after assigning a terminal to a branch. If the terminal
+  // already has a terminal_tid mapping, this is a no-op. If not, creates one
+  // linking the terminal to an available TID from the branch.
+  rpc EnsureTidMappingForBranch (EnsureTidMappingForBranchRequest) returns (ConfigCommandResponse);
+  // Terminal branch assignment RPCs (multi-branch merchant structure).
+  // Updates terminals.branch_id in the authoritative config_service DB.
+  rpc AssignTerminalToBranch (AssignTerminalToBranchRequest) returns (ConfigCommandResponse);
+  rpc UnassignTerminalFromBranch (UnassignTerminalFromBranchRequest) returns (ConfigCommandResponse);
+  // TID branch assignment RPCs (multi-branch merchant structure).
+  // Updates tids.branch_id in the authoritative config_service DB.
+  rpc AssignTidToBranch (AssignTidToBranchRequest) returns (ConfigCommandResponse);
+  rpc UnassignTidFromBranch (UnassignTidFromBranchRequest) returns (ConfigCommandResponse);
+  
+  // ── Bank Theme Settings RPCs ──
+  // Look up bank theme settings (logo URLs) for a super merchant by bank code.
+  // Used by user-service at login to populate the super_merchant_logo_url field
+  // so POS/mobile receipt screens can display the bank's logo.
+  rpc GetBankThemeSettings (GetBankThemeSettingsRequest) returns (GetBankThemeSettingsResponse);
+  
+  // ── Merchant Settlement Type RPCs ──
+  // Get a merchant's configured settlement type (INSTANT, HOURLY, T+1, T+2, T+3)
+  rpc GetMerchantSettlementType (GetMerchantSettlementTypeRequest) returns (GetMerchantSettlementTypeResponse);
+  // List all merchants with a given settlement type (for schedulers)
+  rpc ListMerchantsBySettlementType (ListMerchantsBySettlementTypeRequest) returns (ListMerchantsBySettlementTypeResponse);
+  // Sync settlement type from super-merchant when a config change is approved
+  rpc SyncMerchantSettlementType (SyncMerchantSettlementTypeRequest) returns (SyncMerchantSettlementTypeResponse);
+}
+
+// ── Query messages ──
+
+message GetProductRequest { string code = 1; }
+message ProductResponse {
+  string code = 1;
+  string name = 2;
+  string type = 3;
+  string status = 4;
+}
+
+message GetChannelRequest { string code = 1; }
+message ChannelResponse {
+  string code = 1;
+  string name = 2;
+  string status = 3;
+}
+
+message GetTierRequest { string code = 1; }
+message TierResponse {
+  string code = 1;
+  string name = 2;
+  double daily_limit = 3;
+  double single_limit = 4;
+  double max_balance = 5;
+}
+
+message GetProviderRouteRequest {
+  string product_code = 1;
+}
+message ProviderRouteResponse {
+  string url = 1;
+  string action = 2;
+  // Code of the provider the routing rules picked (e.g. "nibss",
+  // "interswitch"). The caller needs it whenever a downstream decision is
+  // per-processor — PrepareCardTransaction resolves the internal TID scoped to
+  // the processor, so a caller that guesses the code here gets another
+  // processor's TID.
+  string provider_code = 3;
+}
+
+message GetCostBreakdownRequest {
+  string product_code = 1;
+  string channel = 2;
+  string tier = 3;
+  string payment_method = 4;
+  string user_type = 5;
+  double amount = 6;
+}
+message CostBreakdownResponse {
+  double service_fee = 1;
+  double company_fee = 2;
+  double agent_commission = 3;
+  double company_commission = 4;
+  double aggregator_commission = 5;
+  double user_commission = 6;
+  double amount_to_pay = 7;
+  double amount_to_receive = 8;
+  // Slice that goes to the agent's super aggregator (parent of the
+  // aggregator). Computed only when a commission row keyed on
+  // expression.user_type="super_aggregator" matches the context. Zero when
+  // no such rule is configured for the product, regardless of whether the
+  // agent has a super aggregator upstream — the wallet credit step also
+  // gates on the chain actually existing before booking the entry.
+  double super_aggregator_commission = 9;
+}
+
+message GetLimitsRequest { string tier_code = 1; }
+message LimitsResponse {
+  double daily_limit = 1;
+  double single_limit = 2;
+}
+
+message CheckPndRequest { string user_email = 1; }
+message CheckPndResponse {
+  bool is_pnd = 1;
+  string reason = 2;
+}
+
+message CheckAvailabilityRequest {
+  string product_code = 1;
+  string channel = 2;
+}
+message CheckAvailabilityResponse {
+  bool available = 1;
+  string reason = 2;
+}
+
+message CheckTransactionLimitsRequest {
+  string product_code = 1;
+  string user_type = 2;
+  string tier_code = 3;
+  double amount = 4;
+  double daily_total = 5;
+}
+message CheckTransactionLimitsResponse {
+  bool allowed = 1;
+  string reason = 2;
+}
+
+message ValidateTransactionRequest {
+  string user_email = 1;
+  string product_code = 2;
+  string channel = 3;
+  string user_type = 4;
+  string tier_code = 5;
+  double amount = 6;
+  double daily_total = 7;
+  string payment_method = 8;
+  string serial = 9;
+  // ISO date (yyyy-MM-dd) when the user last changed devices. Empty if not applicable.
+  string new_device_date = 10;
+  // Resolved location state from gateway (e.g. "Enugu"). Empty if not available.
+  string state = 11;
+  // Resolved location LGA from gateway (e.g. "Enugu North"). Empty if not available.
+  string lga = 12;
+  // How the underlying funds reached the wallet, when the wallet is the
+  // payment_method. Currently used for card-funded bank transfers, where the
+  // transfer leg is wallet-debited but was funded by an upstream card debit.
+  // Empty for normal wallet transfers. Lets admins layer charge / limit /
+  // provider rules with `expression: {"funding_method": "card"}` without
+  // affecting plain wallet flows.
+  string funding_method = 13;
+  // Settlement route for transfer products: "on_us" when the transfer settles
+  // internally (wallet-to-wallet between IRPay users, e.g. a local transfer or
+  // a bank transfer whose destination is an IRPay virtual account), "external"
+  // when it leaves IRPay over the bank rail. Empty for non-transfer products.
+  // Lets admins scope charge / limit / commission rules by route, e.g. a
+  // stamp-duty rule with `expression: {"route": {"$ne": "on_us"}}` so on-us
+  // transfers are stamp-duty exempt.
+  string route = 14;
+  // Whether the user has opted into SMS notifications for this kind of
+  // transaction (the "notify_debit" preference includes the "sms" channel and
+  // the global notification kill-switch is on). When false, the named
+  // "sms-charge" charge is skipped during charge resolution — the user is not
+  // billed for an SMS they will never receive. Other charges are unaffected.
+  // Defaults to false, so an unset flag never bills the SMS charge.
+  bool sms_notifications_enabled = 15;
+  // Product-specific context fields for commission/charge expression matching.
+  // These allow configs to be scoped by biller (e.g. {"network": "mtn"} for
+  // airtime, {"disco": "ikedc"} for electricity). Empty when not applicable.
+  string network = 16;      // Airtime/data: mtn, glo, airtel, 9mobile
+  string disco = 17;        // Electricity: aedc, ikedc, ekedc, etc.
+  string biller_type = 18;  // Multichoice: dstv, gotv, startimes, showmax
+  // Card scheme for card products (verve, mastercard, visa, amex, unknown),
+  // derived by the caller from the PAN's issuer prefix — the PAN itself never
+  // crosses into config. Lets provider / charge / commission rules be scoped
+  // per scheme, e.g. `{"card_scheme": "verve"}` on a provider row to pin Verve
+  // cards to interswitch while the wildcard row keeps the rest on upsl. Empty
+  // for non-card products and for validations that run before a card is read.
+  string card_scheme = 19;
+}
+message ValidateTransactionResponse {
+  bool allowed = 1;
+  string reject_reason = 2;
+  double service_fee = 3;
+  double amount_to_pay = 4;
+  double agent_commission = 5;
+  double aggregator_commission = 6;
+  double user_commission = 7;
+  double company_commission = 8;
+  int64 product_id = 9;
+  string product_name = 10;
+  int64 provider_id = 11;
+  string provider_code = 12;
+  // JSON snapshot of the config rules evaluated at validation time (for audit).
+  string config_snapshot = 13;
+  // JSON array of custom charges (VAT, stamp duty, etc.) resolved from custom_charge configs.
+  // Each entry: {"name":"vat","amount":7.5} or {"name":"stamp-duty","amount":50.0}
+  string custom_charges_json = 14;
+  // Slice that goes to the agent's super aggregator (parent of the
+  // aggregator). Resolved against commission rows whose expression carries
+  // user_type="super_aggregator". Zero when no rule matches; the credit
+  // step still gates on the chain actually existing.
+  double super_aggregator_commission = 15;
+}
+
+message GetMaxBalanceRequest {
+  string user_type = 1;
+  string tier_code = 2;
+}
+message MaxBalanceResponse { double max_balance = 1; }
+
+message GetBankCodeRequest { string code = 1; }
+message BankCodeResponse {
+  string code = 1;
+  string name = 2;
+  string nip_code = 3;
+}
+
+// List all bank codes
+message ListBankCodesRequest {}
+message ListBankCodesResponse {
+  repeated BankCodeInfo banks = 1;
+}
+
+// List most used banks
+message ListMostUsedBanksRequest {}
+message ListMostUsedBanksResponse {
+  repeated BankCodeInfo banks = 1;
+}
+
+// Bank info used in list responses
+message BankCodeInfo {
+  string code = 1;
+  string name = 2;
+  string nip_code = 3;
+  string logo_url = 4;
+}
+
+message GetConfigValueRequest {
+  string module = 1;
+  string type = 2;
+  map<string, string> context = 3;
+}
+message GetConfigValueResponse {
+  bool found = 1;
+  string value = 2;
+  // The matched configuration row's raw expression JSON (may be empty). Lets
+  // callers read inline metadata fields such as "cost_model" or "base" that are
+  // not match conditions.
+  string expression = 3;
+}
+
+message ResolveScopedValueRequest {
+  string module = 1;
+  string type = 2;
+  // The user the value is being resolved for (agent/merchant/aggregator). The
+  // service resolves their aggregator parent itself via user-service, so the
+  // caller only supplies the leaf user id.
+  int64 user_id = 3;
+}
+message ResolveScopedValueResponse {
+  bool found = 1;
+  string value = 2;
+  // Which tier the returned value came from: "agent" (a row scoped to this
+  // exact user), "aggregator" (a row scoped to the user's aggregator parent),
+  // or "global" (the null-expression default). Empty when not found.
+  string scope = 3;
+}
+
+message GetDataPlanRequest {
+  string sub_code = 1;
+  string network = 2;
+}
+message GetDataPlanResponse {
+  bool found = 1;
+  double amount = 2;
+  string bundle = 3;
+  string description = 4;
+  string provider_sub_code = 5;
+}
+
+message ListDataPlansRequest {
+  string network = 1;
+}
+
+message DataPlanInfo {
+  string sub_code = 1;
+  string bundle = 2;
+  double amount = 3;
+  string duration = 4;
+  string description = 5;
+  string network = 6;
+}
+
+message ListDataPlansResponse {
+  repeated DataPlanInfo plans = 1;
+}
+
+message GetBouquetPriceRequest {
+  string type = 1;
+  string code = 2;
+}
+message GetBouquetPriceResponse {
+  bool found = 1;
+  double price = 2;
+  string name = 3;
+}
+
+message ListBouquetsRequest {
+  string type = 1;
+}
+
+message BouquetInfo {
+  string code = 1;
+  string name = 2;
+  double price = 3;
+  string type = 4;
+}
+
+message ListBouquetsResponse {
+  repeated BouquetInfo bouquets = 1;
+}
+
+// ── Admin command messages ──
+
+message ConfigCommandResponse {
+  bool success = 1;
+  string message = 2;
+  string reference = 3;
+  string data_json = 4;
+}
+
+message CreateConfigurationRequest {
+  string module = 1;
+  string type = 2;
+  string expression = 3;
+  string value = 4;
+  string description = 5;
+  string name = 6;
+}
+
+message UpdateConfigurationRequest {
+  int64 id = 1;
+  string module = 2;
+  string type = 3;
+  string expression = 4;
+  string value = 5;
+  string description = 6;
+  string name = 7;
+}
+
+message DeleteConfigurationRequest { int64 id = 1; }
+
+message DataPlanRequest {
+  int64 id = 1;
+  string reference = 2;
+  string sub_code = 3;
+  string provider_sub_code = 4;
+  string provider = 5;
+  string network = 6;
+  double amount = 7;
+  double cost = 8;
+  string bundle = 9;
+  string duration = 10;
+  string description = 11;
+  string category = 12;
+}
+
+message DeleteDataPlanRequest { int64 id = 1; }
+
+message ImportDataPlansRequest {
+  repeated DataPlanRequest plans = 1;
+}
+
+message SetMaxBalanceRequest {
+  string user_type = 1;
+  string tier = 2;
+  string value = 3;
+  string description = 4;
+}
+
+message RemoveMaxBalanceRequest {
+  string user_type = 1;
+  string tier = 2;
+}
+
+// ── Terminal management messages ──
+
+message CreateTerminalRequest {
+  string serial = 1;
+  string make = 2;
+  string model = 3;
+  string os = 4;
+}
+
+message TerminalEntry {
+  string serial = 1;
+  string make = 2;
+  string model = 3;
+  string os = 4;
+}
+
+message CreateTerminalsBatchRequest {
+  repeated TerminalEntry terminals = 1;
+}
+
+message UpdateTerminalRequest {
+  int64 terminal_id = 1;
+  string make = 2;
+  string model = 3;
+  string os = 4;
+  bool is_active = 5;
+}
+
+message MapTerminalRequest {
+  int64 terminal_id = 1;
+  int64 user_id = 2;
+}
+
+message UnmapTerminalRequest {
+  int64 terminal_id = 1;
+}
+
+// ── TID management messages ──
+
+message CreateTidRequest {
+  string terminal_id = 1;
+  string merchant_id = 2;
+  string merchant_name = 3;
+  string bank_acc_no = 4;
+  bool internal = 6;
+  string merchant_category_code = 8;
+  string state_code = 9;
+  string email = 11;
+  string merchant_physical_addr = 12;
+  string merchant_address_lga_code = 13;
+  // Optional processor scope for an internal TID — comma/space separated
+  // provider codes (e.g. "nibss,upsl" or "interswitch"). Blank = unscoped.
+  string processor = 14;
+  // Optional product scope for an internal TID — comma/space separated product
+  // codes (e.g. "withdrawal" or "withdrawal,cash-advance"). Blank = any product.
+  string product = 15;
+}
+
+message UpdateTidRequest {
+  int64 tid_id = 1;
+  string terminal_id = 2;
+  string merchant_id = 3;
+  bool internal = 5;
+  string merchant_name = 7;
+  string bank_acc_no = 8;
+  string merchant_category_code = 9;
+  string state_code = 10;
+  string email = 11;
+  string merchant_physical_addr = 12;
+  string merchant_address_lga_code = 13;
+  // Optional processor scope for an internal TID — comma/space separated
+  // provider codes (e.g. "nibss,upsl" or "interswitch"). Blank = unscoped.
+  string processor = 14;
+  // When true, apply `processor` even if blank (blank clears the scope). When
+  // false, `processor` is ignored so other updates (e.g. internal toggle) don't
+  // wipe an existing scope.
+  bool update_processor = 15;
+  // Optional product scope for an internal TID — comma/space separated product
+  // codes (e.g. "withdrawal" or "withdrawal,cash-advance"). Blank = any product.
+  string product = 16;
+  // When true, apply `product` even if blank (blank clears the scope). Same
+  // guard as update_processor.
+  bool update_product = 17;
+  // When true, leave `internal` alone. `internal` is a bool, so it cannot
+  // distinguish "set false" from "not supplied" on its own, and every partial
+  // update (setting a processor or product scope) carried the proto default
+  // `false` — silently demoting the TID to external and dropping it out of card
+  // routing entirely. The flag is opt-OUT rather than opt-in so that a caller
+  // that predates it keeps today's behaviour exactly: an unset flag still
+  // applies `internal`, so the toggle-internal endpoint cannot become a no-op
+  // against a newer config-service that an older admin service is talking to.
+  bool preserve_internal = 18;
+}
+
+message DeleteTidRequest {
+  int64 tid_id = 1;
+}
+
+// ── Funding alert messages ──
+
+message CreateFundingAlertRequest {
+  int64 provider_id = 1;
+  double amount = 2;
+  repeated string emails = 3;
+  repeated string phone_numbers = 4;
+  repeated string admin_ids = 5;
+  string notify_via = 6;
+  string interval = 7;
+}
+
+message UpdateFundingAlertRequest {
+  int64 funding_alert_id = 1;
+  int64 provider_id = 2;
+  double amount = 3;
+  repeated string emails = 4;
+  repeated string phone_numbers = 5;
+  repeated string admin_ids = 6;
+  string notify_via = 7;
+  string interval = 8;
+}
+
+message DeleteFundingAlertRequest {
+  int64 funding_alert_id = 1;
+}
+
+// ── Provider balance cache messages ──
+// Balance updates arrive via Kafka (provider-balance topic), not gRPC.
+
+message GetProviderBalanceRequest {
+  string provider_code = 1;
+}
+
+message ProviderBalanceResponse {
+  string provider_code = 1;
+  double balance = 2;
+  string source_account_number = 3;
+  bool is_healthy = 4;
+  string last_error = 5;
+  string last_checked_at = 6;
+}
+
+message GetAllProviderBalancesRequest {}
+
+message AllProviderBalancesResponse {
+  repeated ProviderBalanceResponse balances = 1;
+}
+
+message RefreshProviderBalanceRequest {
+  string provider_code = 1;
+  string triggered_by = 2;
+}
+
+message RefreshProviderCardKeysRequest {
+  string provider_code = 1;
+  string triggered_by = 2;
+}
+
+// ── Card transaction preparation messages ──
+
+message PrepareCardTransactionRequest {
+  string serial = 1;
+  string pin_block = 2;
+  int64 user_id = 3;
+  string product_code = 4;
+  // When true, force the TID swap to the internal/org TID even if the
+  // user is not enrolled for instant settlement. Used by the card-funded
+  // bank-transfer flow so the purchase leg always lands on a TID that is
+  // enrolled with NIBSS for the purchase MTI (processing code 000000).
+  bool force_internal_tid = 5;
+  // The processor (provider code) the transaction is being routed through
+  // (e.g. "nibss", "upsl", "interswitch"). When an internal TID swap applies,
+  // config picks the internal TID scoped to this processor so each processor
+  // can carry its own TID. Blank = legacy single-internal-TID behaviour.
+  string provider_code = 6;
+}
+
+message PrepareCardTransactionResponse {
+  bool success = 1;
+  string error = 2;
+  string clear_pin_block = 3;
+  // TID / merchant identity
+  string terminal_id = 4;
+  string merchant_id = 5;
+  string merchant_name = 6;
+  string merchant_category_code = 7;
+  string merchant_address = 8;
+  string settlement_account = 9;
+  string state_code = 10;
+  string merchant_physical_addr = 11;
+  string merchant_address_lga_code = 12;
+  // Instant settlement fields
+  bool instant_settlement = 13;
+  string original_terminal_id = 14;
+  string original_merchant_id = 15;
+  string original_settlement_account = 16;
+  // The terminal id the provider must present to the switch (ISO field 41)
+  // when the routed processor issues one terminal id per device and this
+  // device holds one. Blank means the provider keeps using its configured
+  // shared id — the behaviour before per-device ids existed.
+  string provider_terminal_id = 17;
+  // Bank code from the TID (tids.bank_code). Identifies which bank (super
+  // merchant) the merchant belongs to. Used for bank-level settlement config
+  // lookups. Empty for non-bank-affiliated merchants (platform merchants).
+  string bank_code = 18;
+  // Bank-level settlement mode: INSTANT or HOURLY. Only set when the bank has
+  // purchase_settlement_enabled=true. Empty means no bank-level settlement.
+  string bank_settlement_mode = 19;
+  // Branch ID from the terminal at transaction time. Used for branch-level
+  // settlement routing. Stamped into transaction metadata so POS reassignment
+  // doesn't affect historical transaction attribution.
+  int64 branch_id = 20;
+}
+
+// ── Terminal secret lookup messages ──
+
+message GetTerminalSecretRequest {
+  string serial = 1;
+}
+
+message GetTerminalSecretResponse {
+  bool found = 1;
+  string error = 2;
+  string secret_key = 3;
+  string tid = 4;
+}
+
+// ── Device-secret authentication messages ──
+
+message ValidateTerminalSecretRequest {
+  string secret_key = 1;
+}
+
+message ValidateTerminalSecretResponse {
+  // True only when a terminal holds exactly this secret_key. Callers treat
+  // false as "reject the request" — this RPC is an authentication decision.
+  bool found = 1;
+  string error = 2;
+  string serial = 3;
+  // Mapped TID, empty when the terminal has not been mapped yet. Absence is
+  // not an auth failure: the device is still a known device.
+  string tid = 4;
+  // Admin hard lock, surfaced so the caller can refuse a locked device
+  // without a second round trip.
+  bool locked = 5;
+  string lock_message = 6;
+}
+
+// ── Terminal lock status messages ──
+
+message GetTerminalLockStatusRequest {
+  string serial = 1;
+}
+
+message GetTerminalLockStatusResponse {
+  // True when the terminal record exists. Missing terminal is not a hard error
+  // — older agents who haven't prepped any device run the same wallet flows
+  // and have no serial. The caller decides what to do with not-found.
+  bool found = 1;
+  bool locked = 2;
+  string lock_message = 3;
+  int64 user_id = 4;
+  // True when the terminal's branch is not "active" (e.g. inactive, suspended, closed).
+  // Terminals with null branchId have branch_inactive=false (they are not blocked).
+  bool branch_inactive = 5;
+  // The branch status when branch_inactive=true (e.g. "inactive", "suspended", "closed").
+  // Defaults to "active" when branchId is null or the branch is active.
+  string branch_status = 6;
+}
+
+// ── Aggregator-for-serial lookup messages ──
+
+message GetAggregatorForSerialRequest {
+  string serial = 1;
+}
+
+message GetAggregatorForSerialResponse {
+  // True when the serial has been dispatched to an aggregator. Stock-only
+  // serials (in `terminals` but not in `aggregator_terminals`) return found=false
+  // — the caller should treat that as "no aggregator constraint to enforce".
+  bool found = 1;
+  int64 aggregator_id = 2;
+}
+
+// ── Terminal owner lookup messages ──
+
+message GetTerminalOwnerRequest {
+  string serial = 1;
+}
+
+message GetTerminalOwnerResponse {
+  // True when a terminal record exists for the serial. A missing terminal
+  // (found=false) means there is no ownership binding to enforce — the caller
+  // should allow the login through (the serial may belong to a non-POS client
+  // or a device that has never been prepped).
+  bool found = 1;
+  // The user the terminal is currently bound to (terminals.user_id), or 0 when
+  // the device exists but is unowned (admin has detached it via UnmapTerminal).
+  // 0 means "free to claim" — no rejection.
+  int64 user_id = 2;
+}
+
+// ── User terminal count messages ──
+
+message CountUserTerminalsRequest {
+  int64 user_id = 1;
+  // When true, count only terminals with active = true. target-service passes
+  // true so a deactivated device doesn't keep an agent on the hook for a
+  // target. Defaults to false (count all mapped) for forward-compat.
+  bool active_only = 2;
+  // When > 0, count only terminals whose deployment (terminal_user.created_at)
+  // is at least this many days in the past. Implements the agent grace period:
+  // a freshly-deployed device doesn't start counting toward the agent's target
+  // until the grace elapses. 0 = no grace (count all matching).
+  int32 min_deployment_age_days = 3;
+}
+
+message CountUserTerminalsResponse {
+  int64 count = 1;
+}
+
+// ── Aggregator pool terminal count messages ──
+
+message CountAggregatorPoolTerminalsRequest {
+  int64 aggregator_id = 1;
+  // When > 0, count only pool serials dispatched at least this many days ago.
+  // Implements the pool grace period: a serial sitting in the aggregator's pool
+  // doesn't start counting toward the aggregator baseline until the grace
+  // elapses, giving the aggregator time to deploy it to the field. 0 = no grace.
+  int32 min_pool_age_days = 2;
+}
+
+message CountAggregatorPoolTerminalsResponse {
+  // Number of UNDEPLOYED serials in the aggregator's pool (dispatched to the
+  // aggregator, not yet mapped to any user) that are past the grace period.
+  // Deployed devices are excluded because they are already represented by their
+  // owning downliner's individual target in the aggregator baseline sum.
+  int64 count = 1;
+}
+
+// ── Provider self-registration messages ──
+
+message RegisterProviderRequest {
+  string provider_code = 1;
+  string grpc_url = 2;
+  repeated ProviderAction actions = 3;
+}
+
+message ProviderAction {
+  string product_code = 1;
+  string action = 2;
+  int32 priority = 3;
+}
+
+// ── Provider routing with failover messages ──
+
+message ResolveProviderRequest {
+  string product_code = 1;
+  map<string, string> context = 2;
+  // Provider codes to exclude from resolution. Used for on-the-fly failover:
+  // when a provider times out (or connection-errors) mid-transaction, the
+  // processor asks for the next-best provider for the same product, excluding
+  // the one that just failed. Disabled and circuit-broken providers are skipped
+  // regardless; this is an additional, per-call exclusion.
+  repeated string exclude_providers = 3;
+}
+
+message ResolveProviderResponse {
+  bool found = 1;
+  string provider_code = 2;
+  string provider_url = 3;
+  string action = 4;
+  // Numeric id of the resolved provider (from the providers registry). Lets the
+  // caller persist a provider_id that matches the actually-resolved provider —
+  // important on failover, where the resolved provider differs from the
+  // validation-time pick.
+  int64 provider_id = 5;
+}
+
+message ReportProviderFailureRequest {
+  string provider_code = 1;
+  string product_code = 2;
+  string response_code = 3;
+  string reason = 4;
+}
+
+message ResetProviderOverrideRequest {
+  string provider_code = 1;
+}
+
+// ── Failover reporting + permanent re-routing ──
+
+message ReportFailoverRequest {
+  // The product whose card debit failed over (e.g. "withdrawal").
+  string product_code = 1;
+  // The provider that timed out / connection-errored (e.g. "nibss").
+  string from_provider_code = 2;
+  // The provider that successfully handled the retry (e.g. "interswitch").
+  string to_provider_code = 3;
+  // Optional reason / message from the failed leg, for audit.
+  string reason = 4;
+}
+
+message ReportFailoverResponse {
+  // Number of consecutive failovers counted for this product+route (after this
+  // report).
+  int32 consecutive_count = 1;
+  // True when this report tripped the threshold and routing was permanently
+  // overridden to to_provider_code for product_code.
+  bool permanent_override_applied = 2;
+}
+
+// ── Direct provider URL lookup (by provider code) ──
+
+message GetProviderUrlRequest {
+  string provider_code = 1;
+}
+
+message GetProviderUrlResponse {
+  bool found = 1;
+  string provider_url = 2;
+  // Numeric id of the provider, so callers reaching a specific provider by code
+  // can also persist the matching provider_id.
+  int64 provider_id = 3;
+}
+
+// ── Provider lookup by ID ──
+
+message GetProviderByIdRequest {
+  int64 provider_id = 1;
+}
+
+message GetProviderByIdResponse {
+  bool found = 1;
+  string provider_code = 2;
+  string provider_name = 3;
+}
+
+// ── Reference data lookup messages ──
+
+message GetLocationNamesRequest {
+  int64 country_id = 1;
+  int64 state_id = 2;
+}
+
+message GetLocationNamesResponse {
+  string country_name = 1;
+  string state_name = 2;
+  // Stable lowercase state code from the seed file (e.g. "la", "ab", "fc").
+  // Callers prefer this over state_name for any branching/lookup logic
+  // because it is canonical and immune to typo/casing drift.
+  string state_code = 3;
+}
+
+// ── App config messages (returned on /me for mobile client) ──
+
+message GetAppConfigsRequest {
+  // Caller context so the server can evaluate tier- or user-type-scoped
+  // configuration rules (minimum amounts, SMS charge, etc.) with the same
+  // specificity matching used for limits and commissions. Empty values mean
+  // "unknown" — the server falls back to the wildcard match.
+  string user_type = 1;
+  string tier_code = 2;
+}
+
+message GetAppConfigsResponse {
+  double sms_charge = 1;
+  map<string, double> minimum_amounts = 2;
+}
+
+// ── Electricity disco messages ──
+
+message ListElectricityDiscosRequest {
+  // When true, return only discos with at least one configured provider whose
+  // gRPC URL resolved successfully. The transaction service uses this to filter
+  // out misconfigured rows from the public /electricity/discos response.
+  bool only_active = 1;
+}
+
+message ElectricityDisco {
+  string code = 1;
+  string name = 2;
+  string icon = 3;
+  // Meter types this disco supports (e.g. "prepaid", "postpaid").
+  repeated string meter_types = 4;
+  // Provider-route triples — one per (provider) configured for the disco.
+  // Each triple carries the resolved gRPC URL so the transaction service
+  // can fan out parallel verify-meter calls without an extra roundtrip.
+  repeated DiscoProviderRoute provider_routes = 5;
+  bool is_active = 6;
+}
+
+message DiscoProviderRoute {
+  string provider_code = 1;
+  string provider_url = 2;
+}
+
+message ListElectricityDiscosResponse {
+  repeated ElectricityDisco discos = 1;
+}
+
+// ── Instant settlement management messages ──
+
+message EnrollInstantSettlementRequest {
+  int64 user_id = 1;
+  string approved_by = 3;
+  string notes = 4;
+  // Optional: when set, the server skips enrollment if a TID already
+  // exists with this email (i.e. the merchant was created via a TID
+  // upload and already has its own settlement TID — instant settlement
+  // would point them at an internal TID and break that arrangement).
+  // The caller still gets a success response in that case so the
+  // upgrade flow doesn't surface a fake error.
+  string email = 5;
+
+  // Optional settlement-window config applied at enrollment time. Same
+  // fields as UpdateSettlementWindowRequest; all default to empty/false
+  // so existing callers that only enroll are unaffected.
+  bool window_enabled = 6;
+  string settlement_times = 7;            // comma-separated HH:mm (Africa/Lagos), e.g. "12:00,21:00"
+  string destination_account_number = 8;
+  string destination_bank_code = 9;       // must be the merchant's super-merchant bank
+  string destination_account_name = 10;   // must match the merchant name
+}
+
+// Set/replace a merchant's settlement-window config without re-running the
+// enrollment skip checks. The merchant must already be enrolled.
+message UpdateSettlementWindowRequest {
+  int64 user_id = 1;
+  bool window_enabled = 2;
+  string settlement_times = 3;
+  string destination_account_number = 4;
+  string destination_bank_code = 5;
+  string destination_account_name = 6;
+}
+
+// Settlement sweep discovery: the settlement service asks "which enrolled
+// merchants have a window due at this clock time?" once a minute.
+message ListDueSettlementsRequest {
+  string time = 1;   // HH:mm in Africa/Lagos to match against settlement_times
+}
+
+message ListDueSettlementsResponse {
+  repeated DueSettlement settlements = 1;
+}
+
+message DueSettlement {
+  int64 user_id = 1;
+  string destination_account_number = 2;
+  string destination_bank_code = 3;
+  string destination_account_name = 4;
+  string settlement_time = 5;
+}
+
+message SuspendInstantSettlementRequest {
+  int64 user_id = 1;
+  string reason = 2;
+}
+
+message RevokeInstantSettlementRequest {
+  int64 user_id = 1;
+  string reason = 2;
+}
+
+message ReactivateInstantSettlementRequest {
+  int64 user_id = 1;
+  string notes = 2;
+}
+
+message CheckInstantSettlementRequest {
+  int64 user_id = 1;
+}
+
+message CheckInstantSettlementResponse {
+  bool active = 1;
+  string status = 2;
+  bool window_enabled = 3;
+  string settlement_times = 4;
+  string destination_account_number = 5;
+  string destination_bank_code = 6;
+  string destination_account_name = 7;
+}
+
+
+// ── Bank Settlement Configuration messages ──
+// Bank-level settlement configuration queries. These settings control whether
+// purchase transactions are settled for all merchants of a bank (super merchant).
+// The configuration is managed by tms-report-java and stored in the supermerchant
+// schema; tms-config provides read-only gRPC access for tms-wallet and tms-processor.
+
+message CheckBankSettlementRequest {
+  // NIBSS bank code (from tids.bank_code)
+  string bank_code = 1;
+}
+
+message CheckBankSettlementResponse {
+  // True if the config exists and purchase_settlement_enabled is true
+  bool purchase_settlement_enabled = 1;
+  // Settlement mode: INSTANT or HOURLY
+  string settlement_mode = 2;
+  // For HOURLY mode: comma-separated HH:mm times when settlements run
+  string settlement_times = 3;
+  // Convenience flag: true if purchase_settlement_enabled AND mode is INSTANT
+  bool instant_settlement_enabled = 4;
+  // Convenience flag: true if purchase_settlement_enabled AND mode is HOURLY
+  bool hourly_settlement_enabled = 5;
+}
+
+message ListHourlySettlementBanksRequest {
+  // Optional: filter to banks due at this specific time (HH:mm format)
+  // If empty, returns all banks with hourly settlement enabled
+  string due_at_time = 1;
+}
+
+message HourlySettlementBank {
+  string bank_code = 1;
+  string settlement_times = 2;
+}
+
+message ListHourlySettlementBanksResponse {
+  repeated HourlySettlementBank banks = 1;
+}
+
+// List all merchant user IDs that belong to a bank (have TIDs with that bank_code).
+// Used by the hourly settlement scheduler to sweep all merchants for a bank.
+message ListBankMerchantsRequest {
+  string bank_code = 1;
+}
+
+message BankMerchant {
+  int64 user_id = 1;
+}
+
+message ListBankMerchantsResponse {
+  repeated BankMerchant merchants = 1;
+}
+
+// ── Settlement Destination Resolution messages ──
+// Resolves the settlement destination for a TID or user using the multi-branch
+// structure: TID's settlement_account_id → merchant's default account → legacy fallback.
+
+message ResolveSettlementDestinationRequest {
+  // Resolve by TID ID (takes precedence if set)
+  int64 tid_id = 1;
+  // Resolve by user ID (merchant-level default)
+  int64 user_id = 2;
+  // Resolve by terminal ID string (looks up TID first)
+  string terminal_id = 3;
+  // Resolve by branch ID (for branch-level settlement routing).
+  // When set, looks up branch's settlement account directly.
+  // Takes precedence over terminal_id and user_id when set.
+  int64 branch_id = 4;
+}
+
+message ResolveSettlementDestinationResponse {
+  bool found = 1;
+  string account_number = 2;
+  string bank_code = 3;
+  string account_name = 4;
+  // Source of the destination: "tid:<id>", "merchant_default:<id>", or "instant_settlement:<id>"
+  string source = 5;
+}
+
+
+
+// ── Merchant Settlement Account Management messages ──
+// CRUD operations for merchant settlement accounts (multi-branch structure).
+
+message ListMerchantSettlementAccountsRequest {
+  int64 user_id = 1;
+  bool active_only = 2;  // When true, only return accounts with status='active'
+}
+
+message MerchantSettlementAccount {
+  int64 id = 1;
+  int64 user_id = 2;
+  string account_number = 3;
+  string bank_code = 4;
+  string account_name = 5;
+  string label = 6;
+  bool is_default = 7;
+  string status = 8;
+  string created_at = 9;
+  string updated_at = 10;
+}
+
+message ListMerchantSettlementAccountsResponse {
+  repeated MerchantSettlementAccount accounts = 1;
+}
+
+message GetMerchantSettlementAccountRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+}
+
+message GetMerchantSettlementAccountResponse {
+  bool found = 1;
+  MerchantSettlementAccount account = 2;
+}
+
+message CreateMerchantSettlementAccountRequest {
+  int64 user_id = 1;
+  string account_number = 2;
+  string bank_code = 3;
+  string account_name = 4;
+  string label = 5;
+  bool is_default = 6;
+}
+
+message UpdateMerchantSettlementAccountRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+  string account_name = 3;
+  string label = 4;
+  string status = 5;  // active, suspended, closed
+}
+
+message SetDefaultMerchantSettlementAccountRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+}
+
+message DeleteMerchantSettlementAccountRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+}
+
+// ── Merchant Branch Management messages ──
+// CRUD operations for merchant branches (multi-branch structure).
+
+message ListMerchantBranchesRequest {
+  int64 user_id = 1;
+  bool active_only = 2;  // When true, only return branches with status='active'
+  bool with_settlement_account_only = 3;  // When true, only return branches with settlement_account_id set
+}
+
+message MerchantBranch {
+  int64 id = 1;
+  int64 user_id = 2;
+  string name = 3;
+  string code = 4;
+  string address = 5;
+  string state_code = 6;
+  string lga_code = 7;
+  string phone_number = 8;
+  string email = 9;
+  string status = 10;
+  bool is_primary = 11;
+  string created_at = 12;
+  string updated_at = 13;
+  int64 settlement_account_id = 14;  // 0 if no settlement account configured
+}
+
+message ListMerchantBranchesResponse {
+  repeated MerchantBranch branches = 1;
+}
+
+message GetMerchantBranchRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+}
+
+message GetMerchantBranchResponse {
+  bool found = 1;
+  MerchantBranch branch = 2;
+}
+
+message CreateMerchantBranchRequest {
+  int64 user_id = 1;
+  string name = 2;
+  string code = 3;
+  string address = 4;
+  string state_code = 5;
+  string lga_code = 6;
+  string phone_number = 7;
+  string email = 8;
+  bool is_primary = 9;
+}
+
+message UpdateMerchantBranchRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+  string name = 3;
+  string address = 4;
+  string state_code = 5;
+  string lga_code = 6;
+  string phone_number = 7;
+  string email = 8;
+  string status = 9;  // active, suspended, closed
+  int64 settlement_account_id = 10;  // 0 to clear
+  bool clear_settlement_account = 11;  // Set true to explicitly clear the account
+}
+
+message SetPrimaryMerchantBranchRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+}
+
+message DeleteMerchantBranchRequest {
+  int64 id = 1;
+  int64 user_id = 2;  // For ownership validation
+}
+
+// ── Bank Theme Settings messages ──
+
+message GetBankThemeSettingsRequest {
+  // NIBSS bank code (from tids.bank_code). Either bank_code or user_id must be set.
+  string bank_code = 1;
+  // User ID to resolve bank_code from their TID. When set, config-service looks
+  // up the user's TID and extracts the bank_code. This allows user-service to
+  // call without knowing the bank_code. If both are set, bank_code takes precedence.
+  int64 user_id = 2;
+}
+
+message GetBankThemeSettingsResponse {
+  // True when a theme settings record exists for the bank code
+  bool found = 1;
+  // Full logo URL for receipt headers and branding
+  string logo_url = 2;
+  // Small logo URL for collapsed sidebar (icon size)
+  string small_logo_url = 3;
+  // The resolved bank code (useful when looked up via user_id)
+  string bank_code = 4;
+  // Receipt-specific logo URL. Falls back to logo_url when not set.
+  string receipt_logo_url = 5;
+}
+
+// ── Ensure TID mapping for branch-assigned terminal ──
+
+message EnsureTidMappingForBranchRequest {
+  int64 terminal_id = 1;
+  int64 branch_id = 2;
+}
+
+// ── Terminal branch assignment messages ──
+
+message AssignTerminalToBranchRequest {
+  int64 terminal_id = 1;
+  int64 branch_id = 2;
+}
+
+message UnassignTerminalFromBranchRequest {
+  int64 terminal_id = 1;
+}
+
+// ── TID branch assignment messages ──
+
+message AssignTidToBranchRequest {
+  int64 tid_id = 1;
+  int64 branch_id = 2;
+}
+
+message UnassignTidFromBranchRequest {
+  int64 tid_id = 1;
+  int64 branch_id = 2;
+}
+
+
+// ── Bank settlement config messages ──
+
+message GetBankSettlementConfigRequest {
+  string bank_code = 1;
+}
+
+message BankSettlementConfigResponse {
+  bool found = 1;
+  string bank_code = 2;
+  bool purchase_settlement_enabled = 3;
+  string settlement_mode = 4;  // INSTANT or HOURLY
+  string settlement_times = 5; // Comma-separated HH:mm times for HOURLY mode
+}
+
+message SetBankSettlementConfigRequest {
+  string bank_code = 1;
+  bool purchase_settlement_enabled = 2;
+  string settlement_mode = 3;  // INSTANT or HOURLY
+  string settlement_times = 4; // Comma-separated HH:mm times for HOURLY mode
+  string updated_by = 5;       // Admin email for audit trail
+}
+
+
+// ── Merchant Settlement Type messages ──
+
+message GetMerchantSettlementTypeRequest {
+  int64 user_id = 1;
+}
+
+message GetMerchantSettlementTypeResponse {
+  bool found = 1;
+  string settlement_type = 2;  // INSTANT, HOURLY, T+1, T+2, T+3
+}
+
+message ListMerchantsBySettlementTypeRequest {
+  string settlement_type = 1;  // INSTANT, HOURLY, T+1, T+2, T+3
+}
+
+message ListMerchantsBySettlementTypeResponse {
+  repeated int64 user_ids = 1;
+}
+
+message SyncMerchantSettlementTypeRequest {
+  int64 user_id = 1;
+  string settlement_type = 2;  // INSTANT, HOURLY, T+1, T+2, T+3, or empty to clear
+}
+
+message SyncMerchantSettlementTypeResponse {
+  bool success = 1;
+  string message = 2;
+}

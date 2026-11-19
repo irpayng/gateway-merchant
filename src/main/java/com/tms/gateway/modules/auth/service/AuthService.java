@@ -3,9 +3,15 @@ package com.tms.gateway.modules.auth.service;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
 import com.tms.gateway.core.security.JwtService;
 import com.tms.gateway.grpc.user.AuthPgMerchantResponse;
+import com.tms.gateway.grpc.user.RegisterPgMerchantResponse;
 import com.tms.gateway.modules.auth.dto.LoginRequest;
 import com.tms.gateway.modules.auth.dto.LoginResponse;
+import com.tms.gateway.modules.auth.dto.RegisterRequest;
+import com.tms.gateway.modules.auth.dto.RegisterResponse;
+import com.tms.gateway.modules.auth.dto.ResendOtpRequest;
 import com.tms.gateway.modules.auth.dto.UserData;
+import com.tms.gateway.modules.auth.dto.VerifyEmailRequest;
+import com.tms.gateway.modules.compliance.dto.ComplianceResponse;
 import com.tms.gateway.modules.grpc.service.UserGrpcClient;
 import com.tms.gateway.modules.user.entity.PgMerchantUserEntity;
 import com.tms.gateway.modules.user.repository.PgMerchantUserRepository;
@@ -20,8 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Authentication service for pg_merchant dashboard.
  *
  * <p>
- * Authenticates users via gRPC to tms-user (same credentials as registration),
- * then issues local JWTs for session management.
+ * Authenticates and registers users via gRPC to tms-user, then issues local
+ * JWTs for session management.
  */
 @Slf4j
 @Service
@@ -29,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserGrpcClient userGrpcClient;
+    private final com.tms.gateway.modules.compliance.service.ComplianceService complianceService;
     private final JwtService jwtService;
     private final PgMerchantUserRepository userRepository;
 
@@ -55,20 +62,105 @@ public class AuthService {
         // Update or create local replica entry
         upsertLocalReplica(authResponse);
 
-        // Build user data (compliance status will be added when compliance module is
-        // implemented)
+        var principal = GatewayMerchantUserDetails.builder().id(authResponse.getUserId())
+                .merchantId(authResponse.getMerchantId()).emailVerifiedAt(Instant.now()).build();
+
+        // Get compliance status - don't fail login if KYC service is unavailable
+        // or if merchantId is not yet assigned (legacy users)
+        ComplianceResponse compliance = null;
+        if (authResponse.getMerchantId() != null && !authResponse.getMerchantId().isBlank()) {
+            try {
+                compliance = complianceService.getCompliance(complianceService.context(principal, null, null));
+            } catch (Exception e) {
+                log.warn("Failed to fetch compliance for merchantId={}: {}", authResponse.getMerchantId(),
+                        e.getMessage());
+            }
+        } else {
+            log.warn("Login for userId={} has no merchantId - skipping compliance check", authResponse.getUserId());
+        }
+
         UserData userData = UserData.builder().id(authResponse.getUserId()).merchantId(authResponse.getMerchantId())
                 .email(authResponse.getEmail()).phoneNumber(authResponse.getPhoneNumber())
                 .businessName(authResponse.getBusinessName()).firstName(authResponse.getFirstName())
                 .lastName(authResponse.getLastName()).displayName(buildDisplayName(authResponse))
-                .complianceStatus("none") // TODO: fetch from compliance replica
-                .complianceStep(0).complianceRequired(true).build();
+                .complianceStatus(compliance == null ? "none" : compliance.status())
+                .complianceStep(compliance == null ? 0 : compliance.currentStep())
+                .complianceRequired(compliance == null || !"approved".equals(compliance.status()))
+                .businessType(extractBusinessType(authResponse, compliance)).build();
 
         log.info("Login successful for userId={} merchantId={}", authResponse.getUserId(),
                 authResponse.getMerchantId());
 
         return LoginResponse.builder().token(token).tokenType("Bearer").expiresIn(jwtExpirationMs / 1000).user(userData)
                 .build();
+    }
+
+    /**
+     * Register a new pg_merchant user.
+     *
+     * @param request
+     *            the registration request
+     * @return the registration response with user details
+     */
+    public RegisterResponse register(RegisterRequest request) {
+        RegisterPgMerchantResponse response = userGrpcClient.registerPgMerchant(request.getEmail().trim().toLowerCase(),
+                request.getPassword(), request.getPhoneNumber(), request.getBusinessName(), request.getBusinessType(),
+                request.getFirstName(), request.getLastName(), request.getCountry());
+
+        log.info("Registration successful for userId={} merchantId={}", response.getUserId(), response.getMerchantId());
+
+        return RegisterResponse.builder().userId(response.getUserId()).merchantId(response.getMerchantId())
+                .email(response.getEmail()).phoneNumber(response.getPhoneNumber())
+                .businessName(response.getBusinessName()).businessType(response.getBusinessType())
+                .message("Registration successful. Please verify your email address.").build();
+    }
+
+    /**
+     * Verify a pg_merchant's email address using the OTP.
+     *
+     * @param request
+     *            the verification request with email and OTP
+     */
+    public void verifyEmail(VerifyEmailRequest request) {
+        userGrpcClient.verifyPgMerchantEmail(request.getEmail().trim().toLowerCase(), request.getOtp().trim());
+        log.info("Email verified for email={}", request.getEmail());
+    }
+
+    /**
+     * Resend the email verification OTP.
+     *
+     * @param request
+     *            the resend request with email
+     */
+    public void resendOtp(ResendOtpRequest request) {
+        userGrpcClient.resendPgMerchantOtp(request.getEmail().trim().toLowerCase());
+        log.info("OTP resent for email={}", request.getEmail());
+    }
+
+    /**
+     * Request a password reset OTP for a pg_merchant user.
+     *
+     * @param email
+     *            the user's email address
+     */
+    public void forgotPassword(String email) {
+        userGrpcClient.forgotPasswordPgMerchant(email.trim().toLowerCase());
+        log.info("Password reset OTP sent for email={}", email);
+    }
+
+    /**
+     * Reset a pg_merchant's password using the OTP.
+     *
+     * @param email
+     *            the user's email address
+     * @param otp
+     *            the verification code
+     * @param newPassword
+     *            the new password
+     */
+    public void resetPassword(String email, String otp, String newPassword) {
+        userGrpcClient.resetPasswordPgMerchant(email.trim().toLowerCase(), otp.trim(), newPassword);
+        log.info("Password reset completed for email={}", email);
     }
 
     /**
@@ -79,16 +171,36 @@ public class AuthService {
      * @return the user data with compliance status
      */
     public UserData getCurrentUser(GatewayMerchantUserDetails userDetails) {
-        // TODO: fetch compliance status from compliance replica
+        // Get compliance status - skip if user has no merchantId (legacy users)
+        ComplianceResponse compliance = null;
+        if (userDetails.getMerchantId() != null && !userDetails.getMerchantId().isBlank()) {
+            try {
+                compliance = complianceService.getCompliance(complianceService.context(userDetails, null, null));
+            } catch (Exception e) {
+                log.warn("Failed to fetch compliance for merchantId={}: {}", userDetails.getMerchantId(),
+                        e.getMessage());
+            }
+        }
+
+        // Get businessType from local replica (populated on login)
+        String businessType = null;
+        var localUser = userRepository.findById(userDetails.getId());
+        if (localUser.isPresent() && localUser.get().getBusinessType() != null) {
+            businessType = localUser.get().getBusinessType();
+        }
+        // Fallback to compliance profile if local replica doesn't have it
+        if (businessType == null && compliance != null && compliance.profile() != null) {
+            businessType = compliance.profile().businessType();
+        }
+
         return UserData.builder().id(userDetails.getId()).merchantId(userDetails.getMerchantId())
                 .email(userDetails.getEmail()).phoneNumber(userDetails.getPhoneNumber())
                 .businessName(userDetails.getBusinessName()).firstName(userDetails.getFirstName())
-                .lastName(userDetails.getLastName()).displayName(userDetails.getDisplayName()).complianceStatus("none") // TODO:
-                                                                                                                        // fetch
-                                                                                                                        // from
-                                                                                                                        // compliance
-                                                                                                                        // replica
-                .complianceStep(0).complianceRequired(true).build();
+                .lastName(userDetails.getLastName()).displayName(userDetails.getDisplayName())
+                .complianceStatus(compliance == null ? "none" : compliance.status())
+                .complianceStep(compliance == null ? 0 : compliance.currentStep())
+                .complianceRequired(compliance == null || !"approved".equals(compliance.status()))
+                .businessType(businessType).build();
     }
 
     /**
@@ -103,9 +215,11 @@ public class AuthService {
 
             if (existing.isPresent()) {
                 PgMerchantUserEntity user = existing.get();
+                user.setMerchantId(auth.getMerchantId());
                 user.setEmail(auth.getEmail());
                 user.setPhoneNumber(auth.getPhoneNumber());
                 user.setBusinessName(auth.getBusinessName());
+                user.setBusinessType(auth.getBusinessType());
                 user.setFirstName(auth.getFirstName());
                 user.setLastName(auth.getLastName());
                 user.setUpdatedAt(now);
@@ -115,8 +229,10 @@ public class AuthService {
                 // Create new replica entry (first login before Kafka sync)
                 PgMerchantUserEntity user = PgMerchantUserEntity.builder().id(auth.getUserId())
                         .merchantId(auth.getMerchantId()).email(auth.getEmail()).phoneNumber(auth.getPhoneNumber())
-                        .businessName(auth.getBusinessName()).firstName(auth.getFirstName())
-                        .lastName(auth.getLastName()).emailVerifiedAt(now) // Must be verified to login
+                        .businessName(auth.getBusinessName()).businessType(auth.getBusinessType())
+                        .firstName(auth.getFirstName()).lastName(auth.getLastName()).emailVerifiedAt(now) // Must be
+                                                                                                          // verified to
+                                                                                                          // login
                         .createdAt(now).updatedAt(now).syncedAt(now).build();
                 userRepository.save(user);
             }
@@ -135,5 +251,22 @@ public class AuthService {
             return name;
         }
         return auth.getBusinessName() != null ? auth.getBusinessName() : auth.getEmail();
+    }
+
+    /**
+     * Extract business type from auth response (primary) or compliance profile
+     * (fallback). Auth response contains the registration-time business type stored
+     * in tms-user; compliance profile contains the value from the KYC profile step.
+     */
+    private String extractBusinessType(AuthPgMerchantResponse auth, ComplianceResponse compliance) {
+        // Primary: from tms-user (registration-time value)
+        if (auth != null && auth.getBusinessType() != null && !auth.getBusinessType().isBlank()) {
+            return auth.getBusinessType();
+        }
+        // Fallback: from compliance profile (KYC step value)
+        if (compliance != null && compliance.profile() != null && compliance.profile().businessType() != null) {
+            return compliance.profile().businessType();
+        }
+        return null;
     }
 }
