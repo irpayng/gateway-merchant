@@ -13,12 +13,35 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class OpenApiConfig {
+
+    /**
+     * Swagger tag per path prefix. Order matters: the first matching prefix wins,
+     * so more specific prefixes come first.
+     */
+    private static final List<Map.Entry<String, String>> TAGS = List.of(Map.entry("/auth", "Authentication"),
+            Map.entry("/compliance/documents", "Compliance Documents"),
+            Map.entry("/compliance/reference-data", "Compliance Reference Data"),
+            Map.entry("/compliance", "Compliance"), Map.entry("/dashboard", "Dashboard"),
+            Map.entry("/payouts", "Payouts"), Map.entry("/transactions", "Transactions"),
+            Map.entry("/customers", "Customers"), Map.entry("/refunds", "Refunds"), Map.entry("/disputes", "Disputes"),
+            Map.entry("/api-keys", "API Keys"), Map.entry("/webhooks", "Webhooks"),
+            Map.entry("/audit-logs", "Audit Logs"));
+
+    static String tagFor(String path) {
+        if (path.equals("/health")) {
+            return "Health";
+        }
+        return TAGS.stream().filter(entry -> path.startsWith(entry.getKey())).map(Map.Entry::getValue).findFirst()
+                .orElse("Other");
+    }
     @Bean
     public OpenAPI gatewayOpenApi() {
         return new OpenAPI().info(new Info().title("Gateway Merchant API").version("v1").description(
                 "Log in using POST /auth/login, copy data.token, then click Authorize and paste the token. "
                         + "Compliance belongs to the authenticated merchant. Start or read the application before saving; "
-                        + "use each returned version for the next save. Compatible tms-user and tms-kyc services are required."))
+                        + "use each returned version for the next save. Compatible tms-user and tms-kyc services are required. "
+                        + "Every POST, PUT, PATCH and DELETE request is recorded in the merchant audit log "
+                        + "(GET /audit-logs) with sensitive fields redacted; GET requests are not recorded."))
                 .components(new Components().addSecuritySchemes("bearerAuth",
                         new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("bearer").bearerFormat("JWT")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
@@ -49,33 +72,7 @@ public class OpenApiConfig {
                 Map.entry("/customers", "Access merchant customer records"),
                 Map.entry("/refunds", "List and filter merchant refunds"));
         return api -> api.getPaths().forEach((path, item) -> item.readOperationsMap().forEach((method, operation) -> {
-            String tag = path.startsWith("/auth")
-                    ? "Authentication"
-                    : path.startsWith("/compliance/documents")
-                            ? "Compliance Documents"
-                            : path.startsWith("/compliance/reference-data")
-                                    ? "Compliance Reference Data"
-                                    : path.startsWith("/compliance")
-                                            ? "Compliance"
-                                            : path.startsWith("/dashboard")
-                                                    ? "Dashboard"
-                                                    : path.startsWith("/payouts")
-                                                            ? "Payouts"
-                                                            : path.startsWith("/transactions")
-                                                                    ? "Transactions"
-                                                                    : path.startsWith("/customers")
-                                                                            ? "Customers"
-                                                                            : path.startsWith("/refunds")
-                                                                                    ? "Refunds"
-                                                                                    : path.startsWith("/disputes")
-                                                                                            ? "Disputes"
-                                                                                            : path.startsWith(
-                                                                                                    "/api-keys")
-                                                                                                            ? "API Keys"
-                                                                                                            : path.equals(
-                                                                                                                    "/health")
-                                                                                                                            ? "Health"
-                                                                                                                            : "Other";
+            String tag = tagFor(path);
             operation.setTags(List.of(tag));
             if (summaries.containsKey(path)) {
                 operation.setSummary(summaries.get(path));

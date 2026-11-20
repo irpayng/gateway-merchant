@@ -57,4 +57,15 @@ class OpenApiConfigTest {
         assertTrue(save.getParameters().getFirst().getDescription().contains("same key"));
         assertTrue(save.getParameters().get(1).getDescription().contains("Latest application version"));
     }
+
+    @Test
+    void tagsMostSpecificPrefixFirst() {
+        assertEquals("Compliance Documents", OpenApiConfig.tagFor("/compliance/documents/{id}"));
+        assertEquals("Compliance Reference Data", OpenApiConfig.tagFor("/compliance/reference-data/{kind}"));
+        assertEquals("Compliance", OpenApiConfig.tagFor("/compliance/submit"));
+        assertEquals("Audit Logs", OpenApiConfig.tagFor("/audit-logs/{id}"));
+        assertEquals("Webhooks", OpenApiConfig.tagFor("/webhooks/{id}/test"));
+        assertEquals("Health", OpenApiConfig.tagFor("/health"));
+        assertEquals("Other", OpenApiConfig.tagFor("/unexpected-route"));
+    }
 }
