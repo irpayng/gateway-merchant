@@ -6,9 +6,12 @@ import com.tms.gateway.modules.dispute.entity.ConversationEntity;
 import com.tms.gateway.modules.dispute.entity.DisputeEntity;
 import com.tms.gateway.modules.dispute.repository.ConversationRepository;
 import com.tms.gateway.modules.dispute.repository.DisputeRepository;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,14 +33,25 @@ public class DisputeEventConsumer {
     private final ConversationRepository conversationRepository;
 
     /**
-     * Listen for dispute events from outbox.event.dispute topic.
+     * Listen for dispute lifecycle events. tms-dispute publishes them directly to
+     * {@code dispute-events}; {@code outbox.event.dispute} is the Debezium outbox
+     * route, kept so a future connector works without code changes. Upserts are
+     * idempotent, so receiving an event on both topics is harmless.
      */
-    @KafkaListener(topics = "outbox.event.dispute", groupId = "gateway-merchant-dispute")
-    public void consume(String message) {
+    @KafkaListener(topics = {"dispute-events", "outbox.event.dispute"}, groupId = "gateway-merchant-dispute")
+    public void consume(ConsumerRecord<String, String> record) {
+        String message = record.value();
         try {
             JsonNode event = objectMapper.readTree(message);
-            String eventType = event.path("eventType").asText(event.path("event_type").asText());
-            JsonNode payload = event.has("payload") ? event.get("payload") : event;
+            // The Debezium EventRouter emits only the expanded outbox payload as the
+            // record value and carries the outbox `type` column in the `eventType`
+            // header (transforms.outbox.table.fields.additional.placement =
+            // type:header:eventType). Fall back to body fields for other producers.
+            String eventType = headerValue(record, "eventType");
+            if (eventType == null || eventType.isBlank()) {
+                eventType = event.path("eventType").asText(event.path("event_type").asText());
+            }
+            JsonNode payload = event.has("payload") && event.get("payload").isObject() ? event.get("payload") : event;
 
             log.debug("Processing dispute event: type={}", eventType);
 
@@ -47,7 +61,7 @@ public class DisputeEventConsumer {
                 case "dispute_closed", "dispute-closed" -> updateDisputeStatus(payload, "closed");
                 case "dispute_resolved", "dispute-resolved" -> updateDisputeStatus(payload, "resolved");
                 case "conversation_added", "conversation-added" -> upsertConversation(payload);
-                default -> log.debug("Ignoring unknown dispute event type: {}", eventType);
+                default -> log.warn("Ignoring unknown dispute event type: '{}'", eventType);
             }
         } catch (Exception e) {
             log.error("Failed to process dispute event: {}", message, e);
@@ -149,16 +163,11 @@ public class DisputeEventConsumer {
             return;
         }
 
-        // Skip conversations whose parent dispute hasn't been replicated yet.
-        // The FK was dropped (V9) so this is a soft guard: we log and discard
-        // rather than retrying a message that will never succeed without the
-        // parent.
-        if (!disputeRepository.existsById(disputeId)) {
-            log.debug(
-                    "Skipping conversation id={} — parent dispute id={} not in local replica (may belong to a different merchant type)",
-                    id, disputeId);
-            return;
-        }
+        // Store conversations even when the parent dispute hasn't been replicated
+        // yet: they travel on a separate topic, and the opening message of a new
+        // dispute is sent before the dispute event itself. The FK was dropped (V9)
+        // for this reason, and every read query joins disputes, so an early
+        // conversation stays invisible until its dispute arrives.
 
         ConversationEntity conv = conversationRepository.findById(id).orElse(new ConversationEntity());
         conv.setId(id);
@@ -202,6 +211,19 @@ public class DisputeEventConsumer {
         conversationRepository.save(conv);
         log.debug("Upserted conversation: id={}, disputeId={}, sender={}", conv.getId(), conv.getDisputeId(),
                 conv.getSenderType());
+    }
+
+    private static String headerValue(ConsumerRecord<String, String> record, String name) {
+        Header header = record.headers().lastHeader(name);
+        if (header == null || header.value() == null) {
+            return null;
+        }
+        String value = new String(header.value(), StandardCharsets.UTF_8).trim();
+        // JsonConverter-encoded headers arrive quoted, e.g. "\"dispute_created\""
+        if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+            value = value.substring(1, value.length() - 1);
+        }
+        return value;
     }
 
     private static String text(JsonNode node, String... fields) {
