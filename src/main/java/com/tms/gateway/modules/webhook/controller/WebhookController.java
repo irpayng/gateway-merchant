@@ -2,6 +2,7 @@ package com.tms.gateway.modules.webhook.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.audit.annotation.Auditable;
 import com.tms.gateway.modules.webhook.dto.CreateWebhookRequest;
 import com.tms.gateway.modules.webhook.dto.CreatedWebhookResponse;
 import com.tms.gateway.modules.webhook.dto.UpdateWebhookRequest;
@@ -57,6 +58,7 @@ public class WebhookController {
     /**
      * Create a new webhook endpoint.
      */
+    @Auditable("Create webhook")
     @PostMapping
     public ResponseEntity<ApiResponse<CreatedWebhookResponse>> createWebhook(
             @AuthenticationPrincipal GatewayMerchantUserDetails user,
@@ -71,6 +73,7 @@ public class WebhookController {
     /**
      * Update an existing webhook.
      */
+    @Auditable("Update webhook")
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> updateWebhook(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @PathVariable("id") String webhookId, @Valid @RequestBody UpdateWebhookRequest request) {
@@ -83,6 +86,7 @@ public class WebhookController {
     /**
      * Delete a webhook.
      */
+    @Auditable("Delete webhook")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteWebhook(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @PathVariable("id") String webhookId) {
@@ -95,6 +99,7 @@ public class WebhookController {
     /**
      * Test a webhook by sending a test event.
      */
+    @Auditable("Send test webhook")
     @PostMapping("/{id}/test")
     public ResponseEntity<ApiResponse<Void>> testWebhook(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @PathVariable("id") String webhookId) {

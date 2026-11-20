@@ -2,6 +2,7 @@ package com.tms.gateway.modules.payout.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.audit.annotation.NoAudit;
 import com.tms.gateway.modules.grpc.service.ConfigGrpcClient;
 import com.tms.gateway.modules.payout.dto.BankResponse;
 import com.tms.gateway.modules.payout.dto.NameEnquiryRequest;
@@ -116,6 +117,7 @@ public class PayoutController {
      * The bank_code is the CBN institution code (e.g., "000013" for GTBank, "058"
      * for Guaranty Trust Bank).
      */
+    @NoAudit
     @PostMapping("/name-enquiry")
     @Operation(summary = "Verify bank account holder name", description = "Look up the account holder's name before initiating a payout")
     public ResponseEntity<ApiResponse<NameEnquiryResponse>> nameEnquiry(

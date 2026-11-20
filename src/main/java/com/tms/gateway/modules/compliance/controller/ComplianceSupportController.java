@@ -1,6 +1,7 @@
 package com.tms.gateway.modules.compliance.controller;
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.audit.annotation.Auditable;
 import com.tms.gateway.modules.compliance.dto.CreateDocumentUploadRequest;
 import com.tms.gateway.modules.compliance.service.*;
 import jakarta.validation.Valid;
@@ -22,11 +23,13 @@ public class ComplianceSupportController {
             @RequestParam(defaultValue = "") String country, @RequestParam(defaultValue = "") String currency) {
         return ApiResponse.success(support.referenceData(kind, parent, country, currency));
     }
+    @Auditable("Start compliance document upload")
     @PostMapping("/documents/uploads")
     public ApiResponse<?> upload(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @RequestHeader("Idempotency-Key") String key, @Valid @RequestBody CreateDocumentUploadRequest request) {
         return ApiResponse.success(support.upload(compliance.mutation(user, key, 0), request));
     }
+    @Auditable("Complete compliance document upload")
     @PostMapping("/documents/{id}/complete")
     public ApiResponse<?> complete(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @RequestHeader("Idempotency-Key") String key, @PathVariable String id) {
@@ -36,6 +39,7 @@ public class ComplianceSupportController {
     public ApiResponse<?> get(@AuthenticationPrincipal GatewayMerchantUserDetails user, @PathVariable String id) {
         return ApiResponse.success(support.document(compliance.context(user, null, null), id, "get"));
     }
+    @Auditable("Delete compliance document")
     @DeleteMapping("/documents/{id}")
     public ApiResponse<?> delete(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @RequestHeader("Idempotency-Key") String key, @PathVariable String id) {

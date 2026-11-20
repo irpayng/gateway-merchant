@@ -2,6 +2,7 @@ package com.tms.gateway.modules.auth.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.audit.annotation.Auditable;
 import com.tms.gateway.modules.auth.dto.ForgotPasswordRequest;
 import com.tms.gateway.modules.auth.dto.LoginRequest;
 import com.tms.gateway.modules.auth.dto.LoginResponse;
@@ -39,6 +40,7 @@ public class AuthController {
      * Uses the same credentials from pg_merchant registration in tms-user. Returns
      * a JWT token for subsequent authenticated requests.
      */
+    @Auditable("Login")
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
@@ -52,6 +54,7 @@ public class AuthController {
      * Creates a new user with type "pg_merchant" and a unique MID. Sends an email
      * verification OTP that must be confirmed before login is allowed.
      */
+    @Auditable("Register account")
     @PostMapping("/register/pg-merchant")
     public ResponseEntity<ApiResponse<RegisterResponse>> register(@Valid @RequestBody RegisterRequest request) {
         RegisterResponse response = authService.register(request);
@@ -64,6 +67,7 @@ public class AuthController {
      * <p>
      * Once verified, the merchant can log in to the dashboard.
      */
+    @Auditable("Verify email")
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
         authService.verifyEmail(request);
@@ -76,6 +80,7 @@ public class AuthController {
      * <p>
      * Throttled to one request per 60 seconds.
      */
+    @Auditable("Resend verification code")
     @PostMapping("/resend-otp")
     public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
         authService.resendOtp(request);
@@ -88,6 +93,7 @@ public class AuthController {
      * <p>
      * Sends an OTP to the email address if an account exists.
      */
+    @Auditable("Request password reset")
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request.getEmail());
@@ -100,6 +106,7 @@ public class AuthController {
      * <p>
      * Sets a new password after verifying the OTP.
      */
+    @Auditable("Reset password")
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request.getEmail(), request.getToken(), request.getPassword());

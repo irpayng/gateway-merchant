@@ -2,6 +2,8 @@ package com.tms.gateway.modules.dispute.controller;
 
 import com.tms.gateway.core.dto.ApiResponse;
 import com.tms.gateway.core.security.GatewayMerchantUserDetails;
+import com.tms.gateway.modules.audit.annotation.Auditable;
+import com.tms.gateway.modules.audit.annotation.NoAudit;
 import com.tms.gateway.modules.dispute.dto.*;
 import com.tms.gateway.modules.dispute.service.DisputeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,6 +93,7 @@ public class DisputeController {
     /**
      * Mark a dispute as read.
      */
+    @NoAudit
     @PatchMapping("/{id}/mark-read")
     @Operation(summary = "Mark dispute as read", description = "Mark a dispute thread as read")
     public ResponseEntity<ApiResponse<Map<String, Object>>> markRead(
@@ -124,6 +127,7 @@ public class DisputeController {
     /**
      * Add a message to a dispute.
      */
+    @Auditable("Reply to dispute")
     @PostMapping("/{id}/add-conversation")
     @Operation(summary = "Add conversation", description = "Add a message to an existing dispute")
     public ResponseEntity<ApiResponse<Map<String, Object>>> addConversation(

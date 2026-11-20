@@ -6,6 +6,7 @@ import com.tms.gateway.modules.apikeys.dto.ApiKeyListResponse;
 import com.tms.gateway.modules.apikeys.dto.CreatedApiKeyResponse;
 import com.tms.gateway.modules.apikeys.dto.UpdateIpWhitelistRequest;
 import com.tms.gateway.modules.apikeys.service.ApiKeyService;
+import com.tms.gateway.modules.audit.annotation.Auditable;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -55,6 +56,7 @@ public class ApiKeyController {
     /**
      * Rotate an existing API key — mints a replacement with the same scope.
      */
+    @Auditable("Rotate API key")
     @PostMapping("/{id}/rotate")
     public ResponseEntity<ApiResponse<CreatedApiKeyResponse>> rotateApiKey(
             @AuthenticationPrincipal GatewayMerchantUserDetails user, @PathVariable("id") String keyId) {
@@ -67,6 +69,7 @@ public class ApiKeyController {
     /**
      * Revoke an API key.
      */
+    @Auditable("Revoke API key")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> revokeApiKey(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @PathVariable("id") String keyId) {
@@ -79,6 +82,7 @@ public class ApiKeyController {
     /**
      * Update IP whitelist for an API key.
      */
+    @Auditable("Update API key IP whitelist")
     @PatchMapping("/{id}/ip-whitelist")
     public ResponseEntity<ApiResponse<Void>> updateIpWhitelist(@AuthenticationPrincipal GatewayMerchantUserDetails user,
             @PathVariable("id") String keyId, @Valid @RequestBody UpdateIpWhitelistRequest request) {
