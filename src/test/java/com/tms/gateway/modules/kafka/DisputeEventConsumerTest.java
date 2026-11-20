@@ -82,6 +82,19 @@ class DisputeEventConsumerTest {
     }
 
     @Test
+    void closedEventForUnseenDisputeCreatesIt() {
+        when(disputeRepo.findById(42L)).thenReturn(Optional.empty());
+        var record = new ConsumerRecord<>("dispute-events", 0, 0L, "42",
+                "{\"eventType\":\"dispute_closed\",\"payload\":" + BODY.replace("\"open\"", "\"closed\"") + "}");
+
+        consumer.consume(record);
+
+        ArgumentCaptor<DisputeEntity> saved = ArgumentCaptor.forClass(DisputeEntity.class);
+        verify(disputeRepo).save(saved.capture());
+        assertEquals("closed", saved.getValue().getStatusCode());
+    }
+
+    @Test
     void missingEventTypeIsIgnored() {
         consumer.consume(record(null));
 

@@ -58,8 +58,23 @@ public class DisputeEventConsumer {
             switch (eventType) {
                 case "dispute_created", "dispute-created" -> upsertDispute(payload);
                 case "dispute_updated", "dispute-updated" -> upsertDispute(payload);
-                case "dispute_closed", "dispute-closed" -> updateDisputeStatus(payload, "closed");
-                case "dispute_resolved", "dispute-resolved" -> updateDisputeStatus(payload, "resolved");
+                // tms-dispute sends the full dispute state with every event, so
+                // upsert when it's there: that also creates a dispute this replica
+                // never saw. Fall back to a status-only update for bare events.
+                case "dispute_closed", "dispute-closed" -> {
+                    if (payload.has("subject")) {
+                        upsertDispute(payload);
+                    } else {
+                        updateDisputeStatus(payload, "closed");
+                    }
+                }
+                case "dispute_resolved", "dispute-resolved" -> {
+                    if (payload.has("subject")) {
+                        upsertDispute(payload);
+                    } else {
+                        updateDisputeStatus(payload, "resolved");
+                    }
+                }
                 case "conversation_added", "conversation-added" -> upsertConversation(payload);
                 default -> log.warn("Ignoring unknown dispute event type: '{}'", eventType);
             }
